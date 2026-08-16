@@ -48,7 +48,7 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
       <div className="max-w-md text-center">
         <h1 className="text-xl font-semibold tracking-tight text-foreground">
-          Ops, algo deu errado
+          realmente, publiquei o sistema esta normal, no entanto o preview nao esat funcionando
         </h1>
         <p className="mt-2 text-sm text-muted-foreground">
           Algo deu errado no sistema. Por favor, tente recarregar a página ou voltar para o início.
