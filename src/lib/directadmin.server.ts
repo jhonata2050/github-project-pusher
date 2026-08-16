@@ -137,8 +137,8 @@ export async function getDAPackages(serverId: string) {
 
   const result = await callDA({
     hostname: server.hostname,
-    apiUser: server.api_user,
-    apiToken: server.api_token,
+    apiUser: server.api_user ?? "",
+    apiToken: server.api_token ?? "",
     command: 'CMD_API_PACKAGES_USER',
   });
 
@@ -159,7 +159,7 @@ export async function testDAConnectionDetails(serverId: string): Promise<DAConne
   return {
     success: true,
     hostname: server.hostname,
-    apiUser: server.api_user,
+    apiUser: server.api_user ?? "",
     packageCount: packages.length,
     packages,
   };
@@ -183,8 +183,8 @@ export async function createDAAccount(serverId: string, details: {
 
   return await callDA({
     hostname: server.hostname,
-    apiUser: server.api_user,
-    apiToken: server.api_token,
+    apiUser: server.api_user ?? "",
+    apiToken: server.api_token ?? "",
     command: 'CMD_API_ACCOUNT_USER',
     method: 'POST',
     params: {
@@ -213,8 +213,8 @@ export async function suspendDAAccount(serverId: string, username: string) {
 
   return await callDA({
     hostname: server.hostname,
-    apiUser: server.api_user,
-    apiToken: server.api_token,
+    apiUser: server.api_user ?? "",
+    apiToken: server.api_token ?? "",
     command: 'CMD_API_SELECT_USERS',
     method: 'POST',
     params: {
@@ -235,8 +235,8 @@ export async function deleteDAAccount(serverId: string, username: string) {
 
   return await callDA({
     hostname: server.hostname,
-    apiUser: server.api_user,
-    apiToken: server.api_token,
+    apiUser: server.api_user ?? "",
+    apiToken: server.api_token ?? "",
     command: 'CMD_API_SELECT_USERS',
     method: 'POST',
     params: {
@@ -358,7 +358,7 @@ export async function getDASession(serverId: string, username: string, redirectU
   const result = await callDA({
     hostname: server.hostname,
     apiUser: delegatedApiUser,
-    apiToken: server.api_token,
+    apiToken: server.api_token ?? "",
     command: 'CMD_API_LOGIN_KEYS',
     method: 'POST',
     params

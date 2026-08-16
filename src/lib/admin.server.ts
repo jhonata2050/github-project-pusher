@@ -79,7 +79,7 @@ export async function updateBrandingImplementation(
       actor_id: context.userId,
       actor_email: email,
       description: `Branding atualizado: ${data.app_name}`,
-      ip_address: ipAddress as any,
+      ip_address: ipAddress as string | null,
       user_agent: userAgent,
       metadata: { branding: data } as unknown as Json,
     });

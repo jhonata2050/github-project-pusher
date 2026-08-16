@@ -206,7 +206,7 @@ async function importClients(rows: Record<string, string>[], stats: ImportStats)
         // We only update if it's the SAME email or if it's explicitly linked by whmcs_id
         const { error } = await supabaseAdmin
           .from("profiles")
-          .update(profile)
+          .update(profile as any)
           .eq("id", existing);
         if (error) throw new Error(error.message);
         
@@ -246,7 +246,7 @@ async function importClients(rows: Record<string, string>[], stats: ImportStats)
 
       const { error: profileError } = await supabaseAdmin
         .from("profiles")
-        .upsert({ id: userId, ...profile }, { onConflict: "id" });
+        .upsert({ id: userId, ...profile } as any, { onConflict: "id" });
       
       if (profileError) throw new Error(profileError.message);
 

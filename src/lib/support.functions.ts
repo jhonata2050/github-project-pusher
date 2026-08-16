@@ -132,7 +132,7 @@ export const createTicket = createServerFn({ method: "POST" })
         ticket_id: ticket.id,
         user_id: context.userId,
         message: input.message,
-        is_staff_reply: false
+        is_staff: false
       });
 
     if (messageError) throw new Error(messageError.message);
@@ -157,7 +157,7 @@ export const replyTicket = createServerFn({ method: "POST" })
         ticket_id: input.ticketId,
         user_id: context.userId,
         message: input.message,
-        is_staff_reply: isAdmin
+        is_staff: isAdmin || false
       })
       .select()
       .single();
@@ -378,7 +378,7 @@ export const createProduct = createServerFn({ method: "POST" })
         description: input.description,
         product_type: input.product_type,
         directadmin_package: input.directadmin_package || null,
-        external_id: input.external_id || null,
+        whmcs_id: input.external_id ? parseInt(input.external_id) : null,
         is_visible: input.is_visible,
         sort_order: input.sort_order,
         disk_quota_mb: input.disk_quota_mb || null,
@@ -441,7 +441,7 @@ export const updateProduct = createServerFn({ method: "POST" })
         product_type: input.product_type,
         description: input.description,
         directadmin_package: input.directadmin_package || null,
-        external_id: input.external_id || null,
+        whmcs_id: input.external_id ? parseInt(input.external_id) : null,
         is_visible: input.is_visible,
         sort_order: input.sort_order,
         disk_quota_mb: input.disk_quota_mb
@@ -493,7 +493,7 @@ export const updateServiceDetails = createServerFn({ method: "POST" })
         username: input.username,
         domain: input.domain,
         server_id: input.server_id,
-        status: input.status ? (input.status as any) : undefined
+        status: input.status ? (input.status as any) : null
       })
       .eq("id", input.serviceId);
 

@@ -352,7 +352,7 @@ function ClientDetailPage() {
                             </TableCell>
                             <TableCell className="hidden sm:table-cell">
                               {s.server_id ? (
-                                <span className="text-xs">{servers?.find(sv => sv.id === s.server_id)?.name || "Servidor"}</span>
+                                <span className="text-xs">{servers?.find(sv => sv.id === s.server_id)?.hostname || "Servidor"}</span>
                               ) : (
                                 <span className="text-[10px] text-destructive italic">Não vinculado</span>
                               )}
@@ -608,7 +608,7 @@ function ClientDetailPage() {
                 >
                   <option value="">Nenhum</option>
                   {servers?.map((sv) => (
-                    <option key={sv.id} value={sv.id}>{sv.name} ({sv.hostname})</option>
+                    <option key={sv.id} value={sv.id}>{sv.hostname} ({sv.hostname})</option>
                   ))}
                 </select>
               </div>

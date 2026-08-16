@@ -208,7 +208,7 @@ function AdminServersPage() {
                       <Activity className="h-3 w-3" /> Configurado
                     </div>
                   </div>
-                  <CardTitle className="mt-4 text-xl font-bold">{server.name}</CardTitle>
+                  <CardTitle className="mt-4 text-xl font-bold">{server.hostname}</CardTitle>
                   <CardDescription className="flex items-center gap-1 mt-1">
                     <Globe className="h-3 w-3" /> {server.hostname}
                   </CardDescription>
@@ -218,7 +218,7 @@ function AdminServersPage() {
                     <span className="text-muted-foreground flex items-center gap-2">
                       <Shield className="h-4 w-4" /> IP: {server.ip_address || "N/A"}
                     </span>
-                    <span className="font-medium">0 / {server.max_accounts} contas</span>
+                    <span className="font-medium">0 / {server.max_accounts ?? 100} contas</span>
                   </div>
                   <div className="w-full bg-muted rounded-full h-2">
                     <div className="bg-brand h-2 rounded-full w-[2%]" />
@@ -260,11 +260,11 @@ function AdminServersPage() {
                       className="rounded-2xl"
                       onClick={() => setEditingServer({
                         id: server.id,
-                        name: server.name,
+                        name: server.hostname,
                         hostname: server.hostname,
-                        ip_address: server.ip_address,
-                        api_user: server.api_user,
-                        max_accounts: server.max_accounts,
+                        ip_address: server.ip_address || "",
+                        api_user: server.api_user || "",
+                        max_accounts: server.max_accounts || 100,
                       })}
                     >
                       <Pencil className="mr-2 h-4 w-4" /> Editar
@@ -274,7 +274,7 @@ function AdminServersPage() {
                       size="icon"
                       className="rounded-xl text-destructive hover:bg-destructive/5"
                       onClick={() => {
-                        if (confirm(`Remover o servidor ${server.name}?`)) deleteServerMutation.mutate(server.id);
+                        if (confirm(`Remover o servidor ${server.hostname}?`)) deleteServerMutation.mutate(server.id);
                       }}
                       disabled={deleteServerMutation.isPending && deleteServerMutation.variables === server.id}
                     >
