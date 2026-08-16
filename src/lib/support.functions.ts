@@ -595,8 +595,8 @@ export const updateServiceDetails = createServerFn({ method: "POST" })
         username: input.username,
         domain: input.domain,
         server_id: input.server_id,
-        product_id: input.product_id ?? undefined,
-        next_due_date: input.next_due_date ?? null,
+        product_id: input.product_id,
+        next_due_date: input.next_due_date,
         status: input.status ? (input.status as any) : null
       })
       .eq("id", input.serviceId);
