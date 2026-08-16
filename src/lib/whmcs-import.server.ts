@@ -89,12 +89,12 @@ const SERVICE_STATUS_MAP: Record<string, string> = {
 
 const INVOICE_STATUS_MAP: Record<string, string> = {
   paid: "paid",
-  unpaid: "unpaid",
+  unpaid: "pending", // Mapeia 'unpaid' do WHMCS para 'pending' do nosso enum
   cancelled: "cancelled",
   canceled: "cancelled",
   refunded: "refunded",
   draft: "draft",
-  collections: "unpaid",
+  collections: "pending",
 };
 
 async function resolveUserId(email: string, whmcsClientId?: string): Promise<string | null> {
@@ -335,7 +335,7 @@ async function importServices(rows: Record<string, string>[], stats: ImportStats
         whmcs_id: serviceWhmcsId || null,
         domain: domain || null,
         username: username || null,
-        server_id: serverId || null,
+        server_id: null, // Evita erro de FK/UUID se o serverId do WHMCS não for um UUID
         billing_cycle: cycle as any,
         status: status as any,
         next_due_date: nextDue,
