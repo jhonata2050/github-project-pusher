@@ -70,19 +70,20 @@ export function ClientsPage() {
   const clients = useQuery({
     queryKey: ["admin-clients", page, term],
     queryFn: async () => {
+      // Remover limite de range e filtros complexos temporariamente para diagnosticar
       let query = supabase
         .from("profiles")
-        .select("id, full_name, email, company_name, tax_id, phone, status, created_at", { count: 'exact' });
+        .select("id, full_name, email, company_name, tax_id, phone, status, created_at, whmcs_id", { count: 'exact' });
 
       if (term) {
         query = query.or(`full_name.ilike.%${term}%,email.ilike.%${term}%,company_name.ilike.%${term}%,tax_id.ilike.%${term}%`);
       }
 
       const { data, count, error } = await query
-        .order("created_at", { ascending: false })
-        .range((page - 1) * pageSize, page * pageSize - 1);
+        .order("created_at", { ascending: false });
+        
       if (error) throw error;
-      return { data, count: count || 0 };
+      return { data: data || [], count: count || 0 };
     },
     staleTime: 1000 * 60 * 5,
   });
