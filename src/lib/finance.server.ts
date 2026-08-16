@@ -117,15 +117,34 @@ export async function placeOrder(
 }
 
 export async function fetchInvoiceDetails(userId: string, id: string) {
+  // First attempt to find the invoice for this specific user
   const { data: invoice, error } = await supabaseAdmin
     .from("invoices")
     .select("*, invoice_items(*)")
     .eq("id", id)
     .eq("user_id", userId)
-    .single();
+    .maybeSingle();
 
-  if (error || !invoice) throw new Error("Fatura não encontrada");
-  return invoice;
+  if (invoice) return invoice;
+
+  // If not found, check if the requesting user is an admin
+  const { data: isAdmin } = await supabaseAdmin.rpc("has_role", {
+    _user_id: userId,
+    _role: "admin",
+  });
+
+  if (isAdmin) {
+    const { data: adminInvoice, error: adminError } = await supabaseAdmin
+      .from("invoices")
+      .select("*, invoice_items(*)")
+      .eq("id", id)
+      .single();
+
+    if (adminError || !adminInvoice) throw new Error("Fatura não encontrada");
+    return adminInvoice;
+  }
+
+  throw new Error("Fatura não encontrada ou acesso negado");
 }
 
 export async function processProvisioning(invoiceId: string) {
