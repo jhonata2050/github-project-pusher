@@ -284,6 +284,21 @@ export const testDAConnection = createServerFn({ method: "POST" })
   });
 
 
+export const getAllProducts = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { data: isAdmin } = await context.supabase.rpc("has_role", { _user_id: context.userId, _role: "admin" });
+    if (!isAdmin) throw new Error("Unauthorized");
+
+    const { data, error } = await supabaseAdmin
+      .from("products")
+      .select("id, name")
+      .order("name");
+
+    if (error) throw new Error(error.message);
+    return data;
+  });
+
 export const getDAPackagesList = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .inputValidator((data: unknown) => z.string().parse(data))
@@ -580,6 +595,8 @@ export const updateServiceDetails = createServerFn({ method: "POST" })
       username: z.string().nullable(),
       domain: z.string().nullable(),
       server_id: z.string().uuid().nullable(),
+      product_id: z.string().uuid().nullable(),
+      next_due_date: z.string().nullable(),
       status: z.enum(["active", "pending", "suspended", "terminated", "cancelled"]).nullable(),
     }).parse(data)
   )
@@ -593,6 +610,8 @@ export const updateServiceDetails = createServerFn({ method: "POST" })
         username: input.username,
         domain: input.domain,
         server_id: input.server_id,
+        product_id: input.product_id,
+        next_due_date: input.next_due_date,
         status: input.status ? (input.status as any) : null
       })
       .eq("id", input.serviceId);
