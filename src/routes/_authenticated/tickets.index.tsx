@@ -71,7 +71,7 @@ function ClientTicketsPage() {
   };
 
   const filtered = tickets.filter((t) =>
-    t.subject.toLowerCase().includes(term.trim().toLowerCase())
+    (t.subject?.toLowerCase() ?? "").includes(term.trim().toLowerCase())
   );
 
   return (

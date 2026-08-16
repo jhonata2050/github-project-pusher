@@ -750,6 +750,7 @@ export type Database = {
           gateway_reference: string | null
           id: string
           invoice_id: string | null
+          metadata: Json
           status: string | null
           transaction_id: string | null
           user_id: string
@@ -761,6 +762,7 @@ export type Database = {
           gateway_reference?: string | null
           id?: string
           invoice_id?: string | null
+          metadata?: Json
           status?: string | null
           transaction_id?: string | null
           user_id: string
@@ -772,6 +774,7 @@ export type Database = {
           gateway_reference?: string | null
           id?: string
           invoice_id?: string | null
+          metadata?: Json
           status?: string | null
           transaction_id?: string | null
           user_id?: string
