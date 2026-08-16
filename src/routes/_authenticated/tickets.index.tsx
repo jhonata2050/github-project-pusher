@@ -71,7 +71,7 @@ function ClientTicketsPage() {
   };
 
   const filtered = tickets.filter((t) =>
-    t.subject.toLowerCase().includes(term.trim().toLowerCase())
+    (t.subject?.toLowerCase() ?? "").includes(term.trim().toLowerCase())
   );
 
   return (
@@ -166,7 +166,7 @@ function ClientTicketsPage() {
                     <div className="flex items-center gap-4 mt-1 text-sm text-muted-foreground">
                        <span className="flex items-center gap-1">
                           <Clock className="h-3.5 w-3.5" />
-                          {new Date(ticket.updated_at || "").toLocaleDateString("pt-BR")}
+                          {new Date(ticket.created_at || "").toLocaleDateString("pt-BR")}
                        </span>
                        <span className="capitalize">{ticket.priority} prioridade</span>
                     </div>

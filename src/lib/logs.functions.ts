@@ -12,7 +12,6 @@ export const getSystemLogs = createServerFn({ method: "GET" })
     }).parse(data)
   )
   .handler(async ({ data, context }) => {
-    // Verify admin (uma única chamada ao banco)
     const { data: isAdmin } = await context.supabase.rpc("has_role", {
       _user_id: context.userId,
       _role: "admin",
@@ -22,12 +21,11 @@ export const getSystemLogs = createServerFn({ method: "GET" })
       throw new Error("Unauthorized");
     }
 
-
     if (data.type === "email") {
       const { data: logs, count, error } = await context.supabase
         .from("email_logs")
         .select(
-          "id, created_at, template_name, status, to_email, subject, user_id, profile:profiles(full_name)",
+          "id, created_at, template_name, status, to_email, subject, user_id",
           { count: "estimated" },
         )
         .order("created_at", { ascending: false })
@@ -47,7 +45,7 @@ export const getSystemLogs = createServerFn({ method: "GET" })
           entityType: "email",
           entityId: log.user_id,
           ipAddress: null,
-          profileName: log.profile?.full_name ?? null,
+          profileName: null,
         })),
         count: count || 0,
       };

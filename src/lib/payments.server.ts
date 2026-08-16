@@ -37,7 +37,7 @@ async function recordTransaction(args: {
       gateway: args.gateway,
       gateway_reference: args.reference,
       status: "pending",
-      metadata: { method: args.method, ...(args.metadata || {}) },
+      metadata: { method: args.method, ...(args.metadata || {}) } as any,
     })
     .select()
     .single();

@@ -92,7 +92,7 @@ function TicketDetailsPage() {
                   {status.label}
                 </Badge>
                 <span className="text-xs text-muted-foreground flex items-center gap-1">
-                  <Clock className="h-3 w-3" /> Atualizado em {new Date(ticket.updated_at || "").toLocaleString("pt-BR")}
+                  <Clock className="h-3 w-3" /> Atualizado em {new Date(ticket.created_at || "").toLocaleString("pt-BR")}
                 </span>
                 <span className="text-xs text-muted-foreground flex items-center gap-1 capitalize">
                   <AlertCircle className="h-3 w-3" /> {ticket.priority} prioridade
@@ -179,7 +179,7 @@ function TicketDetailsPage() {
                 </div>
                 <div>
                   <label className="text-[10px] uppercase font-bold text-muted-foreground">Última Atividade</label>
-                  <p className="text-sm text-foreground">{new Date(ticket.updated_at || "").toLocaleDateString("pt-BR")}</p>
+                  <p className="text-sm text-foreground">{new Date(ticket.created_at || "").toLocaleDateString("pt-BR")}</p>
                 </div>
               </CardContent>
             </Card>

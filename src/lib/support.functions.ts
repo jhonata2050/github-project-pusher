@@ -132,7 +132,7 @@ export const createTicket = createServerFn({ method: "POST" })
         ticket_id: ticket.id,
         user_id: context.userId,
         message: input.message,
-        is_staff_reply: false
+        is_staff: false
       });
 
     if (messageError) throw new Error(messageError.message);
@@ -157,7 +157,7 @@ export const replyTicket = createServerFn({ method: "POST" })
         ticket_id: input.ticketId,
         user_id: context.userId,
         message: input.message,
-        is_staff_reply: isAdmin
+        is_staff: isAdmin || false
       })
       .select()
       .single();
@@ -202,11 +202,10 @@ export const createServerDA = createServerFn({ method: "POST" })
     const { data, error } = await context.supabase
       .from("servers")
       .insert({
-        name: input.name,
         hostname: input.hostname,
         ip_address: input.ip_address ?? null,
         api_user: input.api_user,
-        api_token: input.api_token,
+        api_token: input.api_token || "",
         max_accounts: input.max_accounts
       })
       .select()
@@ -231,13 +230,12 @@ export const updateServerDA = createServerFn({ method: "POST" })
   )
   .handler(async ({ data: input, context }) => {
     const patch = {
-      name: input.name,
       hostname: input.hostname,
       ip_address: input.ip_address ?? null,
       api_user: input.api_user,
       max_accounts: input.max_accounts,
       ...(input.api_token && input.api_token.length > 0 ? { api_token: input.api_token } : {}),
-    };
+    } as any;
 
     const { data, error } = await context.supabase
       .from("servers")
@@ -378,7 +376,7 @@ export const createProduct = createServerFn({ method: "POST" })
         description: input.description,
         product_type: input.product_type,
         directadmin_package: input.directadmin_package || null,
-        external_id: input.external_id || null,
+        whmcs_id: input.external_id ? parseInt(input.external_id) : null,
         is_visible: input.is_visible,
         sort_order: input.sort_order,
         disk_quota_mb: input.disk_quota_mb || null,
@@ -441,7 +439,7 @@ export const updateProduct = createServerFn({ method: "POST" })
         product_type: input.product_type,
         description: input.description,
         directadmin_package: input.directadmin_package || null,
-        external_id: input.external_id || null,
+        whmcs_id: input.external_id ? parseInt(input.external_id) : null,
         is_visible: input.is_visible,
         sort_order: input.sort_order,
         disk_quota_mb: input.disk_quota_mb
@@ -493,7 +491,7 @@ export const updateServiceDetails = createServerFn({ method: "POST" })
         username: input.username,
         domain: input.domain,
         server_id: input.server_id,
-        status: input.status ? (input.status as any) : undefined
+        status: input.status ? (input.status as any) : null
       })
       .eq("id", input.serviceId);
 

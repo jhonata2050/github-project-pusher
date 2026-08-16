@@ -180,7 +180,7 @@ export async function processProvisioning(invoiceId: string) {
             .eq("id", service.id);
 
 
-          console.log(`Provisioned service ${service.id} on server ${server.name}`);
+          console.log(`Provisioned service ${service.id} on server ${server.id}`);
         } catch (err: any) {
           console.error(`Provisioning error: ${err.message}`);
         }

@@ -21,14 +21,15 @@ export type Database = {
           actor_id: string | null
           category: string
           created_at: string
-          description: string
+          description: string | null
           entity_id: string | null
           entity_type: string | null
           id: string
-          ip_address: unknown
+          ip_address: string | null
           metadata: Json
           status: string
           user_agent: string | null
+          user_id: string | null
         }
         Insert: {
           action: string
@@ -36,14 +37,15 @@ export type Database = {
           actor_id?: string | null
           category: string
           created_at?: string
-          description: string
+          description?: string | null
           entity_id?: string | null
           entity_type?: string | null
           id?: string
-          ip_address?: unknown
+          ip_address?: string | null
           metadata?: Json
-          status?: string
+          status: string
           user_agent?: string | null
+          user_id?: string | null
         }
         Update: {
           action?: string
@@ -51,14 +53,15 @@ export type Database = {
           actor_id?: string | null
           category?: string
           created_at?: string
-          description?: string
+          description?: string | null
           entity_id?: string | null
           entity_type?: string | null
           id?: string
-          ip_address?: unknown
+          ip_address?: string | null
           metadata?: Json
           status?: string
           user_agent?: string | null
+          user_id?: string | null
         }
         Relationships: []
       }
@@ -106,83 +109,69 @@ export type Database = {
       }
       domains: {
         Row: {
-          auto_renew: boolean | null
-          created_at: string | null
-          domain_name: string
+          created_at: string
+          domain: string
           expiry_date: string | null
           id: string
-          nameservers: string[] | null
-          registrar: string
           registration_date: string | null
-          status: string
-          updated_at: string | null
+          status: string | null
           user_id: string
         }
         Insert: {
-          auto_renew?: boolean | null
-          created_at?: string | null
-          domain_name: string
+          created_at?: string
+          domain: string
           expiry_date?: string | null
           id?: string
-          nameservers?: string[] | null
-          registrar: string
           registration_date?: string | null
-          status?: string
-          updated_at?: string | null
+          status?: string | null
           user_id: string
         }
         Update: {
-          auto_renew?: boolean | null
-          created_at?: string | null
-          domain_name?: string
+          created_at?: string
+          domain?: string
           expiry_date?: string | null
           id?: string
-          nameservers?: string[] | null
-          registrar?: string
           registration_date?: string | null
-          status?: string
-          updated_at?: string | null
+          status?: string | null
           user_id?: string
         }
         Relationships: []
       }
       email_logs: {
         Row: {
-          created_at: string | null
+          body: string | null
+          created_at: string
           id: string
+          sent_at: string | null
           status: string | null
-          subject: string
+          subject: string | null
           template_name: string | null
-          to_email: string
-          user_id: string | null
+          to_email: string | null
+          user_id: string
         }
         Insert: {
-          created_at?: string | null
+          body?: string | null
+          created_at?: string
           id?: string
+          sent_at?: string | null
           status?: string | null
-          subject: string
+          subject?: string | null
           template_name?: string | null
-          to_email: string
-          user_id?: string | null
+          to_email?: string | null
+          user_id: string
         }
         Update: {
-          created_at?: string | null
+          body?: string | null
+          created_at?: string
           id?: string
+          sent_at?: string | null
           status?: string | null
-          subject?: string
+          subject?: string | null
           template_name?: string | null
-          to_email?: string
-          user_id?: string | null
+          to_email?: string | null
+          user_id?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "email_logs_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       invoice_items: {
         Row: {
@@ -431,6 +420,7 @@ export type Database = {
           slug: string
           sort_order: number
           updated_at: string
+          whmcs_id: number | null
         }
         Insert: {
           auto_provision?: boolean
@@ -453,6 +443,7 @@ export type Database = {
           slug: string
           sort_order?: number
           updated_at?: string
+          whmcs_id?: number | null
         }
         Update: {
           auto_provision?: boolean
@@ -475,6 +466,7 @@ export type Database = {
           slug?: string
           sort_order?: number
           updated_at?: string
+          whmcs_id?: number | null
         }
         Relationships: [
           {
@@ -500,6 +492,7 @@ export type Database = {
           notes: string | null
           phone: string | null
           postal_code: string | null
+          postcode: string | null
           state: string | null
           status: string
           tax_id: string | null
@@ -519,6 +512,7 @@ export type Database = {
           notes?: string | null
           phone?: string | null
           postal_code?: string | null
+          postcode?: string | null
           state?: string | null
           status?: string
           tax_id?: string | null
@@ -538,6 +532,7 @@ export type Database = {
           notes?: string | null
           phone?: string | null
           postal_code?: string | null
+          postcode?: string | null
           state?: string | null
           status?: string
           tax_id?: string | null
@@ -548,54 +543,50 @@ export type Database = {
       }
       servers: {
         Row: {
-          api_token: string
-          api_user: string
-          created_at: string | null
+          api_token: string | null
+          api_user: string | null
+          created_at: string
           hostname: string
           id: string
           ip_address: string | null
           is_active: boolean | null
           max_accounts: number | null
-          name: string
-          updated_at: string | null
+          server_type: string | null
         }
         Insert: {
-          api_token: string
-          api_user: string
-          created_at?: string | null
+          api_token?: string | null
+          api_user?: string | null
+          created_at?: string
           hostname: string
           id?: string
           ip_address?: string | null
           is_active?: boolean | null
           max_accounts?: number | null
-          name: string
-          updated_at?: string | null
+          server_type?: string | null
         }
         Update: {
-          api_token?: string
-          api_user?: string
-          created_at?: string | null
+          api_token?: string | null
+          api_user?: string | null
+          created_at?: string
           hostname?: string
           id?: string
           ip_address?: string | null
           is_active?: boolean | null
           max_accounts?: number | null
-          name?: string
-          updated_at?: string | null
+          server_type?: string | null
         }
         Relationships: []
       }
       services: {
         Row: {
           auto_renew: boolean | null
-          billing_cycle: Database["public"]["Enums"]["billing_cycle"]
+          billing_cycle: Database["public"]["Enums"]["billing_cycle"] | null
           created_at: string
           domain: string | null
           id: string
           next_due_date: string | null
-          next_invoice_date: string | null
           order_id: string | null
-          product_id: string
+          product_id: string | null
           server_id: string | null
           status: Database["public"]["Enums"]["service_status"]
           suspension_reason: string | null
@@ -606,14 +597,13 @@ export type Database = {
         }
         Insert: {
           auto_renew?: boolean | null
-          billing_cycle: Database["public"]["Enums"]["billing_cycle"]
+          billing_cycle?: Database["public"]["Enums"]["billing_cycle"] | null
           created_at?: string
           domain?: string | null
           id?: string
           next_due_date?: string | null
-          next_invoice_date?: string | null
           order_id?: string | null
-          product_id: string
+          product_id?: string | null
           server_id?: string | null
           status?: Database["public"]["Enums"]["service_status"]
           suspension_reason?: string | null
@@ -624,14 +614,13 @@ export type Database = {
         }
         Update: {
           auto_renew?: boolean | null
-          billing_cycle?: Database["public"]["Enums"]["billing_cycle"]
+          billing_cycle?: Database["public"]["Enums"]["billing_cycle"] | null
           created_at?: string
           domain?: string | null
           id?: string
           next_due_date?: string | null
-          next_invoice_date?: string | null
           order_id?: string | null
-          product_id?: string
+          product_id?: string | null
           server_id?: string | null
           status?: Database["public"]["Enums"]["service_status"]
           suspension_reason?: string | null
@@ -662,60 +651,50 @@ export type Database = {
             referencedRelation: "servers"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "services_user_id_profiles_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
         ]
       }
       system_settings: {
         Row: {
-          description: string | null
           key: string
-          updated_at: string | null
+          updated_at: string
           value: Json
         }
         Insert: {
-          description?: string | null
           key: string
-          updated_at?: string | null
+          updated_at?: string
           value: Json
         }
         Update: {
-          description?: string | null
           key?: string
-          updated_at?: string | null
+          updated_at?: string
           value?: Json
         }
         Relationships: []
       }
       ticket_messages: {
         Row: {
-          created_at: string | null
+          created_at: string
           id: string
-          is_staff_reply: boolean | null
+          is_staff: boolean | null
           message: string
           ticket_id: string
-          user_id: string
+          user_id: string | null
         }
         Insert: {
-          created_at?: string | null
+          created_at?: string
           id?: string
-          is_staff_reply?: boolean | null
+          is_staff?: boolean | null
           message: string
           ticket_id: string
-          user_id: string
+          user_id?: string | null
         }
         Update: {
-          created_at?: string | null
+          created_at?: string
           id?: string
-          is_staff_reply?: boolean | null
+          is_staff?: boolean | null
           message?: string
           ticket_id?: string
-          user_id?: string
+          user_id?: string | null
         }
         Relationships: [
           {
@@ -729,41 +708,39 @@ export type Database = {
       }
       tickets: {
         Row: {
-          created_at: string | null
+          created_at: string
           id: string
+          last_reply_at: string | null
+          last_reply_by_name: string | null
           priority: string | null
           status: string | null
-          subject: string
+          subject: string | null
           updated_at: string | null
           user_id: string
         }
         Insert: {
-          created_at?: string | null
+          created_at?: string
           id?: string
+          last_reply_at?: string | null
+          last_reply_by_name?: string | null
           priority?: string | null
           status?: string | null
-          subject: string
+          subject?: string | null
           updated_at?: string | null
           user_id: string
         }
         Update: {
-          created_at?: string | null
+          created_at?: string
           id?: string
+          last_reply_at?: string | null
+          last_reply_by_name?: string | null
           priority?: string | null
           status?: string | null
-          subject?: string
+          subject?: string | null
           updated_at?: string | null
           user_id?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "tickets_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       transactions: {
         Row: {
@@ -773,8 +750,9 @@ export type Database = {
           gateway_reference: string | null
           id: string
           invoice_id: string | null
-          metadata: Json | null
-          status: string
+          metadata: Json
+          status: string | null
+          transaction_id: string | null
           user_id: string
         }
         Insert: {
@@ -784,8 +762,9 @@ export type Database = {
           gateway_reference?: string | null
           id?: string
           invoice_id?: string | null
-          metadata?: Json | null
-          status: string
+          metadata?: Json
+          status?: string | null
+          transaction_id?: string | null
           user_id: string
         }
         Update: {
@@ -795,8 +774,9 @@ export type Database = {
           gateway_reference?: string | null
           id?: string
           invoice_id?: string | null
-          metadata?: Json | null
-          status?: string
+          metadata?: Json
+          status?: string | null
+          transaction_id?: string | null
           user_id?: string
         }
         Relationships: [
@@ -832,40 +812,34 @@ export type Database = {
       }
       vps_instances: {
         Row: {
-          created_at: string | null
-          external_id: string
+          created_at: string
+          external_id: string | null
           id: string
           ip_address: string | null
-          os_template: string | null
-          region: string | null
-          service_id: string
+          provider_id: string | null
+          provider_name: string | null
+          service_id: string | null
           status: string | null
-          updated_at: string | null
-          vps_type: string | null
         }
         Insert: {
-          created_at?: string | null
-          external_id: string
+          created_at?: string
+          external_id?: string | null
           id?: string
           ip_address?: string | null
-          os_template?: string | null
-          region?: string | null
-          service_id: string
+          provider_id?: string | null
+          provider_name?: string | null
+          service_id?: string | null
           status?: string | null
-          updated_at?: string | null
-          vps_type?: string | null
         }
         Update: {
-          created_at?: string | null
-          external_id?: string
+          created_at?: string
+          external_id?: string | null
           id?: string
           ip_address?: string | null
-          os_template?: string | null
-          region?: string | null
-          service_id?: string
+          provider_id?: string | null
+          provider_name?: string | null
+          service_id?: string | null
           status?: string | null
-          updated_at?: string | null
-          vps_type?: string | null
         }
         Relationships: [
           {
@@ -879,25 +853,25 @@ export type Database = {
       }
       whmcs_imports: {
         Row: {
-          created_at: string | null
+          created_at: string
           error_message: string | null
           id: string
           stats: Json | null
-          status: string
+          status: string | null
         }
         Insert: {
-          created_at?: string | null
+          created_at?: string
           error_message?: string | null
           id?: string
           stats?: Json | null
-          status?: string
+          status?: string | null
         }
         Update: {
-          created_at?: string | null
+          created_at?: string
           error_message?: string | null
           id?: string
           stats?: Json | null
-          status?: string
+          status?: string | null
         }
         Relationships: []
       }
@@ -906,17 +880,15 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      has_role: {
-        Args: {
-          _role: Database["public"]["Enums"]["app_role"]
-          _user_id: string
-        }
-        Returns: boolean
-      }
-      increment_coupon_uses: {
-        Args: { _coupon_id: string }
-        Returns: undefined
-      }
+      has_role:
+        | {
+            Args: {
+              _role: Database["public"]["Enums"]["app_role"]
+              _user_id: string
+            }
+            Returns: boolean
+          }
+        | { Args: { _role: string; _user_id: string }; Returns: boolean }
       is_staff: { Args: { _user_id: string }; Returns: boolean }
     }
     Enums: {

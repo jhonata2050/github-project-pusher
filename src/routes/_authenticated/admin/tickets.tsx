@@ -108,11 +108,11 @@ function AdminTicketsPage() {
                           </div>
                           <div className="flex items-center gap-4 text-sm text-muted-foreground">
                             <span className="font-medium text-foreground">
-                              {ticket.profile?.full_name || "Cliente"}
+                              {ticket.user_id || "Cliente"}
                             </span>
                             <span className="flex items-center gap-1">
                               <Clock className="h-3.5 w-3.5" />
-                              {new Date(ticket.updated_at || "").toLocaleDateString('pt-BR', {
+                              {new Date(ticket.created_at || "").toLocaleDateString('pt-BR', {
                                 day: '2-digit',
                                 month: 'short',
                                 hour: '2-digit',
