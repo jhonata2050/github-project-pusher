@@ -350,8 +350,8 @@ function InvoiceDetailsPage() {
                       <div>
                         <p className="text-xs font-semibold uppercase text-slate-400">Cliente</p>
                         <div className="mt-2 text-sm">
-                          <p className="font-medium">{inv.profiles?.full_name || "Cliente"}</p>
-                          <p className="text-slate-500">{inv.profiles?.email || ""}</p>
+                          <p className="font-medium">{(inv as any).profiles?.full_name || "Cliente"}</p>
+                          <p className="text-slate-500">{(inv as any).profiles?.email || ""}</p>
                         </div>
                       </div>
                     </div>
