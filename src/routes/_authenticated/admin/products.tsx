@@ -87,6 +87,13 @@ function ProductsPage() {
     enabled: !!selectedServer,
   });
 
+  // Seleciona automaticamente o primeiro servidor disponível
+  useEffect(() => {
+    if (!selectedServer && servers.data && servers.data.length > 0) {
+      setSelectedServer((servers.data as any[])[0].id);
+    }
+  }, [servers.data, selectedServer]);
+
   const updateMutation = useMutation({
     mutationFn: async (data: any) => {
       if (data.id) {
