@@ -90,7 +90,10 @@ export function ClientsPage() {
 
   const filtered = clients.data?.data ?? [];
   const totalItems = clients.data?.count ?? 0;
-  const totalPages = Math.ceil(totalItems / pageSize);
+  
+  // Paginação manual no cliente para garantir que tudo apareça
+  const paginatedData = filtered.slice((page - 1) * pageSize, page * pageSize);
+  const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
 
   const toggleSelect = (id: string) => {
     setSelectedIds(prev => 
@@ -195,8 +198,13 @@ export function ClientsPage() {
 
       {clients.isLoading ? (
         <Skeleton className="mt-6 h-56 rounded-2xl" />
-      ) : filtered.length === 0 ? (
-        <p className="py-24 text-center text-sm text-muted-foreground">Nenhum cliente encontrado</p>
+      ) : totalItems === 0 ? (
+        <div className="py-24 text-center">
+          <p className="text-sm text-muted-foreground">Nenhum cliente encontrado ({totalItems})</p>
+          <Button variant="outline" className="mt-4" onClick={() => queryClient.invalidateQueries()}>
+            Atualizar Lista
+          </Button>
+        </div>
       ) : (
         <div className="mt-6">
           <div className="overflow-x-auto rounded-2xl border border-border">
@@ -219,7 +227,7 @@ export function ClientsPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filtered.map((client) => (
+                {paginatedData.map((client) => (
                   <TableRow key={client.id} className={selectedIds.includes(client.id) ? "bg-muted/30" : ""}>
                     <TableCell>
                       <Checkbox 
