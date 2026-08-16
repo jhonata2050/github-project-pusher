@@ -85,7 +85,7 @@ export function ClientsPage() {
       if (error) throw error;
       return { data: data || [], count: count || 0 };
     },
-    staleTime: 1000 * 60 * 5,
+    staleTime: 0, // Desativar staleTime para que a lista sempre reflita o estado real após exclusões
   });
 
   const filtered = clients.data?.data ?? [];

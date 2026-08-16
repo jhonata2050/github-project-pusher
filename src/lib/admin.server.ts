@@ -121,17 +121,46 @@ export async function updateClientProfileImplementation(
 
 export async function bulkDeleteClientsImplementation(
   clientIds: string[],
-  context: { supabase: SupabaseClient<Database> },
+  context: { supabase: SupabaseClient<Database>; userId: string },
 ) {
-  const { error } = await context.supabase
-    .from("profiles")
-    .delete()
-    .in("id", clientIds);
+  // 1. Verificar se quem está deletando é admin
+  const { data: isAdmin, error: roleError } = await context.supabase.rpc("has_role", {
+    _user_id: context.userId,
+    _role: "admin",
+  });
 
-  if (error) throw error;
+  if (roleError || !isAdmin) {
+    throw new Error("Acesso negado. Apenas administradores podem excluir clientes.");
+  }
+
+  // 2. Importar o cliente admin para poder deletar de auth.users
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
+  let deletedCount = 0;
+  let failuresCount = 0;
+
+  // 3. Deletar cada usuário via Auth Admin API
+  // A exclusão em auth.users disparará o ON DELETE CASCADE nas tabelas vinculadas
+  for (const id of clientIds) {
+    // Não permite que o admin delete a si mesmo por aqui para evitar acidentes
+    if (id === context.userId) {
+      failuresCount++;
+      continue;
+    }
+
+    const { error } = await supabaseAdmin.auth.admin.deleteUser(id);
+    
+    if (error) {
+      console.error(`Erro ao deletar usuário ${id}:`, error);
+      failuresCount++;
+    } else {
+      deletedCount++;
+    }
+  }
+
   return {
-    success: true,
-    deletedCount: clientIds.length,
-    failuresCount: 0,
+    success: deletedCount > 0,
+    deletedCount,
+    failuresCount,
   };
 }
