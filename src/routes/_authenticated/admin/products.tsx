@@ -403,8 +403,15 @@ function ProductsPage() {
                         </SelectTrigger>
                         <SelectContent className="rounded-xl border-none shadow-xl">
                           {servers.data?.map((s: any) => (
-                            <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
+                            <SelectItem key={s.id} value={s.id}>
+                              {s.hostname ?? s.name ?? s.ip_address ?? s.id}
+                            </SelectItem>
                           ))}
+                          {(!servers.data || servers.data.length === 0) && (
+                            <div className="p-2 text-xs text-center text-muted-foreground">
+                              Nenhum servidor cadastrado
+                            </div>
+                          )}
                         </SelectContent>
                       </Select>
                     </div>
@@ -422,7 +429,11 @@ function ProductsPage() {
                             <SelectItem key={pkg} value={pkg}>{pkg}</SelectItem>
                           ))}
                           {(!daPackages.data || daPackages.data.length === 0) && !daPackages.isLoading && (
-                            <div className="p-2 text-xs text-center text-muted-foreground">Nenhum pacote encontrado ou servidor não selecionado</div>
+                            <div className="p-2 text-xs text-center text-muted-foreground">
+                              {daPackages.error
+                                ? (daPackages.error as Error).message
+                                : "Selecione um servidor para carregar os pacotes"}
+                            </div>
                           )}
                         </SelectContent>
                       </Select>
