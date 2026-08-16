@@ -238,7 +238,12 @@ export function ClientsPage() {
                     </TableCell>
                     <TableCell className="font-medium">
                       <div className="flex flex-col">
-                        <span>{client.full_name ?? "Sem nome"}</span>
+                        <div className="flex items-center gap-2">
+                          <span>{client.full_name ?? "Sem nome"}</span>
+                          {client.whmcs_id && (
+                            <Badge variant="outline" className="text-[10px] h-4 px-1">WHMCS: {client.whmcs_id}</Badge>
+                          )}
+                        </div>
                         <span className="text-xs text-muted-foreground md:hidden">{client.email}</span>
                       </div>
                       {client.company_name && (
