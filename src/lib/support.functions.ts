@@ -355,6 +355,92 @@ export const getProductGroups = createServerFn({ method: "GET" })
     return data;
   });
 
+export const createProductGroup = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: unknown) => 
+    z.object({
+      name: z.string().min(1),
+      description: z.string().nullable(),
+      sort_order: z.number().default(0),
+      is_visible: z.boolean().default(true)
+    }).parse(data)
+  )
+  .handler(async ({ data: input, context }) => {
+    const { data: isAdmin } = await context.supabase.rpc("has_role", { _user_id: context.userId, _role: "admin" });
+    if (!isAdmin) throw new Error("Unauthorized");
+
+    const { data, error } = await supabaseAdmin
+      .from("product_groups")
+      .insert({
+        name: input.name,
+        description: input.description,
+        sort_order: input.sort_order,
+        is_visible: input.is_visible
+      })
+      .select()
+      .single();
+
+    if (error) throw new Error(error.message);
+    return data;
+  });
+
+export const updateProductGroup = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: unknown) => 
+    z.object({
+      id: z.string().uuid(),
+      name: z.string().min(1),
+      description: z.string().nullable(),
+      sort_order: z.number(),
+      is_visible: z.boolean()
+    }).parse(data)
+  )
+  .handler(async ({ data: input, context }) => {
+    const { data: isAdmin } = await context.supabase.rpc("has_role", { _user_id: context.userId, _role: "admin" });
+    if (!isAdmin) throw new Error("Unauthorized");
+
+    const { data, error } = await supabaseAdmin
+      .from("product_groups")
+      .update({
+        name: input.name,
+        description: input.description,
+        sort_order: input.sort_order,
+        is_visible: input.is_visible
+      })
+      .eq("id", input.id)
+      .select()
+      .single();
+
+    if (error) throw new Error(error.message);
+    return data;
+  });
+
+export const deleteProductGroup = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: unknown) => z.string().uuid().parse(data))
+  .handler(async ({ data: groupId, context }) => {
+    const { data: isAdmin } = await context.supabase.rpc("has_role", { _user_id: context.userId, _role: "admin" });
+    if (!isAdmin) throw new Error("Unauthorized");
+
+    // Verificar se há produtos no grupo
+    const { count, error: countError } = await context.supabase
+      .from("products")
+      .select("id", { count: 'exact', head: true })
+      .eq("group_id", groupId);
+
+    if (countError) throw new Error(countError.message);
+    if (count && count > 0) {
+      throw new Error("Não é possível excluir um grupo que contém produtos.");
+    }
+
+    const { error } = await supabaseAdmin
+      .from("product_groups")
+      .delete()
+      .eq("id", groupId);
+
+    if (error) throw new Error(error.message);
+    return { success: true };
+
 export const createProduct = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((data: unknown) => 
