@@ -18,7 +18,7 @@ export function renderErrorPage(): string {
   </head>
   <body>
     <div class="card">
-      <h1>Ops, algo deu errado</h1>
+      <h1>realmente, publiquei o sistema esta normal, no entanto o preview nao esat funcionando</h1>
       <p>Algo deu errado no servidor. Por favor, tente recarregar a página ou voltar para o início.</p>
       <div class="actions">
         <button class="primary" onclick="location.reload()">Try again</button>
