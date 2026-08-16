@@ -29,6 +29,7 @@ import { Route as AuthenticatedAdminFinanceRouteImport } from './routes/_authent
 import { Route as AuthenticatedAdminImportRouteImport } from './routes/_authenticated/admin/import'
 import { Route as AuthenticatedAdminInvoicesRouteImport } from './routes/_authenticated/admin/invoices'
 import { Route as AuthenticatedAdminLogsRouteImport } from './routes/_authenticated/admin/logs'
+import { Route as AuthenticatedAdminProductGroupsRouteImport } from './routes/_authenticated/admin/product-groups'
 import { Route as AuthenticatedAdminProductsRouteImport } from './routes/_authenticated/admin/products'
 import { Route as AuthenticatedAdminServersRouteImport } from './routes/_authenticated/admin/servers'
 import { Route as AuthenticatedAdminTicketsRouteImport } from './routes/_authenticated/admin/tickets'
@@ -161,6 +162,12 @@ const AuthenticatedAdminLogsRoute = AuthenticatedAdminLogsRouteImport.update({
   path: '/logs',
   getParentRoute: () => AuthenticatedAdminRouteRoute,
 } as any)
+const AuthenticatedAdminProductGroupsRoute =
+  AuthenticatedAdminProductGroupsRouteImport.update({
+    id: '/product-groups',
+    path: '/product-groups',
+    getParentRoute: () => AuthenticatedAdminRouteRoute,
+  } as any)
 const AuthenticatedAdminProductsRoute =
   AuthenticatedAdminProductsRouteImport.update({
     id: '/products',
@@ -319,6 +326,7 @@ export interface FileRoutesByFullPath {
   '/admin/import': typeof AuthenticatedAdminImportRoute
   '/admin/invoices': typeof AuthenticatedAdminInvoicesRoute
   '/admin/logs': typeof AuthenticatedAdminLogsRoute
+  '/admin/product-groups': typeof AuthenticatedAdminProductGroupsRoute
   '/admin/products': typeof AuthenticatedAdminProductsRoute
   '/admin/servers': typeof AuthenticatedAdminServersRoute
   '/admin/tickets': typeof AuthenticatedAdminTicketsRoute
@@ -359,6 +367,7 @@ export interface FileRoutesByTo {
   '/admin/import': typeof AuthenticatedAdminImportRoute
   '/admin/invoices': typeof AuthenticatedAdminInvoicesRoute
   '/admin/logs': typeof AuthenticatedAdminLogsRoute
+  '/admin/product-groups': typeof AuthenticatedAdminProductGroupsRoute
   '/admin/products': typeof AuthenticatedAdminProductsRoute
   '/admin/servers': typeof AuthenticatedAdminServersRoute
   '/admin/tickets': typeof AuthenticatedAdminTicketsRoute
@@ -406,6 +415,7 @@ export interface FileRoutesById {
   '/_authenticated/admin/import': typeof AuthenticatedAdminImportRoute
   '/_authenticated/admin/invoices': typeof AuthenticatedAdminInvoicesRoute
   '/_authenticated/admin/logs': typeof AuthenticatedAdminLogsRoute
+  '/_authenticated/admin/product-groups': typeof AuthenticatedAdminProductGroupsRoute
   '/_authenticated/admin/products': typeof AuthenticatedAdminProductsRoute
   '/_authenticated/admin/servers': typeof AuthenticatedAdminServersRoute
   '/_authenticated/admin/tickets': typeof AuthenticatedAdminTicketsRoute
@@ -453,6 +463,7 @@ export interface FileRouteTypes {
     | '/admin/import'
     | '/admin/invoices'
     | '/admin/logs'
+    | '/admin/product-groups'
     | '/admin/products'
     | '/admin/servers'
     | '/admin/tickets'
@@ -493,6 +504,7 @@ export interface FileRouteTypes {
     | '/admin/import'
     | '/admin/invoices'
     | '/admin/logs'
+    | '/admin/product-groups'
     | '/admin/products'
     | '/admin/servers'
     | '/admin/tickets'
@@ -539,6 +551,7 @@ export interface FileRouteTypes {
     | '/_authenticated/admin/import'
     | '/_authenticated/admin/invoices'
     | '/_authenticated/admin/logs'
+    | '/_authenticated/admin/product-groups'
     | '/_authenticated/admin/products'
     | '/_authenticated/admin/servers'
     | '/_authenticated/admin/tickets'
@@ -722,6 +735,13 @@ declare module '@tanstack/react-router' {
       path: '/logs'
       fullPath: '/admin/logs'
       preLoaderRoute: typeof AuthenticatedAdminLogsRouteImport
+      parentRoute: typeof AuthenticatedAdminRouteRoute
+    }
+    '/_authenticated/admin/product-groups': {
+      id: '/_authenticated/admin/product-groups'
+      path: '/product-groups'
+      fullPath: '/admin/product-groups'
+      preLoaderRoute: typeof AuthenticatedAdminProductGroupsRouteImport
       parentRoute: typeof AuthenticatedAdminRouteRoute
     }
     '/_authenticated/admin/products': {
@@ -922,6 +942,7 @@ interface AuthenticatedAdminRouteRouteChildren {
   AuthenticatedAdminImportRoute: typeof AuthenticatedAdminImportRoute
   AuthenticatedAdminInvoicesRoute: typeof AuthenticatedAdminInvoicesRoute
   AuthenticatedAdminLogsRoute: typeof AuthenticatedAdminLogsRoute
+  AuthenticatedAdminProductGroupsRoute: typeof AuthenticatedAdminProductGroupsRoute
   AuthenticatedAdminProductsRoute: typeof AuthenticatedAdminProductsRoute
   AuthenticatedAdminServersRoute: typeof AuthenticatedAdminServersRoute
   AuthenticatedAdminTicketsRoute: typeof AuthenticatedAdminTicketsRoute
@@ -940,6 +961,7 @@ const AuthenticatedAdminRouteRouteChildren: AuthenticatedAdminRouteRouteChildren
     AuthenticatedAdminImportRoute: AuthenticatedAdminImportRoute,
     AuthenticatedAdminInvoicesRoute: AuthenticatedAdminInvoicesRoute,
     AuthenticatedAdminLogsRoute: AuthenticatedAdminLogsRoute,
+    AuthenticatedAdminProductGroupsRoute: AuthenticatedAdminProductGroupsRoute,
     AuthenticatedAdminProductsRoute: AuthenticatedAdminProductsRoute,
     AuthenticatedAdminServersRoute: AuthenticatedAdminServersRoute,
     AuthenticatedAdminTicketsRoute: AuthenticatedAdminTicketsRoute,
