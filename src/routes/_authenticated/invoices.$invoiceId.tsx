@@ -61,6 +61,8 @@ function InvoiceDetailsPage() {
   const [paymentMethod, setPaymentMethod] = useState<"pix" | "credit_card" | "boleto">("pix");
   const [gateway, setGateway] = useState<string>("abacatepay");
   const [pixResult, setPixResult] = useState<any>(null);
+  const receiptRef = useRef<HTMLDivElement>(null);
+  const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
 
   const invoice = useQuery({
     queryKey: ["invoice", invoiceId],
