@@ -604,7 +604,7 @@ export const updateServiceDetails = createServerFn({ method: "POST" })
     const { data: isAdmin } = await context.supabase.rpc("has_role", { _user_id: context.userId, _role: "admin" });
     if (!isAdmin) throw new Error("Acesso restrito a administradores.");
 
-    const { error } = await context.supabase
+    const { error } = await supabaseAdmin
       .from("services")
       .update({
         username: input.username,
