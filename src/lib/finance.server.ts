@@ -120,7 +120,7 @@ export async function fetchInvoiceDetails(userId: string, id: string) {
   // First attempt to find the invoice for this specific user
   const { data: invoice, error } = await supabaseAdmin
     .from("invoices")
-    .select("*, invoice_items(*)")
+    .select("*, invoice_items(*), profiles(*)")
     .eq("id", id)
     .eq("user_id", userId)
     .maybeSingle();
@@ -136,7 +136,7 @@ export async function fetchInvoiceDetails(userId: string, id: string) {
   if (isAdmin) {
     const { data: adminInvoice, error: adminError } = await supabaseAdmin
       .from("invoices")
-      .select("*, invoice_items(*)")
+      .select("*, invoice_items(*), profiles(*)")
       .eq("id", id)
       .single();
 
