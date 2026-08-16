@@ -58,6 +58,7 @@ const ADMIN_SECTIONS: NavSection[] = [
     icon: ShoppingBag,
     links: [
       { label: "Produtos e planos", to: "/admin/products", icon: Package },
+      { label: "Grupos de produtos", to: "/admin/product-groups", icon: LayoutPanelLeft },
       { label: "Cupons e promoções", to: "/admin/coupons", icon: Ticket },
     ],
   },
