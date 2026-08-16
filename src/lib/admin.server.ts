@@ -51,11 +51,20 @@ export async function updateBrandingImplementation(
   data: any,
   context: { supabase: SupabaseClient<Database>; userId: string; claims: any },
 ) {
-  const { data: isAdmin } = await context.supabase.rpc("has_role", {
+  const { data: isAdmin, error: roleError } = await context.supabase.rpc("has_role", {
     _user_id: context.userId,
     _role: "admin",
   });
-  if (!isAdmin) throw new Error("Acesso restrito a administradores.");
+  
+  if (roleError) {
+    console.error("[Branding] Erro ao verificar permissões:", roleError);
+    throw new Error(`Erro de permissão: ${roleError.message}`);
+  }
+
+  if (!isAdmin) {
+    console.warn(`[Branding] Acesso negado para usuário ${context.userId}`);
+    throw new Error("Acesso restrito a administradores.");
+  }
 
   const { error } = await context.supabase.from("system_settings").upsert({
     key: "branding",
