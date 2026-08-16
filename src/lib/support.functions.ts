@@ -440,6 +440,7 @@ export const deleteProductGroup = createServerFn({ method: "POST" })
 
     if (error) throw new Error(error.message);
     return { success: true };
+  });
 
 export const createProduct = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
