@@ -13,14 +13,38 @@ export const getVPSAdminData = createServerFn({ method: "GET" })
       .from('vps_instances')
       .select(`
         *,
-        service:services(
-          *,
-          profile:profiles(full_name, email)
-        )
+        service:services(*)
       `);
 
     if (error) throw error;
-    return data;
+
+    const rows = data ?? [];
+    const userIds = [
+      ...new Set(
+        rows
+          .map((r: any) => r.service?.user_id)
+          .filter((id: string | undefined): id is string => Boolean(id)),
+      ),
+    ];
+
+    let profilesById: Record<string, { full_name: string | null; email: string | null }> = {};
+    if (userIds.length > 0) {
+      const { data: profiles, error: profilesError } = await supabaseAdmin
+        .from('profiles')
+        .select('id, full_name, email')
+        .in('id', userIds);
+      if (profilesError) throw profilesError;
+      profilesById = Object.fromEntries(
+        (profiles ?? []).map((p: any) => [p.id, { full_name: p.full_name, email: p.email }]),
+      );
+    }
+
+    return rows.map((r: any) => ({
+      ...r,
+      service: r.service
+        ? { ...r.service, profile: profilesById[r.service.user_id] ?? null }
+        : null,
+    }));
   });
 
 export const updateVPSInstance = createServerFn({ method: "POST" })
