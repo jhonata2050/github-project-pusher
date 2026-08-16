@@ -28,6 +28,7 @@ export type Database = {
           ip_address: string | null
           status: string
           user_agent: string | null
+          user_id: string | null
         }
         Insert: {
           action: string
@@ -42,6 +43,7 @@ export type Database = {
           ip_address?: string | null
           status: string
           user_agent?: string | null
+          user_id?: string | null
         }
         Update: {
           action?: string
@@ -56,6 +58,7 @@ export type Database = {
           ip_address?: string | null
           status?: string
           user_agent?: string | null
+          user_id?: string | null
         }
         Relationships: []
       }
@@ -544,6 +547,7 @@ export type Database = {
           id: string
           ip_address: string | null
           is_active: boolean | null
+          max_accounts: number | null
           server_type: string | null
         }
         Insert: {
@@ -554,6 +558,7 @@ export type Database = {
           id?: string
           ip_address?: string | null
           is_active?: boolean | null
+          max_accounts?: number | null
           server_type?: string | null
         }
         Update: {
@@ -564,12 +569,14 @@ export type Database = {
           id?: string
           ip_address?: string | null
           is_active?: boolean | null
+          max_accounts?: number | null
           server_type?: string | null
         }
         Relationships: []
       }
       services: {
         Row: {
+          auto_renew: boolean | null
           billing_cycle: Database["public"]["Enums"]["billing_cycle"] | null
           created_at: string
           domain: string | null
@@ -577,6 +584,7 @@ export type Database = {
           next_due_date: string | null
           order_id: string | null
           product_id: string | null
+          server_id: string | null
           status: Database["public"]["Enums"]["service_status"]
           suspension_reason: string | null
           updated_at: string
@@ -585,6 +593,7 @@ export type Database = {
           whmcs_id: string | null
         }
         Insert: {
+          auto_renew?: boolean | null
           billing_cycle?: Database["public"]["Enums"]["billing_cycle"] | null
           created_at?: string
           domain?: string | null
@@ -592,6 +601,7 @@ export type Database = {
           next_due_date?: string | null
           order_id?: string | null
           product_id?: string | null
+          server_id?: string | null
           status?: Database["public"]["Enums"]["service_status"]
           suspension_reason?: string | null
           updated_at?: string
@@ -600,6 +610,7 @@ export type Database = {
           whmcs_id?: string | null
         }
         Update: {
+          auto_renew?: boolean | null
           billing_cycle?: Database["public"]["Enums"]["billing_cycle"] | null
           created_at?: string
           domain?: string | null
@@ -607,6 +618,7 @@ export type Database = {
           next_due_date?: string | null
           order_id?: string | null
           product_id?: string | null
+          server_id?: string | null
           status?: Database["public"]["Enums"]["service_status"]
           suspension_reason?: string | null
           updated_at?: string
@@ -627,6 +639,13 @@ export type Database = {
             columns: ["product_id"]
             isOneToOne: false
             referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "services_server_id_fkey"
+            columns: ["server_id"]
+            isOneToOne: false
+            referencedRelation: "servers"
             referencedColumns: ["id"]
           },
         ]
@@ -693,6 +712,7 @@ export type Database = {
           priority: string | null
           status: string | null
           subject: string | null
+          updated_at: string | null
           user_id: string
         }
         Insert: {
@@ -703,6 +723,7 @@ export type Database = {
           priority?: string | null
           status?: string | null
           subject?: string | null
+          updated_at?: string | null
           user_id: string
         }
         Update: {
@@ -713,6 +734,7 @@ export type Database = {
           priority?: string | null
           status?: string | null
           subject?: string | null
+          updated_at?: string | null
           user_id?: string
         }
         Relationships: []
@@ -722,6 +744,7 @@ export type Database = {
           amount: number
           created_at: string
           gateway: string | null
+          gateway_reference: string | null
           id: string
           invoice_id: string | null
           status: string | null
@@ -732,6 +755,7 @@ export type Database = {
           amount: number
           created_at?: string
           gateway?: string | null
+          gateway_reference?: string | null
           id?: string
           invoice_id?: string | null
           status?: string | null
@@ -742,6 +766,7 @@ export type Database = {
           amount?: number
           created_at?: string
           gateway?: string | null
+          gateway_reference?: string | null
           id?: string
           invoice_id?: string | null
           status?: string | null
@@ -782,6 +807,7 @@ export type Database = {
       vps_instances: {
         Row: {
           created_at: string
+          external_id: string | null
           id: string
           ip_address: string | null
           provider_id: string | null
@@ -791,6 +817,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          external_id?: string | null
           id?: string
           ip_address?: string | null
           provider_id?: string | null
@@ -800,6 +827,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          external_id?: string | null
           id?: string
           ip_address?: string | null
           provider_id?: string | null
