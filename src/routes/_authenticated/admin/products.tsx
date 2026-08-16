@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Package, Plus, Search, Store, Edit2, Save, X, Server } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import { AppShell } from "@/components/app/AppShell";
 import { Badge } from "@/components/ui/badge";
