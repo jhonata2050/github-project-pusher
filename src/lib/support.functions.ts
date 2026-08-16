@@ -178,6 +178,9 @@ export const replyTicket = createServerFn({ method: "POST" })
 export const getServers = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
+    // Admin check is handled by RLS if policy exists, but let's be explicit if needed
+    // or use supabaseAdmin if we want to ensure admin always sees it.
+    // For now, let's stick to context.supabase and fix RLS.
     const { data, error } = await context.supabase
       .from("servers")
       .select("*");
@@ -199,7 +202,11 @@ export const createServerDA = createServerFn({ method: "POST" })
     }).parse(data)
   )
   .handler(async ({ data: input, context }) => {
-    const { data, error } = await context.supabase
+    // Verify admin role explicitly
+    const { data: isAdmin } = await context.supabase.rpc("has_role", { _user_id: context.userId, _role: "admin" });
+    if (!isAdmin) throw new Error("Unauthorized: Only admins can create servers.");
+
+    const { data, error } = await supabaseAdmin
       .from("servers")
       .insert({
         hostname: input.hostname,
@@ -237,7 +244,10 @@ export const updateServerDA = createServerFn({ method: "POST" })
       ...(input.api_token && input.api_token.length > 0 ? { api_token: input.api_token } : {}),
     } as any;
 
-    const { data, error } = await context.supabase
+    const { data: isAdmin } = await context.supabase.rpc("has_role", { _user_id: context.userId, _role: "admin" });
+    if (!isAdmin) throw new Error("Unauthorized: Only admins can update servers.");
+
+    const { data, error } = await supabaseAdmin
       .from("servers")
       .update(patch)
       .eq("id", input.id)
@@ -252,7 +262,10 @@ export const deleteServerDA = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((data: unknown) => z.string().parse(data))
   .handler(async ({ data: serverId, context }) => {
-    const { error } = await context.supabase.from("servers").delete().eq("id", serverId);
+    const { data: isAdmin } = await context.supabase.rpc("has_role", { _user_id: context.userId, _role: "admin" });
+    if (!isAdmin) throw new Error("Unauthorized: Only admins can delete servers.");
+
+    const { error } = await supabaseAdmin.from("servers").delete().eq("id", serverId);
     if (error) throw new Error(error.message);
     return { success: true };
   });
