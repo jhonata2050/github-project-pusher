@@ -22,7 +22,7 @@ export async function sendEmail({
     .in("key", ["smtp_host", "smtp_port", "smtp_user", "smtp_pass", "smtp_encryption", "support_email", "company_name", "resend_api_key"]);
 
   const config: Record<string, string> = {};
-  settings?.forEach((s) => {
+  settings?.forEach((s: any) => {
     if (typeof s.value === 'string') {
       config[s.key] = s.value.replace(/"/g, ''); // Limpa aspas extras do banco
     }

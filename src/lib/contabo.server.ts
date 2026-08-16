@@ -6,7 +6,7 @@ async function getContaboToken() {
       .select("*");
   
   const settings: Record<string, string> = {};
-  settingsData?.forEach(s => {
+  settingsData?.forEach((s: any) => {
     settings[s.key] = typeof s.value === 'string' ? s.value.trim() : String(s.value ?? '').trim();
   });
   

@@ -16,7 +16,7 @@ export const getSystemSettings = createServerFn({ method: "GET" })
     if (error) throw new Error(error.message);
 
     const settings: Record<string, any> = {};
-    data.forEach(s => {
+    data.forEach((s: any) => {
       settings[s.key] = s.value;
     });
 
