@@ -404,6 +404,7 @@ export const updateProductGroup = createServerFn({ method: "POST" })
       .from("product_groups")
       .update({
         name: input.name,
+        slug: input.name.toLowerCase().replace(/\s+/g, '-'),
         description: input.description,
         sort_order: input.sort_order,
         is_visible: input.is_visible
