@@ -81,7 +81,7 @@ export async function updateBrandingImplementation(
       description: `Branding atualizado: ${data.app_name}`,
       ip_address: ipAddress as string | null,
       user_agent: userAgent,
-      metadata: { branding: data } as unknown as Json,
+      metadata: { branding: data } as any,
     });
   } catch (e) {
     console.error("Erro ao logar alteração de branding:", e);

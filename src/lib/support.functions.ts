@@ -202,11 +202,10 @@ export const createServerDA = createServerFn({ method: "POST" })
     const { data, error } = await context.supabase
       .from("servers")
       .insert({
-        name: input.name,
         hostname: input.hostname,
         ip_address: input.ip_address ?? null,
         api_user: input.api_user,
-        api_token: input.api_token,
+        api_token: input.api_token || "",
         max_accounts: input.max_accounts
       })
       .select()
@@ -231,13 +230,12 @@ export const updateServerDA = createServerFn({ method: "POST" })
   )
   .handler(async ({ data: input, context }) => {
     const patch = {
-      name: input.name,
       hostname: input.hostname,
       ip_address: input.ip_address ?? null,
       api_user: input.api_user,
       max_accounts: input.max_accounts,
       ...(input.api_token && input.api_token.length > 0 ? { api_token: input.api_token } : {}),
-    };
+    } as any;
 
     const { data, error } = await context.supabase
       .from("servers")

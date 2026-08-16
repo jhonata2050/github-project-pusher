@@ -26,6 +26,7 @@ export type Database = {
           entity_type: string | null
           id: string
           ip_address: string | null
+          metadata: Json
           status: string
           user_agent: string | null
           user_id: string | null
@@ -41,6 +42,7 @@ export type Database = {
           entity_type?: string | null
           id?: string
           ip_address?: string | null
+          metadata?: Json
           status: string
           user_agent?: string | null
           user_id?: string | null
@@ -56,6 +58,7 @@ export type Database = {
           entity_type?: string | null
           id?: string
           ip_address?: string | null
+          metadata?: Json
           status?: string
           user_agent?: string | null
           user_id?: string | null
