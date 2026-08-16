@@ -373,6 +373,7 @@ export const createProductGroup = createServerFn({ method: "POST" })
       .from("product_groups")
       .insert({
         name: input.name,
+        slug: input.name.toLowerCase().replace(/\s+/g, '-'),
         description: input.description,
         sort_order: input.sort_order,
         is_visible: input.is_visible
