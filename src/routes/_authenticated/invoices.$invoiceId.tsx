@@ -312,10 +312,83 @@ function InvoiceDetailsPage() {
                 <p className="mt-2 text-sm text-muted-foreground">
                   Esta fatura foi liquidada em {inv.paid_at ? new Date(inv.paid_at).toLocaleDateString("pt-BR") : "data desconhecida"}.
                 </p>
-                <Button variant="outline" className="mt-6 w-full rounded-xl gap-2" onClick={handleDownloadReceipt}>
+                <Button 
+                  variant="outline" 
+                  className="mt-6 w-full rounded-xl gap-2" 
+                  onClick={handleDownloadReceipt}
+                  disabled={isGeneratingPdf}
+                >
                   <Download className="size-4" />
-                  Baixar Recibo
+                  {isGeneratingPdf ? "Gerando..." : "Baixar Recibo (PDF)"}
                 </Button>
+
+                {/* Hidden Receipt Template for PDF Generation */}
+                <div className="hidden">
+                  <div 
+                    ref={receiptRef}
+                    className="p-10 text-slate-900 bg-white"
+                    style={{ width: "800px", fontFamily: "sans-serif" }}
+                  >
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <h1 className="text-2xl font-bold">Recibo de Pagamento</h1>
+                        <p className="text-slate-500 text-sm mt-1">Fatura #{inv.id.slice(0, 8)}</p>
+                      </div>
+                      <div className="bg-green-100 text-green-700 px-4 py-1 rounded-full text-xs font-bold uppercase">
+                        Paga
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-8 mt-8 pb-8 border-b border-slate-200">
+                      <div>
+                        <p className="text-xs font-semibold uppercase text-slate-400">Dados da Fatura</p>
+                        <div className="mt-2 space-y-1 text-sm">
+                          <p><span className="text-slate-500">Emitida em:</span> {new Date(inv.created_at).toLocaleDateString("pt-BR")}</p>
+                          <p><span className="text-slate-500">Paga em:</span> {inv.paid_at ? new Date(inv.paid_at).toLocaleDateString("pt-BR") : "—"}</p>
+                        </div>
+                      </div>
+                      <div>
+                        <p className="text-xs font-semibold uppercase text-slate-400">Cliente</p>
+                        <div className="mt-2 text-sm">
+                          <p className="font-medium">{inv.profiles?.full_name || "Cliente"}</p>
+                          <p className="text-slate-500">{inv.profiles?.email || ""}</p>
+                        </div>
+                      </div>
+                    </div>
+
+                    <table className="w-full mt-8 text-sm">
+                      <thead>
+                        <tr className="border-b border-slate-200 text-slate-400 font-semibold uppercase text-[10px]">
+                          <th className="py-3 text-left">Descrição</th>
+                          <th className="py-3 text-right">Valor</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100">
+                        {inv.invoice_items?.map((item: any) => (
+                          <tr key={item.id}>
+                            <td className="py-4 font-medium">{item.description}</td>
+                            <td className="py-4 text-right font-bold text-slate-900">{brl.format(Number(item.amount))}</td>
+                          </tr>
+                        )) || (
+                          <tr>
+                            <td className="py-4 font-medium">Serviço</td>
+                            <td className="py-4 text-right font-bold text-slate-900">{brl.format(Number(inv.total_amount))}</td>
+                          </tr>
+                        )}
+                      </tbody>
+                    </table>
+
+                    <div className="mt-8 pt-6 border-t border-slate-200 flex flex-col items-end">
+                      <div className="flex w-64 justify-between items-center text-lg font-bold">
+                        <span className="text-slate-500">Total Pago:</span>
+                        <span className="text-brand">{brl.format(Number(inv.total_amount))}</span>
+                      </div>
+                      <p className="mt-12 text-center w-full text-xs text-slate-400 italic">
+                        Este é um recibo gerado automaticamente pelo sistema HostPanel.
+                      </p>
+                    </div>
+                  </div>
+                </div>
               </div>
             )}
             
