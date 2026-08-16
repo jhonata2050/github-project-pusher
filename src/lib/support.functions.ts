@@ -580,6 +580,8 @@ export const updateServiceDetails = createServerFn({ method: "POST" })
       username: z.string().nullable(),
       domain: z.string().nullable(),
       server_id: z.string().uuid().nullable(),
+      product_id: z.string().uuid().nullable(),
+      next_due_date: z.string().nullable(),
       status: z.enum(["active", "pending", "suspended", "terminated", "cancelled"]).nullable(),
     }).parse(data)
   )
@@ -593,6 +595,8 @@ export const updateServiceDetails = createServerFn({ method: "POST" })
         username: input.username,
         domain: input.domain,
         server_id: input.server_id,
+        product_id: input.product_id || undefined,
+        next_due_date: input.next_due_date || null,
         status: input.status ? (input.status as any) : null
       })
       .eq("id", input.serviceId);
