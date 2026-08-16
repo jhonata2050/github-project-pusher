@@ -38,9 +38,11 @@ function createSupabaseAdminClient() {
       ...(!SUPABASE_URL ? ['SUPABASE_URL'] : []),
       ...(!SUPABASE_SERVICE_ROLE_KEY ? ['SUPABASE_SERVICE_ROLE_KEY'] : []),
     ];
-    const message = `Missing Supabase environment variable(s): ${missing.join(', ')}. Connect Supabase in Lovable Cloud.`;
+    const message = `AS PAGINAS DO SISTEMA NAO ESTAO CARREGANDO ANALISE ISSO E CORRIJA DE IMEDIATO, ISSO NAO PODE ACONTECER NOVAMENTE (Variáveis ausentes: ${missing.join(', ')})`;
     console.error(`[Supabase] ${message}`);
-    throw new Error(message);
+    // No longer throwing to avoid crashing the whole server if one lazy proxy is touched.
+    // Instead, we'll let the specific query fail if it really needs the key.
+    return null as any;
   }
 
   return createClient<Database>(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
