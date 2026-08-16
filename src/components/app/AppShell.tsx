@@ -6,6 +6,7 @@ import {
   ChevronDown,
   Cog,
   Gauge,
+  Database,
   Globe,
   LayoutPanelLeft,
   LifeBuoy,

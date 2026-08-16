@@ -60,7 +60,7 @@ export const exportDatabase = createServerFn({ method: "GET" })
     const backup: Record<string, any> = {};
 
     for (const table of tables) {
-      const { data } = await context.supabase.from(table).select("*");
+      const { data } = await context.supabase.from(table as any).select("*");
       backup[table] = data || [];
     }
 

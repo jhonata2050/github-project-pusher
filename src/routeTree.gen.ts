@@ -22,6 +22,7 @@ import { Route as AuthResetPasswordRouteImport } from './routes/auth.reset-passw
 import { Route as AuthenticatedAdminIndexRouteImport } from './routes/_authenticated/admin/index'
 import { Route as AuthenticatedAdminClientsRouteImport } from './routes/_authenticated/admin/clients'
 import { Route as AuthenticatedAdminCouponsRouteImport } from './routes/_authenticated/admin/coupons'
+import { Route as AuthenticatedAdminDatabaseRouteImport } from './routes/_authenticated/admin/database'
 import { Route as AuthenticatedAdminDomainsRouteImport } from './routes/_authenticated/admin/domains'
 import { Route as AuthenticatedAdminEmailsRouteImport } from './routes/_authenticated/admin/emails'
 import { Route as AuthenticatedAdminFinanceRouteImport } from './routes/_authenticated/admin/finance'
@@ -117,6 +118,12 @@ const AuthenticatedAdminCouponsRoute =
   AuthenticatedAdminCouponsRouteImport.update({
     id: '/coupons',
     path: '/coupons',
+    getParentRoute: () => AuthenticatedAdminRouteRoute,
+  } as any)
+const AuthenticatedAdminDatabaseRoute =
+  AuthenticatedAdminDatabaseRouteImport.update({
+    id: '/database',
+    path: '/database',
     getParentRoute: () => AuthenticatedAdminRouteRoute,
   } as any)
 const AuthenticatedAdminDomainsRoute =
@@ -305,6 +312,7 @@ export interface FileRoutesByFullPath {
   '/auth/reset-password': typeof AuthResetPasswordRoute
   '/admin/clients': typeof AuthenticatedAdminClientsRouteWithChildren
   '/admin/coupons': typeof AuthenticatedAdminCouponsRoute
+  '/admin/database': typeof AuthenticatedAdminDatabaseRoute
   '/admin/domains': typeof AuthenticatedAdminDomainsRoute
   '/admin/emails': typeof AuthenticatedAdminEmailsRoute
   '/admin/finance': typeof AuthenticatedAdminFinanceRoute
@@ -344,6 +352,7 @@ export interface FileRoutesByTo {
   '/profile': typeof AuthenticatedProfileRoute
   '/auth/reset-password': typeof AuthResetPasswordRoute
   '/admin/coupons': typeof AuthenticatedAdminCouponsRoute
+  '/admin/database': typeof AuthenticatedAdminDatabaseRoute
   '/admin/domains': typeof AuthenticatedAdminDomainsRoute
   '/admin/emails': typeof AuthenticatedAdminEmailsRoute
   '/admin/finance': typeof AuthenticatedAdminFinanceRoute
@@ -390,6 +399,7 @@ export interface FileRoutesById {
   '/auth/reset-password': typeof AuthResetPasswordRoute
   '/_authenticated/admin/clients': typeof AuthenticatedAdminClientsRouteWithChildren
   '/_authenticated/admin/coupons': typeof AuthenticatedAdminCouponsRoute
+  '/_authenticated/admin/database': typeof AuthenticatedAdminDatabaseRoute
   '/_authenticated/admin/domains': typeof AuthenticatedAdminDomainsRoute
   '/_authenticated/admin/emails': typeof AuthenticatedAdminEmailsRoute
   '/_authenticated/admin/finance': typeof AuthenticatedAdminFinanceRoute
@@ -436,6 +446,7 @@ export interface FileRouteTypes {
     | '/auth/reset-password'
     | '/admin/clients'
     | '/admin/coupons'
+    | '/admin/database'
     | '/admin/domains'
     | '/admin/emails'
     | '/admin/finance'
@@ -475,6 +486,7 @@ export interface FileRouteTypes {
     | '/profile'
     | '/auth/reset-password'
     | '/admin/coupons'
+    | '/admin/database'
     | '/admin/domains'
     | '/admin/emails'
     | '/admin/finance'
@@ -520,6 +532,7 @@ export interface FileRouteTypes {
     | '/auth/reset-password'
     | '/_authenticated/admin/clients'
     | '/_authenticated/admin/coupons'
+    | '/_authenticated/admin/database'
     | '/_authenticated/admin/domains'
     | '/_authenticated/admin/emails'
     | '/_authenticated/admin/finance'
@@ -660,6 +673,13 @@ declare module '@tanstack/react-router' {
       path: '/coupons'
       fullPath: '/admin/coupons'
       preLoaderRoute: typeof AuthenticatedAdminCouponsRouteImport
+      parentRoute: typeof AuthenticatedAdminRouteRoute
+    }
+    '/_authenticated/admin/database': {
+      id: '/_authenticated/admin/database'
+      path: '/database'
+      fullPath: '/admin/database'
+      preLoaderRoute: typeof AuthenticatedAdminDatabaseRouteImport
       parentRoute: typeof AuthenticatedAdminRouteRoute
     }
     '/_authenticated/admin/domains': {
@@ -895,6 +915,7 @@ const AuthenticatedAdminClientsRouteWithChildren =
 interface AuthenticatedAdminRouteRouteChildren {
   AuthenticatedAdminClientsRoute: typeof AuthenticatedAdminClientsRouteWithChildren
   AuthenticatedAdminCouponsRoute: typeof AuthenticatedAdminCouponsRoute
+  AuthenticatedAdminDatabaseRoute: typeof AuthenticatedAdminDatabaseRoute
   AuthenticatedAdminDomainsRoute: typeof AuthenticatedAdminDomainsRoute
   AuthenticatedAdminEmailsRoute: typeof AuthenticatedAdminEmailsRoute
   AuthenticatedAdminFinanceRoute: typeof AuthenticatedAdminFinanceRoute
@@ -912,6 +933,7 @@ const AuthenticatedAdminRouteRouteChildren: AuthenticatedAdminRouteRouteChildren
   {
     AuthenticatedAdminClientsRoute: AuthenticatedAdminClientsRouteWithChildren,
     AuthenticatedAdminCouponsRoute: AuthenticatedAdminCouponsRoute,
+    AuthenticatedAdminDatabaseRoute: AuthenticatedAdminDatabaseRoute,
     AuthenticatedAdminDomainsRoute: AuthenticatedAdminDomainsRoute,
     AuthenticatedAdminEmailsRoute: AuthenticatedAdminEmailsRoute,
     AuthenticatedAdminFinanceRoute: AuthenticatedAdminFinanceRoute,
