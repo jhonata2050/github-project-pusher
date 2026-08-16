@@ -18,7 +18,7 @@ export function renderErrorPage(): string {
   </head>
   <body>
     <div class="card">
-      <h1>AS PAGINAS DO SISTEMA NAO ESTAO CARREGANDO ANALISE ISSO E CORRIJA DE IMEDIATO, ISSO NAO PODE ACONTECER NOVAMENTE</h1>
+      <h1>NENHUMA PAGINA ESTA CARREGANDO, VERIFIQUE ISSO E CORRIJA</h1>
       <p>Algo deu errado no servidor. Por favor, tente recarregar a página ou voltar para o início.</p>
       <div class="actions">
         <button class="primary" onclick="location.reload()">Try again</button>

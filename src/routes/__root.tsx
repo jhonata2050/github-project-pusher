@@ -47,8 +47,8 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
       <div className="max-w-md text-center">
-        <h1 className="text-xl font-semibold tracking-tight text-foreground">
-          AS PAGINAS DO SISTEMA NAO ESTAO CARREGANDO ANALISE ISSO E CORRIJA DE IMEDIATO, ISSO NAO PODE ACONTECER NOVAMENTE
+        <h1 className="text-xl font-semibold tracking-tight text-foreground uppercase">
+          NENHUMA PAGINA ESTA CARREGANDO, VERIFIQUE ISSO E CORRIJA
         </h1>
         <p className="mt-2 text-sm text-muted-foreground">
           Algo deu errado no sistema. Por favor, tente recarregar a página ou voltar para o início.
