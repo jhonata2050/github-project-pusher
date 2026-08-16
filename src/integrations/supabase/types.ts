@@ -403,6 +403,7 @@ export type Database = {
           disk_quota_mb: number | null
           domains_limit: number | null
           email_accounts_limit: number | null
+          external_id: string | null
           group_id: string | null
           id: string
           is_featured: boolean
@@ -413,6 +414,7 @@ export type Database = {
           slug: string
           sort_order: number
           updated_at: string
+          whmcs_id: number | null
         }
         Insert: {
           auto_provision?: boolean
@@ -424,6 +426,7 @@ export type Database = {
           disk_quota_mb?: number | null
           domains_limit?: number | null
           email_accounts_limit?: number | null
+          external_id?: string | null
           group_id?: string | null
           id?: string
           is_featured?: boolean
@@ -434,6 +437,7 @@ export type Database = {
           slug: string
           sort_order?: number
           updated_at?: string
+          whmcs_id?: number | null
         }
         Update: {
           auto_provision?: boolean
@@ -445,6 +449,7 @@ export type Database = {
           disk_quota_mb?: number | null
           domains_limit?: number | null
           email_accounts_limit?: number | null
+          external_id?: string | null
           group_id?: string | null
           id?: string
           is_featured?: boolean
@@ -455,6 +460,7 @@ export type Database = {
           slug?: string
           sort_order?: number
           updated_at?: string
+          whmcs_id?: number | null
         }
         Relationships: [
           {
@@ -480,10 +486,12 @@ export type Database = {
           notes: string | null
           phone: string | null
           postal_code: string | null
+          postcode: string | null
           state: string | null
           status: string
           tax_id: string | null
           updated_at: string
+          whmcs_id: string | null
         }
         Insert: {
           address_line?: string | null
@@ -498,10 +506,12 @@ export type Database = {
           notes?: string | null
           phone?: string | null
           postal_code?: string | null
+          postcode?: string | null
           state?: string | null
           status?: string
           tax_id?: string | null
           updated_at?: string
+          whmcs_id?: string | null
         }
         Update: {
           address_line?: string | null
@@ -516,10 +526,12 @@ export type Database = {
           notes?: string | null
           phone?: string | null
           postal_code?: string | null
+          postcode?: string | null
           state?: string | null
           status?: string
           tax_id?: string | null
           updated_at?: string
+          whmcs_id?: string | null
         }
         Relationships: []
       }
@@ -623,17 +635,17 @@ export type Database = {
         Row: {
           key: string
           updated_at: string
-          value: string
+          value: Json
         }
         Insert: {
           key: string
           updated_at?: string
-          value: string
+          value: Json
         }
         Update: {
           key?: string
           updated_at?: string
-          value?: string
+          value?: Json
         }
         Relationships: []
       }
