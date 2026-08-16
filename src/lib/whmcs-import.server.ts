@@ -123,7 +123,7 @@ async function resolveUserId(email: string, whmcsClientId?: string): Promise<str
     const { data: { users }, error } = await supabaseAdmin.auth.admin.listUsers();
     if (!error && users) {
       // Find the first user with this whmcs_id in metadata
-      const user = users.find(u => u.user_metadata?.['whmcs_id']?.toString() === cleanWhmcsId);
+      const user = users.find((u: any) => u.user_metadata?.['whmcs_id']?.toString() === cleanWhmcsId);
       if (user) {
         console.log(`[Import] Resolvido via auth metadata whmcs_id (${cleanWhmcsId}): ${user.id}`);
         return user.id;
@@ -149,7 +149,7 @@ async function resolveUserId(email: string, whmcsClientId?: string): Promise<str
   if (cleanEmail) {
     const { data: { users }, error } = await supabaseAdmin.auth.admin.listUsers();
     if (!error && users) {
-      const user = users.find(u => u.email?.toLowerCase() === cleanEmail);
+      const user = users.find((u: any) => u.email?.toLowerCase() === cleanEmail);
       if (user) {
         console.log(`[Import] Resolvido via auth email fallback (${cleanEmail}): ${user.id}`);
         return user.id;
@@ -221,7 +221,7 @@ async function importClients(rows: Record<string, string>[], stats: ImportStats)
 
       // Double check in Auth by email to be absolutely sure before creating
       const { data: { users }, error: listError } = await supabaseAdmin.auth.admin.listUsers();
-      const existingAuthUser = users?.find(u => u.email?.toLowerCase() === email.toLowerCase());
+      const existingAuthUser = users?.find((u: any) => u.email?.toLowerCase() === email.toLowerCase());
 
       let userId = existingAuthUser?.id;
 

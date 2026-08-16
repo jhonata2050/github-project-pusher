@@ -66,7 +66,7 @@ export const Route = createFileRoute('/api/public/cron/maintenance')({
             .select('*');
             
           const settingsMap: Record<string, any> = {};
-          sysSettings?.forEach(s => settingsMap[s.key] = s.value);
+          sysSettings?.forEach((s: any) => settingsMap[s.key] = s.value);
 
           const deleteDays = Number(settingsMap['auto_delete_days']) || 30;
           const deleteDate = new Date();

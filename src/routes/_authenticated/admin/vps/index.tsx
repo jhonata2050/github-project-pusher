@@ -290,7 +290,7 @@ function AdminVPSPage() {
                       <TableCell colSpan={5} className="text-center py-8">Nenhum servidor encontrado.</TableCell>
                     </TableRow>
                   ) : externalInstances?.map((instance: any) => {
-                    const isAlreadyLinked = instances?.some(i => i.external_id === String(instance.instanceId));
+                    const isAlreadyLinked = instances?.some((i: any) => i.external_id === String(instance.instanceId));
                     return (
                       <TableRow key={instance.instanceId}>
                         <TableCell className="font-medium">{instance.displayName}</TableCell>
