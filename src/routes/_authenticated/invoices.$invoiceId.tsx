@@ -86,6 +86,56 @@ function InvoiceDetailsPage() {
   const inv = invoice.data;
   const status = STATUS_LABELS[inv.status] || { label: inv.status, color: "bg-muted" };
 
+  const handleDownloadReceipt = () => {
+    const items = (inv.invoice_items || [])
+      .map(
+        (item: any) =>
+          `<tr><td>${item.description ?? "Item"}</td><td style="text-align:right">${brl.format(Number(item.amount || 0))}</td></tr>`,
+      )
+      .join("");
+
+    const html = `<!doctype html>
+<html lang="pt-BR"><head><meta charset="utf-8" />
+<title>Recibo ${inv.id.slice(0, 8)}</title>
+<style>
+  body{font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;padding:40px;color:#0f172a}
+  h1{font-size:20px;margin:0 0 4px}
+  .muted{color:#64748b;font-size:13px}
+  table{width:100%;border-collapse:collapse;margin-top:24px;font-size:14px}
+  th,td{padding:10px 8px;border-bottom:1px solid #e2e8f0;text-align:left}
+  .total{margin-top:20px;text-align:right;font-size:18px;font-weight:700}
+  .paid{display:inline-block;margin-top:16px;padding:4px 12px;border-radius:999px;background:#dcfce7;color:#166534;font-size:12px;font-weight:700;text-transform:uppercase}
+</style></head>
+<body>
+  <h1>Recibo de pagamento</h1>
+  <p class="muted">Fatura #${inv.id.slice(0, 8)}</p>
+  <p class="muted">Emitida em ${new Date(inv.created_at).toLocaleDateString("pt-BR")}</p>
+  <p class="muted">Paga em ${inv.paid_at ? new Date(inv.paid_at).toLocaleDateString("pt-BR") : "—"}</p>
+  <span class="paid">Paga</span>
+  <table><thead><tr><th>Descrição</th><th style="text-align:right">Valor</th></tr></thead>
+  <tbody>${items || "<tr><td>Serviço</td><td style=\"text-align:right\">" + brl.format(Number(inv.total_amount)) + "</td></tr>"}</tbody></table>
+  <div class="total">Total: ${brl.format(Number(inv.total_amount))}</div>
+  <script>window.onload = () => { window.print(); }<\/script>
+</body></html>`;
+
+    const blob = new Blob([html], { type: "text/html;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `recibo-${inv.id.slice(0, 8)}.html`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 2000);
+
+    const printWindow = window.open("", "_blank", "width=800,height=900");
+    if (printWindow) {
+      printWindow.document.write(html);
+      printWindow.document.close();
+    }
+    toast.success("Recibo gerado com sucesso!");
+  };
+
   return (
     <AppShell
       area="client"
@@ -273,7 +323,7 @@ function InvoiceDetailsPage() {
                 <p className="mt-2 text-sm text-muted-foreground">
                   Esta fatura foi liquidada em {inv.paid_at ? new Date(inv.paid_at).toLocaleDateString("pt-BR") : "data desconhecida"}.
                 </p>
-                <Button variant="outline" className="mt-6 w-full rounded-xl gap-2">
+                <Button variant="outline" className="mt-6 w-full rounded-xl gap-2" onClick={handleDownloadReceipt}>
                   <Download className="size-4" />
                   Baixar Recibo
                 </Button>
