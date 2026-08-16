@@ -1,0 +1,18 @@
+CREATE INDEX IF NOT EXISTS idx_services_user_created ON public.services (user_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_invoices_user_created ON public.invoices (user_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_invoices_due_date ON public.invoices (due_date);
+CREATE INDEX IF NOT EXISTS idx_tickets_user_updated ON public.tickets (user_id, updated_at DESC);
+CREATE INDEX IF NOT EXISTS idx_tickets_updated_at ON public.tickets (updated_at DESC);
+CREATE INDEX IF NOT EXISTS idx_email_logs_user_created ON public.email_logs (user_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_email_logs_created_at ON public.email_logs (created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_invoice_items_invoice_id ON public.invoice_items (invoice_id);
+CREATE INDEX IF NOT EXISTS idx_invoice_items_service_id ON public.invoice_items (service_id);
+CREATE INDEX IF NOT EXISTS idx_transactions_invoice_id ON public.transactions (invoice_id);
+CREATE INDEX IF NOT EXISTS idx_transactions_user_created ON public.transactions (user_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_vps_instances_service_id ON public.vps_instances (service_id);
+CREATE INDEX IF NOT EXISTS idx_ticket_messages_ticket_created ON public.ticket_messages (ticket_id, created_at);
+CREATE INDEX IF NOT EXISTS idx_orders_user_created ON public.orders (user_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_products_visible_sort ON public.products (is_visible, sort_order);
+CREATE INDEX IF NOT EXISTS idx_product_prices_product_active ON public.product_prices (product_id, is_active);
+CREATE INDEX IF NOT EXISTS idx_domains_user_id ON public.domains (user_id);
+CREATE INDEX IF NOT EXISTS idx_services_status ON public.services (status);

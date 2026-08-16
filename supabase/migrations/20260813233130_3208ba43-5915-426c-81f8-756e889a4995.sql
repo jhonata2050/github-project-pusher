@@ -1,0 +1,2 @@
+DROP POLICY IF EXISTS "Leitura pública autenticada de configurações" ON public.system_settings;
+CREATE POLICY "Apenas equipe lê configurações" ON public.system_settings FOR SELECT TO authenticated USING (public.is_staff(auth.uid()));
