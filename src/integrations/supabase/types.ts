@@ -61,57 +61,374 @@ export type Database = {
       }
       coupons: {
         Row: {
-          created_at: string | null
+          code: string
+          created_at: string
           id: string
+          is_active: boolean | null
+          is_recurring: boolean | null
+          max_uses: number | null
+          type: string
+          updated_at: string
+          used_count: number | null
+          valid_until: string | null
+          value: number
         }
         Insert: {
-          created_at?: string | null
+          code: string
+          created_at?: string
           id?: string
+          is_active?: boolean | null
+          is_recurring?: boolean | null
+          max_uses?: number | null
+          type: string
+          updated_at?: string
+          used_count?: number | null
+          valid_until?: string | null
+          value: number
         }
         Update: {
-          created_at?: string | null
+          code?: string
+          created_at?: string
           id?: string
+          is_active?: boolean | null
+          is_recurring?: boolean | null
+          max_uses?: number | null
+          type?: string
+          updated_at?: string
+          used_count?: number | null
+          valid_until?: string | null
+          value?: number
         }
         Relationships: []
       }
       email_logs: {
         Row: {
-          created_at: string | null
+          body: string | null
+          created_at: string
           id: string
-          user_id: string | null
+          sent_at: string | null
+          status: string | null
+          subject: string | null
+          user_id: string
         }
         Insert: {
-          created_at?: string | null
+          body?: string | null
+          created_at?: string
           id?: string
-          user_id?: string | null
+          sent_at?: string | null
+          status?: string | null
+          subject?: string | null
+          user_id: string
         }
         Update: {
-          created_at?: string | null
+          body?: string | null
+          created_at?: string
           id?: string
-          user_id?: string | null
+          sent_at?: string | null
+          status?: string | null
+          subject?: string | null
+          user_id?: string
         }
         Relationships: []
       }
-      invoices: {
+      invoice_items: {
         Row: {
-          created_at: string | null
+          amount: number
+          created_at: string
+          description: string
           id: string
-          status: string | null
-          user_id: string | null
+          invoice_id: string
+          quantity: number
+          service_id: string | null
         }
         Insert: {
-          created_at?: string | null
+          amount: number
+          created_at?: string
+          description: string
           id?: string
-          status?: string | null
-          user_id?: string | null
+          invoice_id: string
+          quantity?: number
+          service_id?: string | null
         }
         Update: {
-          created_at?: string | null
+          amount?: number
+          created_at?: string
+          description?: string
           id?: string
-          status?: string | null
-          user_id?: string | null
+          invoice_id?: string
+          quantity?: number
+          service_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "invoice_items_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "invoices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoice_items_service_id_fkey"
+            columns: ["service_id"]
+            isOneToOne: false
+            referencedRelation: "services"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      invoices: {
+        Row: {
+          created_at: string
+          discount_amount: number
+          due_date: string
+          id: string
+          notes: string | null
+          order_id: string | null
+          paid_at: string | null
+          payment_method: string | null
+          status: Database["public"]["Enums"]["invoice_status"]
+          subtotal: number
+          tax_amount: number
+          total_amount: number
+          updated_at: string
+          user_id: string
+          whmcs_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          discount_amount?: number
+          due_date: string
+          id?: string
+          notes?: string | null
+          order_id?: string | null
+          paid_at?: string | null
+          payment_method?: string | null
+          status?: Database["public"]["Enums"]["invoice_status"]
+          subtotal: number
+          tax_amount?: number
+          total_amount: number
+          updated_at?: string
+          user_id: string
+          whmcs_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          discount_amount?: number
+          due_date?: string
+          id?: string
+          notes?: string | null
+          order_id?: string | null
+          paid_at?: string | null
+          payment_method?: string | null
+          status?: Database["public"]["Enums"]["invoice_status"]
+          subtotal?: number
+          tax_amount?: number
+          total_amount?: number
+          updated_at?: string
+          user_id?: string
+          whmcs_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "invoices_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      orders: {
+        Row: {
+          coupon_id: string | null
+          created_at: string
+          id: string
+          ip_address: string | null
+          notes: string | null
+          status: Database["public"]["Enums"]["order_status"]
+          total_amount: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          coupon_id?: string | null
+          created_at?: string
+          id?: string
+          ip_address?: string | null
+          notes?: string | null
+          status?: Database["public"]["Enums"]["order_status"]
+          total_amount: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          coupon_id?: string | null
+          created_at?: string
+          id?: string
+          ip_address?: string | null
+          notes?: string | null
+          status?: Database["public"]["Enums"]["order_status"]
+          total_amount?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "orders_coupon_id_fkey"
+            columns: ["coupon_id"]
+            isOneToOne: false
+            referencedRelation: "coupons"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      product_groups: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          is_visible: boolean
+          name: string
+          slug: string
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_visible?: boolean
+          name: string
+          slug: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_visible?: boolean
+          name?: string
+          slug?: string
+          sort_order?: number
+          updated_at?: string
         }
         Relationships: []
+      }
+      product_prices: {
+        Row: {
+          created_at: string
+          currency: string
+          cycle: Database["public"]["Enums"]["billing_cycle"]
+          id: string
+          is_active: boolean
+          price: number
+          product_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          currency?: string
+          cycle: Database["public"]["Enums"]["billing_cycle"]
+          id?: string
+          is_active?: boolean
+          price: number
+          product_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          currency?: string
+          cycle?: Database["public"]["Enums"]["billing_cycle"]
+          id?: string
+          is_active?: boolean
+          price?: number
+          product_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_prices_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      products: {
+        Row: {
+          auto_provision: boolean
+          bandwidth_quota_mb: number | null
+          created_at: string
+          database_limit: number | null
+          description: string | null
+          directadmin_package: string | null
+          disk_quota_mb: number | null
+          domains_limit: number | null
+          email_accounts_limit: number | null
+          group_id: string | null
+          id: string
+          is_featured: boolean
+          is_visible: boolean
+          name: string
+          product_type: string
+          setup_fee: number
+          slug: string
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          auto_provision?: boolean
+          bandwidth_quota_mb?: number | null
+          created_at?: string
+          database_limit?: number | null
+          description?: string | null
+          directadmin_package?: string | null
+          disk_quota_mb?: number | null
+          domains_limit?: number | null
+          email_accounts_limit?: number | null
+          group_id?: string | null
+          id?: string
+          is_featured?: boolean
+          is_visible?: boolean
+          name: string
+          product_type?: string
+          setup_fee?: number
+          slug: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          auto_provision?: boolean
+          bandwidth_quota_mb?: number | null
+          created_at?: string
+          database_limit?: number | null
+          description?: string | null
+          directadmin_package?: string | null
+          disk_quota_mb?: number | null
+          domains_limit?: number | null
+          email_accounts_limit?: number | null
+          group_id?: string | null
+          id?: string
+          is_featured?: boolean
+          is_visible?: boolean
+          name?: string
+          product_type?: string
+          setup_fee?: number
+          slug?: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "products_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "product_groups"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       profiles: {
         Row: {
@@ -174,43 +491,97 @@ export type Database = {
         Row: {
           api_token: string | null
           api_user: string | null
-          created_at: string | null
-          hostname: string | null
+          created_at: string
+          hostname: string
           id: string
+          ip_address: string | null
+          is_active: boolean | null
+          server_type: string | null
         }
         Insert: {
           api_token?: string | null
           api_user?: string | null
-          created_at?: string | null
-          hostname?: string | null
+          created_at?: string
+          hostname: string
           id?: string
+          ip_address?: string | null
+          is_active?: boolean | null
+          server_type?: string | null
         }
         Update: {
           api_token?: string | null
           api_user?: string | null
-          created_at?: string | null
-          hostname?: string | null
+          created_at?: string
+          hostname?: string
           id?: string
+          ip_address?: string | null
+          is_active?: boolean | null
+          server_type?: string | null
         }
         Relationships: []
       }
       services: {
         Row: {
-          created_at: string | null
+          billing_cycle: Database["public"]["Enums"]["billing_cycle"] | null
+          created_at: string
+          domain: string | null
           id: string
-          user_id: string | null
+          next_due_date: string | null
+          order_id: string | null
+          product_id: string | null
+          status: Database["public"]["Enums"]["service_status"]
+          suspension_reason: string | null
+          updated_at: string
+          user_id: string
+          username: string | null
+          whmcs_id: string | null
         }
         Insert: {
-          created_at?: string | null
+          billing_cycle?: Database["public"]["Enums"]["billing_cycle"] | null
+          created_at?: string
+          domain?: string | null
           id?: string
-          user_id?: string | null
+          next_due_date?: string | null
+          order_id?: string | null
+          product_id?: string | null
+          status?: Database["public"]["Enums"]["service_status"]
+          suspension_reason?: string | null
+          updated_at?: string
+          user_id: string
+          username?: string | null
+          whmcs_id?: string | null
         }
         Update: {
-          created_at?: string | null
+          billing_cycle?: Database["public"]["Enums"]["billing_cycle"] | null
+          created_at?: string
+          domain?: string | null
           id?: string
-          user_id?: string | null
+          next_due_date?: string | null
+          order_id?: string | null
+          product_id?: string | null
+          status?: Database["public"]["Enums"]["service_status"]
+          suspension_reason?: string | null
+          updated_at?: string
+          user_id?: string
+          username?: string | null
+          whmcs_id?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "services_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "services_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       system_settings: {
         Row: {
@@ -232,19 +603,31 @@ export type Database = {
       }
       tickets: {
         Row: {
-          created_at: string | null
+          created_at: string
           id: string
-          user_id: string | null
+          last_reply_at: string | null
+          priority: string | null
+          status: string | null
+          subject: string | null
+          user_id: string
         }
         Insert: {
-          created_at?: string | null
+          created_at?: string
           id?: string
-          user_id?: string | null
+          last_reply_at?: string | null
+          priority?: string | null
+          status?: string | null
+          subject?: string | null
+          user_id: string
         }
         Update: {
-          created_at?: string | null
+          created_at?: string
           id?: string
-          user_id?: string | null
+          last_reply_at?: string | null
+          priority?: string | null
+          status?: string | null
+          subject?: string | null
+          user_id?: string
         }
         Relationships: []
       }
@@ -271,18 +654,41 @@ export type Database = {
       }
       vps_instances: {
         Row: {
-          created_at: string | null
+          created_at: string
           id: string
+          ip_address: string | null
+          provider_id: string | null
+          provider_name: string | null
+          service_id: string | null
+          status: string | null
         }
         Insert: {
-          created_at?: string | null
+          created_at?: string
           id?: string
+          ip_address?: string | null
+          provider_id?: string | null
+          provider_name?: string | null
+          service_id?: string | null
+          status?: string | null
         }
         Update: {
-          created_at?: string | null
+          created_at?: string
           id?: string
+          ip_address?: string | null
+          provider_id?: string | null
+          provider_name?: string | null
+          service_id?: string | null
+          status?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "vps_instances_service_id_fkey"
+            columns: ["service_id"]
+            isOneToOne: false
+            referencedRelation: "services"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {
@@ -300,6 +706,20 @@ export type Database = {
     }
     Enums: {
       app_role: "admin" | "staff" | "client"
+      billing_cycle:
+        | "monthly"
+        | "quarterly"
+        | "semiannually"
+        | "annually"
+        | "biennially"
+      invoice_status: "pending" | "paid" | "cancelled" | "refunded" | "overdue"
+      order_status: "pending" | "active" | "fraud" | "cancelled"
+      service_status:
+        | "pending"
+        | "active"
+        | "suspended"
+        | "terminated"
+        | "cancelled"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -428,6 +848,22 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["admin", "staff", "client"],
+      billing_cycle: [
+        "monthly",
+        "quarterly",
+        "semiannually",
+        "annually",
+        "biennially",
+      ],
+      invoice_status: ["pending", "paid", "cancelled", "refunded", "overdue"],
+      order_status: ["pending", "active", "fraud", "cancelled"],
+      service_status: [
+        "pending",
+        "active",
+        "suspended",
+        "terminated",
+        "cancelled",
+      ],
     },
   },
 } as const
