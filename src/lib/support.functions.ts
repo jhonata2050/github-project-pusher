@@ -284,6 +284,21 @@ export const testDAConnection = createServerFn({ method: "POST" })
   });
 
 
+export const getAllProducts = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { data: isAdmin } = await context.supabase.rpc("has_role", { _user_id: context.userId, _role: "admin" });
+    if (!isAdmin) throw new Error("Unauthorized");
+
+    const { data, error } = await supabaseAdmin
+      .from("products")
+      .select("id, name")
+      .order("name");
+
+    if (error) throw new Error(error.message);
+    return data;
+  });
+
 export const getDAPackagesList = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .inputValidator((data: unknown) => z.string().parse(data))

@@ -50,7 +50,7 @@ import {
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
-import { getServers, updateServiceDetails } from "@/lib/support.functions";
+import { getServers, updateServiceDetails, getAllProducts } from "@/lib/support.functions";
 
 export const Route = createFileRoute("/_authenticated/admin/clients/$clientId")({
   head: ({ params }) => ({
@@ -62,6 +62,7 @@ export const Route = createFileRoute("/_authenticated/admin/clients/$clientId")(
     Promise.all([
       context.queryClient.ensureQueryData(clientDossierQueryOptions(params.clientId)),
       context.queryClient.ensureQueryData(serversQueryOptions),
+      context.queryClient.ensureQueryData(productsQueryOptions),
     ]),
   component: ClientDetailPage,
 });
@@ -69,6 +70,11 @@ export const Route = createFileRoute("/_authenticated/admin/clients/$clientId")(
 const serversQueryOptions = queryOptions({
   queryKey: ["admin-servers"],
   queryFn: () => getServers(),
+});
+
+const productsQueryOptions = queryOptions({
+  queryKey: ["admin-all-products"],
+  queryFn: () => getAllProducts(),
 });
 
 
@@ -94,6 +100,7 @@ function ClientDetailPage() {
 
   const { data: client } = useSuspenseQuery(clientDossierQueryOptions(clientId));
   const { data: servers } = useSuspenseQuery(serversQueryOptions);
+  const { data: allProducts } = useSuspenseQuery(productsQueryOptions);
 
   const dossier = {
     invoices: client.invoices,
@@ -170,6 +177,8 @@ function ClientDetailPage() {
       username: formData.get("username") as string || null,
       domain: formData.get("domain") as string || null,
       server_id: formData.get("server_id") as string || null,
+      product_id: formData.get("product_id") as string || null,
+      next_due_date: formData.get("next_due_date") as string || null,
       status: formData.get("status") as any || null,
     });
   };
@@ -575,8 +584,18 @@ function ClientDetailPage() {
           {editingService && (
             <form onSubmit={handleUpdateService} className="space-y-4 py-4">
               <div className="grid gap-2">
-                <Label htmlFor="service_product">Produto</Label>
-                <Input id="service_product" value={editingService.products?.name || "Produto"} disabled className="rounded-xl h-11 bg-muted/30" />
+                <Label htmlFor="product_id">Produto / Plano</Label>
+                <select 
+                  id="product_id" 
+                  name="product_id" 
+                  defaultValue={editingService.product_id || ""}
+                  className="flex h-11 w-full rounded-xl border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                >
+                  <option value="">Selecione um produto</option>
+                  {allProducts?.map((p) => (
+                    <option key={p.id} value={p.id}>{p.name}</option>
+                  ))}
+                </select>
               </div>
               <div className="grid gap-2">
                 <Label htmlFor="username">Usuário do Servidor (SSO)</Label>
@@ -595,6 +614,16 @@ function ClientDetailPage() {
                   name="domain" 
                   defaultValue={editingService.domain || ""} 
                   placeholder="dominio.com.br" 
+                  className="rounded-xl h-11" 
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="next_due_date">Data de Vencimento</Label>
+                <Input 
+                  type="date"
+                  id="next_due_date" 
+                  name="next_due_date" 
+                  defaultValue={editingService.next_due_date ? editingService.next_due_date.split('T')[0] : ""} 
                   className="rounded-xl h-11" 
                 />
               </div>
