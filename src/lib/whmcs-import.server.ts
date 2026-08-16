@@ -89,11 +89,11 @@ const SERVICE_STATUS_MAP: Record<string, string> = {
 
 const INVOICE_STATUS_MAP: Record<string, string> = {
   paid: "paid",
-  unpaid: "pending", // Mapeia 'unpaid' do WHMCS para 'pending' do nosso enum
+  unpaid: "pending",
   cancelled: "cancelled",
   canceled: "cancelled",
   refunded: "refunded",
-  draft: "draft",
+  draft: "pending",
   collections: "pending",
 };
 
@@ -318,10 +318,10 @@ async function importServices(rows: Record<string, string>[], stats: ImportStats
       const productId = await resolveProductId(productName || "Plano Importado");
       if (!productId) throw new Error("não foi possível resolver o produto");
 
-      const cycleRaw = pick(row, ["billingcycle", "billingcycle", "ciclo"]).toLowerCase();
+      const cycleRaw = pick(row, ["billingcycle", "billingcycle", "ciclo", "billing_cycle"]).toLowerCase();
       const cycle = CYCLE_MAP[cycleRaw] ?? "monthly";
       
-      const statusRaw = pick(row, ["status", "domainstatus", "state"]).toLowerCase();
+      const statusRaw = pick(row, ["status", "domainstatus", "state", "service_status"]).toLowerCase();
       const status = SERVICE_STATUS_MAP[statusRaw] ?? "active";
 
       const domain = pick(row, ["domain", "dominio", "host", "hostname"]);
@@ -329,17 +329,17 @@ async function importServices(rows: Record<string, string>[], stats: ImportStats
       const serverId = pick(row, ["server", "server_id", "serverid", "id_servidor"]);
       const nextDue = toDate(pick(row, ["nextduedate", "nextduedate", "vencimento", "nextdue"]));
 
-      const { error } = await (supabaseAdmin.from("services") as any).insert({
+      const { error } = await (supabaseAdmin.from("services") as any).upsert({
         user_id: userId,
         product_id: productId,
         whmcs_id: serviceWhmcsId || null,
         domain: domain || null,
         username: username || null,
-        server_id: null, // Evita erro de FK/UUID se o serverId do WHMCS não for um UUID
+        server_id: null,
         billing_cycle: cycle as any,
         status: status as any,
         next_due_date: nextDue,
-      });
+      }, { onConflict: 'whmcs_id' });
 
       if (error) throw new Error(error.message);
       stats.services.created++;
@@ -380,7 +380,7 @@ async function importInvoices(rows: Record<string, string>[], stats: ImportStats
       const paidAt = toDate(pick(row, ["datepaid", "paidat", "datapagamento", "datepaid"]));
       const method = pick(row, ["paymentmethod", "paymentmethod", "metodo", "gateway"]);
 
-      const { error } = await (supabaseAdmin.from("invoices") as any).insert({
+      const { error } = await (supabaseAdmin.from("invoices") as any).upsert({
         user_id: userId,
         whmcs_id: invoiceWhmcsId || null,
         subtotal,
@@ -392,7 +392,7 @@ async function importInvoices(rows: Record<string, string>[], stats: ImportStats
         paid_at: paidAt,
         payment_method: method || null,
         notes: `Importado do WHMCS (ID: ${invoiceWhmcsId || "?"})`,
-      });
+      }, { onConflict: 'whmcs_id' });
 
       if (error) throw new Error(error.message);
       stats.invoices.created++;
