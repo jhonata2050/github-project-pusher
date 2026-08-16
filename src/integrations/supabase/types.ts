@@ -101,6 +101,36 @@ export type Database = {
         }
         Relationships: []
       }
+      domains: {
+        Row: {
+          created_at: string
+          domain: string
+          expiry_date: string | null
+          id: string
+          registration_date: string | null
+          status: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          domain: string
+          expiry_date?: string | null
+          id?: string
+          registration_date?: string | null
+          status?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          domain?: string
+          expiry_date?: string | null
+          id?: string
+          registration_date?: string | null
+          status?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       email_logs: {
         Row: {
           body: string | null
@@ -109,6 +139,8 @@ export type Database = {
           sent_at: string | null
           status: string | null
           subject: string | null
+          template_name: string | null
+          to_email: string | null
           user_id: string
         }
         Insert: {
@@ -118,6 +150,8 @@ export type Database = {
           sent_at?: string | null
           status?: string | null
           subject?: string | null
+          template_name?: string | null
+          to_email?: string | null
           user_id: string
         }
         Update: {
@@ -127,6 +161,8 @@ export type Database = {
           sent_at?: string | null
           status?: string | null
           subject?: string | null
+          template_name?: string | null
+          to_email?: string | null
           user_id?: string
         }
         Relationships: []
@@ -601,11 +637,47 @@ export type Database = {
         }
         Relationships: []
       }
+      ticket_messages: {
+        Row: {
+          created_at: string
+          id: string
+          is_staff: boolean | null
+          message: string
+          ticket_id: string
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_staff?: boolean | null
+          message: string
+          ticket_id: string
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_staff?: boolean | null
+          message?: string
+          ticket_id?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ticket_messages_ticket_id_fkey"
+            columns: ["ticket_id"]
+            isOneToOne: false
+            referencedRelation: "tickets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tickets: {
         Row: {
           created_at: string
           id: string
           last_reply_at: string | null
+          last_reply_by_name: string | null
           priority: string | null
           status: string | null
           subject: string | null
@@ -615,6 +687,7 @@ export type Database = {
           created_at?: string
           id?: string
           last_reply_at?: string | null
+          last_reply_by_name?: string | null
           priority?: string | null
           status?: string | null
           subject?: string | null
@@ -624,12 +697,54 @@ export type Database = {
           created_at?: string
           id?: string
           last_reply_at?: string | null
+          last_reply_by_name?: string | null
           priority?: string | null
           status?: string | null
           subject?: string | null
           user_id?: string
         }
         Relationships: []
+      }
+      transactions: {
+        Row: {
+          amount: number
+          created_at: string
+          gateway: string | null
+          id: string
+          invoice_id: string | null
+          status: string | null
+          transaction_id: string | null
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          gateway?: string | null
+          id?: string
+          invoice_id?: string | null
+          status?: string | null
+          transaction_id?: string | null
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          gateway?: string | null
+          id?: string
+          invoice_id?: string | null
+          status?: string | null
+          transaction_id?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "transactions_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "invoices"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       user_roles: {
         Row: {
@@ -689,6 +804,30 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      whmcs_imports: {
+        Row: {
+          created_at: string
+          error_message: string | null
+          id: string
+          stats: Json | null
+          status: string | null
+        }
+        Insert: {
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          stats?: Json | null
+          status?: string | null
+        }
+        Update: {
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          stats?: Json | null
+          status?: string | null
+        }
+        Relationships: []
       }
     }
     Views: {
