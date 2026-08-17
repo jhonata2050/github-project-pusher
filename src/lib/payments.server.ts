@@ -58,11 +58,21 @@ export async function createPaymentSession(
     .from("invoices")
     .select("*")
     .eq("id", data.invoiceId)
-    .eq("user_id", userId)
-    .single();
+    .maybeSingle();
 
   if (iError || !invoice) throw new Error("Fatura não encontrada");
   if (invoice.status === "paid") throw new Error("Fatura já está paga");
+
+  // O dono da fatura pode pagar; admins podem gerar pagamento para qualquer fatura.
+  if (invoice.user_id !== userId) {
+    const { data: isAdmin } = await supabaseAdmin.rpc("has_role", {
+      _user_id: userId,
+      _role: "admin",
+    });
+    if (!isAdmin) throw new Error("Fatura não encontrada");
+  }
+
+  const ownerId = invoice.user_id as string;
 
   const { data: settings } = await supabaseAdmin
     .from("system_settings")
@@ -79,7 +89,7 @@ export async function createPaymentSession(
     }
   }
 
-  const { data: profile } = await supabaseAdmin.from("profiles").select("*").eq("id", userId).single();
+  const { data: profile } = await supabaseAdmin.from("profiles").select("*").eq("id", ownerId).maybeSingle();
 
   const amount = Number(invoice.total_amount);
   const cents = Math.round(amount * 100);
@@ -120,7 +130,7 @@ export async function createPaymentSession(
         throw new Error(`AbacatePay: ${json?.error || res.status}`);
       }
       const transactionId = await recordTransaction({
-        userId, invoiceId: invoice.id, amount, gateway: def.id, reference: json.data.id,
+        userId: ownerId, invoiceId: invoice.id, amount, gateway: def.id, reference: json.data.id,
         method: data.method, metadata: { checkoutUrl: json.data.url },
       });
       return { ...base, transactionId, checkoutUrl: json.data.url };
@@ -152,7 +162,7 @@ export async function createPaymentSession(
       const json: any = await res.json().catch(() => null);
       if (!res.ok || !json?.url) throw new Error(`Stripe: ${json?.error?.message || res.status}`);
       const transactionId = await recordTransaction({
-        userId, invoiceId: invoice.id, amount, gateway: def.id, reference: json.id,
+        userId: ownerId, invoiceId: invoice.id, amount, gateway: def.id, reference: json.id,
         method: data.method, metadata: { checkoutUrl: json.url },
       });
       return { ...base, transactionId, checkoutUrl: json.url };
@@ -183,7 +193,7 @@ export async function createPaymentSession(
         const url = json?.init_point || json?.sandbox_init_point;
         if (!res.ok || !url) throw new Error(`Mercado Pago: ${json?.message || res.status}`);
         const transactionId = await recordTransaction({
-          userId, invoiceId: invoice.id, amount, gateway: def.id, reference: json.id,
+          userId: ownerId, invoiceId: invoice.id, amount, gateway: def.id, reference: json.id,
           method: data.method, metadata: { checkoutUrl: url },
         });
         return { ...base, transactionId, checkoutUrl: url };
@@ -214,7 +224,7 @@ export async function createPaymentSession(
       const pixData = json?.point_of_interaction?.transaction_data;
       const boletoUrl = json?.transaction_details?.external_resource_url;
       const transactionId = await recordTransaction({
-        userId, invoiceId: invoice.id, amount, gateway: def.id, reference: String(json.id),
+        userId: ownerId, invoiceId: invoice.id, amount, gateway: def.id, reference: String(json.id),
         method: data.method, metadata: { checkoutUrl: boletoUrl },
       });
 
@@ -257,7 +267,7 @@ export async function createPaymentSession(
         throw new Error(`Woovi: ${json?.error || res.status} - ${JSON.stringify(json)}`);
       }
       const transactionId = await recordTransaction({
-        userId,
+        userId: ownerId,
         invoiceId: invoice.id,
         amount,
         gateway: def.id,
@@ -311,7 +321,7 @@ export async function createPaymentSession(
         const r = json?.pix_create_request;
         if (r?.result !== "success") throw new Error(`PagHiper: ${r?.response_message || res.status}`);
         const transactionId = await recordTransaction({
-          userId, invoiceId: invoice.id, amount, gateway: def.id, reference: r.transaction_id,
+          userId: ownerId, invoiceId: invoice.id, amount, gateway: def.id, reference: r.transaction_id,
           method: "pix",
         });
         return {
@@ -326,7 +336,7 @@ export async function createPaymentSession(
       if (r?.result !== "success") throw new Error(`PagHiper: ${r?.response_message || res.status}`);
       const slip = r.bank_slip?.url_slip_pdf || r.bank_slip?.url_slip;
       const transactionId = await recordTransaction({
-        userId, invoiceId: invoice.id, amount, gateway: def.id, reference: r.transaction_id,
+        userId: ownerId, invoiceId: invoice.id, amount, gateway: def.id, reference: r.transaction_id,
         method: "boleto", metadata: { checkoutUrl: slip, digitable_line: r.bank_slip?.digitable_line },
       });
       return { ...base, transactionId, checkoutUrl: slip };
@@ -391,7 +401,7 @@ export async function createPaymentSession(
       }
 
       const transactionId = await recordTransaction({
-        userId,
+        userId: ownerId,
         invoiceId: invoice.id,
         amount,
         gateway: def.id,
