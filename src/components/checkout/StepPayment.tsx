@@ -23,7 +23,9 @@ export function StepPayment({
       const timer = setTimeout(() => {
         onPay();
       }, 1000);
-      return () => clearTimeout(timer);
+      return () => {
+        clearTimeout(timer);
+      };
     }
   }, [paymentMethod, cpfCnpj, pixResult, isProcessingPix, onPay]);
 
