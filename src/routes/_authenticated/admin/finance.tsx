@@ -202,7 +202,10 @@ function AdminFinanceSettingsPage() {
                   defaultValue={settings?.["payment_gateway_priority"] || ""} 
                   className="rounded-xl font-mono text-sm" 
                 />
-                <p className="text-[10px] text-muted-foreground">Define a ordem de fallback caso o principal falhe.</p>
+                <div className="space-y-1">
+                  <p className="text-[10px] text-muted-foreground">Define a ordem de fallback caso o gateway principal falhe.</p>
+                  <p className="text-[10px] font-semibold text-brand/80">IDs disponíveis: {GATEWAYS.filter(g => g.id !== 'contabo').map(g => g.id).join(", ")}</p>
+                </div>
               </div>
             </CardContent>
           </Card>
