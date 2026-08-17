@@ -1,5 +1,6 @@
 import { gatewayById } from "./gateways";
 import { handleGatewayError } from "./gateway-errors.server";
+import { getCajuPayCredentials, getCajuPayHeaders } from "./cajupay.server";
 
 export async function validateGateway(gatewayId: string, credentials: Record<string, string>) {
   const def = gatewayById(gatewayId);
@@ -64,31 +65,12 @@ export async function validateGateway(gatewayId: string, credentials: Record<str
       }
 
       case "cajupay": {
-        const baseUrl = (credentials["cajupay_base_url"] || "https://api.cajupay.com.br").replace(/\/$/, "");
-        const id = credentials["cajupay_client_id"] || "";
-        const secret = credentials["cajupay_client_secret"] || "";
-        const basic = btoa(`${id}:${secret}`);
-        const variants: Array<{ headers: Record<string, string>; body: string }> = [
-          {
-            headers: { "Content-Type": "application/x-www-form-urlencoded", Authorization: `Basic ${basic}` },
-            body: new URLSearchParams({ grant_type: "client_credentials" }).toString(),
-          },
-          {
-            headers: { "Content-Type": "application/x-www-form-urlencoded" },
-            body: new URLSearchParams({ grant_type: "client_credentials", client_id: id, client_secret: secret }).toString(),
-          },
-          {
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ grant_type: "client_credentials", client_id: id, client_secret: secret }),
-          },
-        ];
-        let lastRes: Response | null = null;
-        for (const v of variants) {
-          const res = await fetch(`${baseUrl}/oauth/token`, { method: "POST", headers: v.headers, body: v.body });
-          if (res.ok) return { success: true, message: "Conexão com CajuPay validada com sucesso!" };
-          lastRes = res;
-        }
-        throw new Error(await handleGatewayError(lastRes!, "CajuPay"));
+        const auth = getCajuPayCredentials(credentials);
+        const res = await fetch(`${auth.baseUrl}/api/payments?limit=1`, {
+          headers: getCajuPayHeaders(auth),
+        });
+        if (!res.ok) throw new Error(await handleGatewayError(res, "CajuPay"));
+        return { success: true, message: "Conexão com CajuPay validada com sucesso!" };
       }
 
       case "contabo": {

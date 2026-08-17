@@ -1,5 +1,7 @@
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import { getRequest } from "@tanstack/react-start/server";
 import { ALL_GATEWAY_SETTING_KEYS, gatewayById, type PaymentMethod } from "./gateways";
+import { getCajuPayCredentials, getCajuPayHeaders, readCajuPayError } from "./cajupay.server";
 
 type PaymentResult = {
   transactionId?: string | undefined;
@@ -12,7 +14,13 @@ type PaymentResult = {
 };
 
 function publicUrl() {
-  return process.env["PUBLIC_URL"] || "http://localhost:8080";
+  const configured = process.env["PUBLIC_URL"];
+  if (configured) return configured.replace(/\/$/, "");
+  const previewHost = process.env["LOVABLE_PREVIEW_HOST"];
+  if (previewHost) {
+    return `${previewHost.startsWith("http") ? "" : "https://"}${previewHost}`.replace(/\/$/, "");
+  }
+  return new URL(getRequest().url).origin;
 }
 
 function onlyDigits(v?: string | null) {
@@ -344,86 +352,51 @@ export async function createPaymentSession(
 
     // --------------------------------------------------------------- CajuPay
     case "cajupay": {
-      const baseUrl = (cfg["cajupay_base_url"] || "https://api.cajupay.com.br").replace(/\/$/, "");
-      const clientId = cfg["cajupay_client_id"];
-      const clientSecret = cfg["cajupay_client_secret"];
-
-      if (!clientId || !clientSecret) {
-        throw new Error("CajuPay: Credenciais ausentes (client_id ou client_secret)");
+      const credentials = getCajuPayCredentials(cfg);
+      if (!credentials.publicKey || !credentials.secretKey) {
+        throw new Error("CajuPay: informe a Public Key e a Secret Key.");
+      }
+      if (data.method === "credit_card") {
+        throw new Error("CajuPay: cartão exige o checkout SDK e não está disponível neste fluxo.");
       }
 
-      // OAuth2 client_credentials — a API aceita formatos diferentes conforme a versão,
-      // então tentamos as variações mais comuns até obter o token.
-      const basic = btoa(`${clientId}:${clientSecret}`);
-      const attempts: Array<{ headers: Record<string, string>; body: string }> = [
-        {
-          headers: { "Content-Type": "application/x-www-form-urlencoded", Authorization: `Basic ${basic}` },
-          body: new URLSearchParams({ grant_type: "client_credentials" }).toString(),
-        },
-        {
-          headers: { "Content-Type": "application/x-www-form-urlencoded" },
-          body: new URLSearchParams({
-            grant_type: "client_credentials",
-            client_id: clientId,
-            client_secret: clientSecret,
-          }).toString(),
-        },
-        {
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            grant_type: "client_credentials",
-            client_id: clientId,
-            client_secret: clientSecret,
-          }),
-        },
-      ];
+      const isPix = data.method === "pix";
+      const endpoint = isPix ? "/api/payments/pix" : "/api/payments/boleto";
+      const partnerCheckoutUrl = `${publicUrl()}/invoices/${invoice.id}`;
+      const payload = isPix
+        ? {
+            amount_cents: cents,
+            currency: "BRL",
+            description,
+            product_ref: ref,
+            customer_ref: ownerId,
+            partner_checkout_url: partnerCheckoutUrl,
+            consumer: {
+              name: customer.name,
+              email: customer.email,
+              document: customer.taxId,
+              phone: `+55${customer.phone.replace(/^55/, "")}`,
+            },
+          }
+        : {
+            value_cents: cents,
+            comment: description,
+            customer: {
+              name: customer.name,
+              tax_id: customer.taxId,
+              email: customer.email,
+            },
+          };
 
-      let accessToken: string | undefined;
-      let lastError = "credenciais inválidas";
-      for (const attempt of attempts) {
-        const tokenRes = await fetch(`${baseUrl}/oauth/token`, {
-          method: "POST",
-          headers: attempt.headers,
-          body: attempt.body,
-        });
-        const tokenJson: any = await tokenRes.json().catch(() => null);
-        if (tokenRes.ok && tokenJson?.access_token) {
-          accessToken = tokenJson.access_token;
-          break;
-        }
-        lastError =
-          tokenJson?.error_description || tokenJson?.error || tokenRes.statusText || String(tokenRes.status);
-      }
-      if (!accessToken) {
-        throw new Error(`CajuPay: falha na autenticação (${lastError})`);
-      }
-
-      const res = await fetch(`${baseUrl}/v1/charges`, {
+      const res = await fetch(`${credentials.baseUrl}${endpoint}`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${accessToken}`,
-        },
-        body: JSON.stringify({
-          reference: ref,
-          amount: cents,
-          description,
-          payment_method: data.method === "credit_card" ? "credit_card" : data.method,
-          due_days: 3,
-          callback_url: `${publicUrl()}/api/public/webhooks/cajupay`,
-          return_url: returnUrl,
-          customer: {
-            name: customer.name,
-            email: customer.email,
-            document: customer.taxId,
-            phone: customer.phone,
-          },
-        }),
+        headers: getCajuPayHeaders(credentials, `invoice-${invoice.id}-${data.method}-v3`),
+        body: JSON.stringify(payload),
       });
 
       const json: any = await res.json().catch(() => null);
       if (!res.ok) {
-        throw new Error(`CajuPay API Error: ${json?.message || res.statusText || res.status}`);
+        throw new Error(`CajuPay: ${await readCajuPayError(new Response(JSON.stringify(json), { status: res.status }))}`);
       }
 
       const transactionId = await recordTransaction({
@@ -431,21 +404,20 @@ export async function createPaymentSession(
         invoiceId: invoice.id,
         amount,
         gateway: def.id,
-        reference: json.id || json.charge_id || ref,
+        reference: json.payment_id || json.transaction_id || ref,
         method: data.method,
-        metadata: { checkoutUrl: json.checkout_url || json.payment_url },
+        metadata: { pix_key: json.pix_key, digitable_line: json.digitable_line },
       });
 
-      if (data.method === "pix") {
+      if (isPix) {
         return {
           ...base,
           transactionId,
-          pixCode: json.pix?.qr_code || json.qr_code,
-          qrCodeUrl: json.pix?.qr_code_image || json.qr_code_image,
-          checkoutUrl: json.checkout_url,
+          pixCode: json.pix_copy_paste,
+          qrCodeUrl: json.pix_qr_code,
         };
       }
-      return { ...base, transactionId, checkoutUrl: json.checkout_url || json.payment_url || json.boleto?.url };
+      return { ...base, transactionId, checkoutUrl: json.boleto_url || json.pdf_url || json.url };
     }
 
     default:
