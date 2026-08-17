@@ -24,7 +24,7 @@ export async function validateGateway(gatewayId: string, credentials: Record<str
 
       case "stripe": {
         const res = await fetch("https://api.stripe.com/v1/balance", {
-          headers: { Authorization: `Bearer ${credentials["stripe_secret_key"]}` },
+          headers: { Authorization: `Bearer ${credentials["stripe_secret_key"] || ""}` },
         });
         if (!res.ok) throw new Error(await handleGatewayError(res, "Stripe"));
         return { success: true, message: "Conexão com Stripe validada com sucesso!" };
@@ -32,7 +32,7 @@ export async function validateGateway(gatewayId: string, credentials: Record<str
 
       case "mercadopago": {
         const res = await fetch("https://api.mercadopago.com/v1/payment_methods", {
-          headers: { Authorization: `Bearer ${credentials["mercadopago_access_token"]}` },
+          headers: { Authorization: `Bearer ${credentials["mercadopago_access_token"] || ""}` },
         });
         if (!res.ok) throw new Error(await handleGatewayError(res, "Mercado Pago"));
         return { success: true, message: "Conexão com Mercado Pago validada com sucesso!" };
@@ -40,7 +40,7 @@ export async function validateGateway(gatewayId: string, credentials: Record<str
 
       case "woovi": {
         const res = await fetch("https://api.woovi.com/api/openpix/v1/charge?limit=1", {
-          headers: { Authorization: credentials["woovi_app_id"] },
+          headers: { Authorization: credentials["woovi_app_id"] || "" },
         });
         if (!res.ok) throw new Error(await handleGatewayError(res, "Woovi"));
         return { success: true, message: "Conexão com Woovi/OpenPix validada com sucesso!" };
