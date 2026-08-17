@@ -2,11 +2,11 @@ import { gatewayById } from "./gateways";
 
 export async function validateGateway(gatewayId: string, credentials: Record<string, string>) {
   const def = gatewayById(gatewayId);
-  if (!def) throw new Error("Gateway não encontrado");
+  if (!def) return { success: false, message: "Gateway não encontrado" };
 
   for (const key of def.required) {
     if (!credentials[key]) {
-      throw new Error(`O campo ${key} é obrigatório.`);
+      return { success: false, message: `O campo ${key} é obrigatório.` };
     }
   }
 
@@ -71,7 +71,10 @@ export async function validateGateway(gatewayId: string, credentials: Record<str
           },
           body: new URLSearchParams({ grant_type: "client_credentials" }),
         });
-        if (!res.ok) throw new Error("CajuPay: Falha na autenticação (Client ID/Secret inválidos)");
+        if (!res.ok) {
+          const detail = (await res.text().catch(() => "")).slice(0, 200);
+          throw new Error(`CajuPay: falha na autenticação (HTTP ${res.status}) ${detail}`.trim());
+        }
         return { success: true, message: "Conexão com CajuPay validada com sucesso!" };
       }
 
@@ -95,6 +98,6 @@ export async function validateGateway(gatewayId: string, credentials: Record<str
         return { success: true, message: "Este gateway não possui validação em tempo real ainda." };
     }
   } catch (err: any) {
-    throw new Error(err.message || "Erro desconhecido na validação.");
+    return { success: false, message: err?.message || "Erro desconhecido na validação." };
   }
 }
