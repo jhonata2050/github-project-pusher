@@ -362,6 +362,7 @@ export async function createPaymentSession(
 
       const isPix = data.method === "pix";
       const endpoint = isPix ? "/api/payments/pix" : "/api/payments/boleto";
+      const partnerCheckoutUrl = `${publicUrl()}/invoices/${invoice.id}`;
       const payload = isPix
         ? {
             amount_cents: cents,
@@ -369,6 +370,7 @@ export async function createPaymentSession(
             description,
             product_ref: ref,
             customer_ref: ownerId,
+            partner_checkout_url: partnerCheckoutUrl,
             consumer: {
               name: customer.name,
               email: customer.email,
@@ -388,7 +390,7 @@ export async function createPaymentSession(
 
       const res = await fetch(`${credentials.baseUrl}${endpoint}`, {
         method: "POST",
-        headers: getCajuPayHeaders(credentials, `invoice-${invoice.id}-${data.method}-v2`),
+        headers: getCajuPayHeaders(credentials, `invoice-${invoice.id}-${data.method}-v3`),
         body: JSON.stringify(payload),
       });
 
