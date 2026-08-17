@@ -452,6 +452,3 @@ export async function createPaymentSessionWithFallback(
 
   throw lastError || new Error("Nenhum gateway de pagamento disponível no momento.");
 }
-
-  throw lastError || new Error("Nenhum gateway de pagamento disponível no momento.");
-}
