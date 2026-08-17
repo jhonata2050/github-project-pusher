@@ -58,11 +58,21 @@ export async function createPaymentSession(
     .from("invoices")
     .select("*")
     .eq("id", data.invoiceId)
-    .eq("user_id", userId)
-    .single();
+    .maybeSingle();
 
   if (iError || !invoice) throw new Error("Fatura não encontrada");
   if (invoice.status === "paid") throw new Error("Fatura já está paga");
+
+  // O dono da fatura pode pagar; admins podem gerar pagamento para qualquer fatura.
+  if (invoice.user_id !== userId) {
+    const { data: isAdmin } = await supabaseAdmin.rpc("has_role", {
+      _user_id: userId,
+      _role: "admin",
+    });
+    if (!isAdmin) throw new Error("Fatura não encontrada");
+  }
+
+  const ownerId = invoice.user_id as string;
 
   const { data: settings } = await supabaseAdmin
     .from("system_settings")
@@ -79,7 +89,7 @@ export async function createPaymentSession(
     }
   }
 
-  const { data: profile } = await supabaseAdmin.from("profiles").select("*").eq("id", userId).single();
+  const { data: profile } = await supabaseAdmin.from("profiles").select("*").eq("id", ownerId).maybeSingle();
 
   const amount = Number(invoice.total_amount);
   const cents = Math.round(amount * 100);
