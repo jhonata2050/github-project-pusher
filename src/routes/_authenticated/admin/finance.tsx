@@ -157,6 +157,9 @@ function AdminFinanceSettingsPage() {
       auto_suspend: formData.get("auto_suspend") === "on",
       auto_delete_days: Number(formData.get("auto_delete_days")) || 30,
       payment_gateway_priority: formData.get("payment_gateway_priority") || "",
+      gateway_priority_pix: formData.get("gateway_priority_pix") || "",
+      gateway_priority_credit_card: formData.get("gateway_priority_credit_card") || "",
+      gateway_priority_boleto: formData.get("gateway_priority_boleto") || "",
       payment_gateway_fallback_enabled: formData.get("payment_gateway_fallback_enabled") === "on",
     };
     for (const gateway of GATEWAYS) {
@@ -203,18 +206,58 @@ function AdminFinanceSettingsPage() {
                 <Switch name="payment_gateway_fallback_enabled" defaultChecked={settings?.["payment_gateway_fallback_enabled"] !== false} />
               </div>
 
-              <div className="space-y-2">
-                <Label>Prioridade de Gateways (IDs separados por vírgula)</Label>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="space-y-2">
+                  <Label>Prioridade PIX</Label>
+                  <Input 
+                    name="gateway_priority_pix" 
+                    placeholder="ex: woovi,cajupay" 
+                    defaultValue={settings?.["gateway_priority_pix"] || ""} 
+                    className="rounded-xl font-mono text-sm" 
+                  />
+                  <p className="text-[10px] text-muted-foreground">
+                    IDs: {GATEWAYS.filter(g => g.methods.includes('pix')).map(g => g.id).join(", ")}
+                  </p>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Prioridade CARTÃO</Label>
+                  <Input 
+                    name="gateway_priority_credit_card" 
+                    placeholder="ex: stripe,mercadopago" 
+                    defaultValue={settings?.["gateway_priority_credit_card"] || ""} 
+                    className="rounded-xl font-mono text-sm" 
+                  />
+                  <p className="text-[10px] text-muted-foreground">
+                    IDs: {GATEWAYS.filter(g => g.methods.includes('credit_card')).map(g => g.id).join(", ")}
+                  </p>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Prioridade BOLETO</Label>
+                  <Input 
+                    name="gateway_priority_boleto" 
+                    placeholder="ex: paghiper,mercadopago" 
+                    defaultValue={settings?.["gateway_priority_boleto"] || ""} 
+                    className="rounded-xl font-mono text-sm" 
+                  />
+                  <p className="text-[10px] text-muted-foreground">
+                    IDs: {GATEWAYS.filter(g => g.methods.includes('boleto')).map(g => g.id).join(", ")}
+                  </p>
+                </div>
+              </div>
+
+              <div className="space-y-2 pt-2">
+                <Label>Prioridade Global (Fallback Geral)</Label>
                 <Input 
                   name="payment_gateway_priority" 
                   placeholder="ex: abacatepay,cajupay,mercadopago" 
                   defaultValue={settings?.["payment_gateway_priority"] || ""} 
                   className="rounded-xl font-mono text-sm" 
                 />
-                <div className="space-y-1">
-                  <p className="text-[10px] text-muted-foreground">Define a ordem de fallback caso o gateway principal falhe.</p>
-                  <p className="text-[10px] font-semibold text-brand/80">IDs disponíveis: {GATEWAYS.filter(g => g.id !== 'contabo').map(g => g.id).join(", ")}</p>
-                </div>
+                <p className="text-[10px] text-muted-foreground">
+                  Usado se a prioridade específica do método estiver vazia.
+                </p>
               </div>
             </CardContent>
           </Card>

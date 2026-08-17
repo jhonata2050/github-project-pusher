@@ -433,12 +433,30 @@ export async function createPaymentSessionWithFallback(
   const { data: settingsRows } = await supabaseAdmin
     .from("system_settings")
     .select("*")
-    .in("key", ["payment_gateway_priority", "payment_gateway_fallback_enabled"]);
+    .in("key", [
+      "payment_gateway_priority", 
+      "payment_gateway_fallback_enabled",
+      "gateway_priority_pix",
+      "gateway_priority_credit_card",
+      "gateway_priority_boleto"
+    ]);
 
   const settings: Record<string, any> = {};
   settingsRows?.forEach((row: { key: string; value: any }) => { settings[row.key] = row.value; });
 
-  const priorityStr = (settings["payment_gateway_priority"] as string) || "";
+  // Obter prioridade específica para o método
+  const methodPriorityKey = 
+    data.method === "pix" ? "gateway_priority_pix" :
+    data.method === "credit_card" ? "gateway_priority_credit_card" :
+    data.method === "boleto" ? "gateway_priority_boleto" : null;
+
+  let priorityStr = (methodPriorityKey ? (settings[methodPriorityKey] as string) : "") || "";
+  
+  // Se não houver prioridade para o método, usa a global
+  if (!priorityStr) {
+    priorityStr = (settings["payment_gateway_priority"] as string) || "";
+  }
+
   const priorityList = priorityStr
     .split(",")
     .map((s) => s.trim())
