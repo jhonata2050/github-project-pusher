@@ -435,47 +435,41 @@ export function AppShell({
                 {isAdminArea ? "Ver como cliente" : "Ir para administração"}
               </Link>
             )}
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <button
-                    type="button"
-                    className="flex w-full items-center gap-3 rounded-xl px-3 py-2 text-sm text-sidebar-foreground hover:bg-sidebar-accent"
-                  >
-                    <Avatar className="size-7">
-                      <AvatarFallback className="bg-accent text-xs text-accent-foreground">{initials}</AvatarFallback>
-                    </Avatar>
-                    <span className="flex-1 truncate text-left">{user ? name : "Entrar"}</span>
-                    <MoreVertical className="size-4 text-muted-foreground" />
-                  </button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="start" className="w-52">
-                  {user ? (
-                    <>
-                      <DropdownMenuItem asChild>
-                        <Link to="/profile">
-                          <UserIcon className="mr-2 size-4" />
-                          Meus dados
-                        </Link>
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={signOut}>
-                        <LogOutIcon className="mr-2 size-4" />
-                        Sair
-                      </DropdownMenuItem>
-                    </>
-                  ) : (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button
+                  type="button"
+                  className="flex w-full items-center gap-3 rounded-xl px-3 py-2 text-sm text-sidebar-foreground hover:bg-sidebar-accent"
+                >
+                  <Avatar className="size-7">
+                    <AvatarFallback className="bg-accent text-xs text-accent-foreground">{initials}</AvatarFallback>
+                  </Avatar>
+                  <span className="flex-1 truncate text-left">{user ? name : "Entrar"}</span>
+                  <MoreVertical className="size-4 text-muted-foreground" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start" className="w-52">
+                {user ? (
+                  <>
                     <DropdownMenuItem asChild>
-                      <Link to="/auth">
+                      <Link to="/profile">
                         <UserIcon className="mr-2 size-4" />
-                        Acessar Conta
+                        Meus dados
                       </Link>
                     </DropdownMenuItem>
-                  )}
-                </DropdownMenuContent>
-              </DropdownMenu>
-                <DropdownMenuItem onClick={signOut}>
-                  <LogOut className="mr-2 size-4" />
-                  Sair
-                </DropdownMenuItem>
+                    <DropdownMenuItem onClick={signOut}>
+                      <LogOutIcon className="mr-2 size-4" />
+                      Sair
+                    </DropdownMenuItem>
+                  </>
+                ) : (
+                  <DropdownMenuItem asChild>
+                    <Link to="/auth">
+                      <UserIcon className="mr-2 size-4" />
+                      Acessar Conta
+                    </Link>
+                  </DropdownMenuItem>
+                )}
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
