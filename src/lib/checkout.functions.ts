@@ -23,3 +23,60 @@ export const getLocations = createServerFn({ method: "GET" })
       { id: "eu-ger", name: "Europa - Alemanha" },
     ];
   });
+
+const BLOCKED_DOMAINS = [
+  "eqsam.com",
+  "eqsam.com.br",
+  "google.com",
+  "google.com.br",
+  "whatsapp.com",
+  "facebook.com",
+  "instagram.com",
+  "admin.com",
+  "hostboss.com",
+];
+
+export const validateDomain = createServerFn({ method: "POST" })
+  .inputValidator((data) => z.object({ domain: z.string() }).parse(data))
+  .handler(async ({ data }) => {
+    const domain = data.domain.toLowerCase().trim();
+
+    // 1. Check blocked terms
+    const isBlocked = BLOCKED_DOMAINS.some(blocked => 
+      domain === blocked || domain.endsWith("." + blocked) || domain.includes("eqsam")
+    );
+    
+    if (isBlocked) {
+      return { valid: false, message: "Este domínio é reservado e não pode ser utilizado." };
+    }
+
+    // 2. Check if already in use in services table
+    const { data: existing, error } = await supabaseAdmin
+      .from("services")
+      .select("id")
+      .eq("domain", domain)
+      .maybeSingle();
+
+    if (error) {
+      console.error("Error checking domain:", error);
+      throw new Error("Erro ao validar domínio");
+    }
+
+    if (existing) {
+      return { valid: false, message: "Este domínio já está sendo utilizado por outro cliente." };
+    }
+
+    return { valid: true };
+  });
+
+export const checkEmailExists = createServerFn({ method: "POST" })
+  .inputValidator((data) => z.object({ email: z.string().email() }).parse(data))
+  .handler(async ({ data }) => {
+    const { data: profile } = await supabaseAdmin
+      .from("profiles")
+      .select("id")
+      .eq("email", data.email)
+      .maybeSingle();
+
+    return { exists: !!profile };
+  });

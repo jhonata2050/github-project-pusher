@@ -185,6 +185,10 @@ export function AppShell({
   const [hideBanner, setHideBanner] = useState(false);
 
 
+  const isCheckout = pathname.startsWith("/checkout/");
+  const isGuest = !user;
+  const hideSidebar = isCheckout && isGuest;
+
   const isAdminArea = area ? area === "admin" : (user ? isStaff : false);
   const sections = isAdminArea ? ADMIN_SECTIONS : CLIENT_SECTIONS;
   const homeTo = isAdminArea ? "/admin" : "/dashboard";
@@ -356,7 +360,8 @@ export function AppShell({
       </header>
 
       <div className="flex min-h-0 flex-1">
-        <aside className="sticky top-0 hidden h-screen w-64 shrink-0 flex-col border-r border-sidebar-border bg-sidebar px-3 py-4 lg:flex">
+        {!hideSidebar && (
+          <aside className="sticky top-0 hidden h-screen w-64 shrink-0 flex-col border-r border-sidebar-border bg-sidebar px-3 py-4 lg:flex">
           <div className="flex items-center justify-between px-2 pb-4">
             <Link
               to="/"
@@ -473,7 +478,8 @@ export function AppShell({
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
-        </aside>
+          </aside>
+        )}
 
         <main className="min-w-0 flex-1 px-3 py-4 lg:px-6 lg:py-6 lg:h-screen lg:overflow-y-auto">
           <header className="hidden items-center justify-between gap-4 pb-4 lg:flex">
