@@ -38,7 +38,7 @@ function ResetPasswordPage() {
         description: "Senha da conta alterada pelo usuário",
       }});
       toast.success("Senha alterada com sucesso!");
-      navigate({ to: "/auth" });
+      navigate({ to: "/auth", search: { } });
     } catch (err: any) {
       toast.error(err.message || "Erro ao alterar senha");
     } finally {

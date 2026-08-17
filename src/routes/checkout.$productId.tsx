@@ -14,7 +14,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { createOrder } from "@/lib/finance.functions";
 import { useServerFn } from "@tanstack/react-start";
 
-export const Route = createFileRoute("/_authenticated/checkout/$productId")({
+export const Route = createFileRoute("/checkout/$productId")({
   head: () => ({
     meta: [
       { title: "Checkout — HostPanel" },
@@ -163,10 +163,19 @@ function CheckoutPage() {
             </div>
             <Button 
               className="mt-6 w-full h-12 rounded-xl text-lg font-semibold"
-              onClick={() => orderMutation.mutate()}
+              onClick={() => {
+                if (!user) {
+                  navigate({ 
+                    to: "/auth", 
+                    search: { redirect: window.location.pathname } 
+                  });
+                  return;
+                }
+                orderMutation.mutate();
+              }}
               disabled={orderMutation.isPending}
             >
-              {orderMutation.isPending ? "Processando..." : "Confirmar pedido"}
+              {orderMutation.isPending ? "Processando..." : user ? "Confirmar pedido" : "Entrar para contratar"}
             </Button>
             <p className="mt-4 text-[10px] text-center text-muted-foreground">
               Ao confirmar o pedido, você concorda com nossos Termos de Serviço.

@@ -12,6 +12,11 @@ import { supabase } from "@/integrations/supabase/client";
 import { logPublicAuthEvent, logSessionEvent } from "@/lib/audit.functions";
 
 export const Route = createFileRoute("/auth")({
+  validateSearch: (search: Record<string, unknown>) => {
+    return {
+      redirect: (search['redirect'] as string) || undefined,
+    } as { redirect?: string };
+  },
   head: () => ({
     meta: [
       { title: "Entrar na HostPanel — Painel de hospedagem" },
@@ -40,6 +45,7 @@ const passwordSchema = z
 
 function AuthPage() {
   const navigate = useNavigate();
+  const { redirect } = Route.useSearch();
   const { user, loading } = useAuth();
   const [mode, setMode] = useState<"signin" | "signup">("signin");
   const [email, setEmail] = useState("");
@@ -49,7 +55,7 @@ function AuthPage() {
   const [checkEmail, setCheckEmail] = useState(false);
 
   useEffect(() => {
-    if (!loading && user) void navigate({ to: "/dashboard" });
+    if (!loading && user) void navigate({ to: (redirect as any) || "/dashboard" });
   }, [loading, user, navigate]);
 
   async function handleGoogle() {
@@ -67,7 +73,7 @@ function AuthPage() {
       return;
     }
     if (result.redirected) return;
-    await navigate({ to: "/dashboard" });
+    await navigate({ to: (redirect as any) || "/dashboard" });
   }
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
@@ -100,14 +106,14 @@ function AuthPage() {
           setCheckEmail(true);
           return;
         }
-        await navigate({ to: "/dashboard" });
+        await navigate({ to: (redirect as any) || "/dashboard" });
       } else {
         const { error } = await supabase.auth.signInWithPassword({
           email: parsedEmail.data,
           password: parsedPassword.data,
         });
         if (error) throw error;
-        await navigate({ to: "/dashboard" });
+        await navigate({ to: (redirect as any) || "/dashboard" });
       }
     } catch (error) {
       void logPublicAuthEvent({ data: {

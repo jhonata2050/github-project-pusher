@@ -19,6 +19,7 @@ import { Route as AuthenticatedProfileRouteImport } from './routes/_authenticate
 import { Route as AuthenticatedServicesRouteImport } from './routes/_authenticated/services'
 import { Route as AuthenticatedTicketsRouteImport } from './routes/_authenticated/tickets'
 import { Route as AuthResetPasswordRouteImport } from './routes/auth.reset-password'
+import { Route as CheckoutProductIdRouteImport } from './routes/checkout.$productId'
 import { Route as AuthenticatedAdminIndexRouteImport } from './routes/_authenticated/admin/index'
 import { Route as AuthenticatedAdminClientsRouteImport } from './routes/_authenticated/admin/clients'
 import { Route as AuthenticatedAdminCouponsRouteImport } from './routes/_authenticated/admin/coupons'
@@ -33,7 +34,6 @@ import { Route as AuthenticatedAdminProductGroupsRouteImport } from './routes/_a
 import { Route as AuthenticatedAdminProductsRouteImport } from './routes/_authenticated/admin/products'
 import { Route as AuthenticatedAdminServersRouteImport } from './routes/_authenticated/admin/servers'
 import { Route as AuthenticatedAdminTicketsRouteImport } from './routes/_authenticated/admin/tickets'
-import { Route as AuthenticatedCheckoutProductIdRouteImport } from './routes/_authenticated/checkout.$productId'
 import { Route as AuthenticatedInvoicesIndexRouteImport } from './routes/_authenticated/invoices.index'
 import { Route as AuthenticatedInvoicesInvoiceIdRouteImport } from './routes/_authenticated/invoices.$invoiceId'
 import { Route as AuthenticatedServicesIndexRouteImport } from './routes/_authenticated/services.index'
@@ -103,6 +103,11 @@ const AuthResetPasswordRoute = AuthResetPasswordRouteImport.update({
   id: '/reset-password',
   path: '/reset-password',
   getParentRoute: () => AuthRoute,
+} as any)
+const CheckoutProductIdRoute = CheckoutProductIdRouteImport.update({
+  id: '/checkout/$productId',
+  path: '/checkout/$productId',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const AuthenticatedAdminIndexRoute = AuthenticatedAdminIndexRouteImport.update({
   id: '/',
@@ -185,12 +190,6 @@ const AuthenticatedAdminTicketsRoute =
     id: '/tickets',
     path: '/tickets',
     getParentRoute: () => AuthenticatedAdminRouteRoute,
-  } as any)
-const AuthenticatedCheckoutProductIdRoute =
-  AuthenticatedCheckoutProductIdRouteImport.update({
-    id: '/checkout/$productId',
-    path: '/checkout/$productId',
-    getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
 const AuthenticatedInvoicesIndexRoute =
   AuthenticatedInvoicesIndexRouteImport.update({
@@ -317,6 +316,7 @@ export interface FileRoutesByFullPath {
   '/services': typeof AuthenticatedServicesRouteWithChildren
   '/tickets': typeof AuthenticatedTicketsRouteWithChildren
   '/auth/reset-password': typeof AuthResetPasswordRoute
+  '/checkout/$productId': typeof CheckoutProductIdRoute
   '/admin/clients': typeof AuthenticatedAdminClientsRouteWithChildren
   '/admin/coupons': typeof AuthenticatedAdminCouponsRoute
   '/admin/database': typeof AuthenticatedAdminDatabaseRoute
@@ -330,7 +330,6 @@ export interface FileRoutesByFullPath {
   '/admin/products': typeof AuthenticatedAdminProductsRoute
   '/admin/servers': typeof AuthenticatedAdminServersRoute
   '/admin/tickets': typeof AuthenticatedAdminTicketsRoute
-  '/checkout/$productId': typeof AuthenticatedCheckoutProductIdRoute
   '/invoices/$invoiceId': typeof AuthenticatedInvoicesInvoiceIdRoute
   '/services/$serviceId': typeof AuthenticatedServicesServiceIdRoute
   '/tickets/$ticketId': typeof AuthenticatedTicketsTicketIdRoute
@@ -359,6 +358,7 @@ export interface FileRoutesByTo {
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/profile': typeof AuthenticatedProfileRoute
   '/auth/reset-password': typeof AuthResetPasswordRoute
+  '/checkout/$productId': typeof CheckoutProductIdRoute
   '/admin/coupons': typeof AuthenticatedAdminCouponsRoute
   '/admin/database': typeof AuthenticatedAdminDatabaseRoute
   '/admin/domains': typeof AuthenticatedAdminDomainsRoute
@@ -371,7 +371,6 @@ export interface FileRoutesByTo {
   '/admin/products': typeof AuthenticatedAdminProductsRoute
   '/admin/servers': typeof AuthenticatedAdminServersRoute
   '/admin/tickets': typeof AuthenticatedAdminTicketsRoute
-  '/checkout/$productId': typeof AuthenticatedCheckoutProductIdRoute
   '/invoices/$invoiceId': typeof AuthenticatedInvoicesInvoiceIdRoute
   '/services/$serviceId': typeof AuthenticatedServicesServiceIdRoute
   '/tickets/$ticketId': typeof AuthenticatedTicketsTicketIdRoute
@@ -406,6 +405,7 @@ export interface FileRoutesById {
   '/_authenticated/services': typeof AuthenticatedServicesRouteWithChildren
   '/_authenticated/tickets': typeof AuthenticatedTicketsRouteWithChildren
   '/auth/reset-password': typeof AuthResetPasswordRoute
+  '/checkout/$productId': typeof CheckoutProductIdRoute
   '/_authenticated/admin/clients': typeof AuthenticatedAdminClientsRouteWithChildren
   '/_authenticated/admin/coupons': typeof AuthenticatedAdminCouponsRoute
   '/_authenticated/admin/database': typeof AuthenticatedAdminDatabaseRoute
@@ -419,7 +419,6 @@ export interface FileRoutesById {
   '/_authenticated/admin/products': typeof AuthenticatedAdminProductsRoute
   '/_authenticated/admin/servers': typeof AuthenticatedAdminServersRoute
   '/_authenticated/admin/tickets': typeof AuthenticatedAdminTicketsRoute
-  '/_authenticated/checkout/$productId': typeof AuthenticatedCheckoutProductIdRoute
   '/_authenticated/invoices/$invoiceId': typeof AuthenticatedInvoicesInvoiceIdRoute
   '/_authenticated/services/$serviceId': typeof AuthenticatedServicesServiceIdRoute
   '/_authenticated/tickets/$ticketId': typeof AuthenticatedTicketsTicketIdRoute
@@ -454,6 +453,7 @@ export interface FileRouteTypes {
     | '/services'
     | '/tickets'
     | '/auth/reset-password'
+    | '/checkout/$productId'
     | '/admin/clients'
     | '/admin/coupons'
     | '/admin/database'
@@ -467,7 +467,6 @@ export interface FileRouteTypes {
     | '/admin/products'
     | '/admin/servers'
     | '/admin/tickets'
-    | '/checkout/$productId'
     | '/invoices/$invoiceId'
     | '/services/$serviceId'
     | '/tickets/$ticketId'
@@ -496,6 +495,7 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/profile'
     | '/auth/reset-password'
+    | '/checkout/$productId'
     | '/admin/coupons'
     | '/admin/database'
     | '/admin/domains'
@@ -508,7 +508,6 @@ export interface FileRouteTypes {
     | '/admin/products'
     | '/admin/servers'
     | '/admin/tickets'
-    | '/checkout/$productId'
     | '/invoices/$invoiceId'
     | '/services/$serviceId'
     | '/tickets/$ticketId'
@@ -542,6 +541,7 @@ export interface FileRouteTypes {
     | '/_authenticated/services'
     | '/_authenticated/tickets'
     | '/auth/reset-password'
+    | '/checkout/$productId'
     | '/_authenticated/admin/clients'
     | '/_authenticated/admin/coupons'
     | '/_authenticated/admin/database'
@@ -555,7 +555,6 @@ export interface FileRouteTypes {
     | '/_authenticated/admin/products'
     | '/_authenticated/admin/servers'
     | '/_authenticated/admin/tickets'
-    | '/_authenticated/checkout/$productId'
     | '/_authenticated/invoices/$invoiceId'
     | '/_authenticated/services/$serviceId'
     | '/_authenticated/tickets/$ticketId'
@@ -583,6 +582,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   AuthRoute: typeof AuthRouteWithChildren
+  CheckoutProductIdRoute: typeof CheckoutProductIdRoute
   ApiPublicBrandingRoute: typeof ApiPublicBrandingRoute
   ApiPublicPasswordResetRoute: typeof ApiPublicPasswordResetRoute
   ApiPublicCronMaintenanceRoute: typeof ApiPublicCronMaintenanceRoute
@@ -666,6 +666,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/auth/reset-password'
       preLoaderRoute: typeof AuthResetPasswordRouteImport
       parentRoute: typeof AuthRoute
+    }
+    '/checkout/$productId': {
+      id: '/checkout/$productId'
+      path: '/checkout/$productId'
+      fullPath: '/checkout/$productId'
+      preLoaderRoute: typeof CheckoutProductIdRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/_authenticated/admin/': {
       id: '/_authenticated/admin/'
@@ -764,13 +771,6 @@ declare module '@tanstack/react-router' {
       fullPath: '/admin/tickets'
       preLoaderRoute: typeof AuthenticatedAdminTicketsRouteImport
       parentRoute: typeof AuthenticatedAdminRouteRoute
-    }
-    '/_authenticated/checkout/$productId': {
-      id: '/_authenticated/checkout/$productId'
-      path: '/checkout/$productId'
-      fullPath: '/checkout/$productId'
-      preLoaderRoute: typeof AuthenticatedCheckoutProductIdRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/invoices/': {
       id: '/_authenticated/invoices/'
@@ -1024,7 +1024,6 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedProfileRoute: typeof AuthenticatedProfileRoute
   AuthenticatedServicesRoute: typeof AuthenticatedServicesRouteWithChildren
   AuthenticatedTicketsRoute: typeof AuthenticatedTicketsRouteWithChildren
-  AuthenticatedCheckoutProductIdRoute: typeof AuthenticatedCheckoutProductIdRoute
   AuthenticatedVpsIndexRoute: typeof AuthenticatedVpsIndexRoute
 }
 
@@ -1035,7 +1034,6 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedProfileRoute: AuthenticatedProfileRoute,
   AuthenticatedServicesRoute: AuthenticatedServicesRouteWithChildren,
   AuthenticatedTicketsRoute: AuthenticatedTicketsRouteWithChildren,
-  AuthenticatedCheckoutProductIdRoute: AuthenticatedCheckoutProductIdRoute,
   AuthenticatedVpsIndexRoute: AuthenticatedVpsIndexRoute,
 }
 
@@ -1056,6 +1054,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   AuthRoute: AuthRouteWithChildren,
+  CheckoutProductIdRoute: CheckoutProductIdRoute,
   ApiPublicBrandingRoute: ApiPublicBrandingRoute,
   ApiPublicPasswordResetRoute: ApiPublicPasswordResetRoute,
   ApiPublicCronMaintenanceRoute: ApiPublicCronMaintenanceRoute,
