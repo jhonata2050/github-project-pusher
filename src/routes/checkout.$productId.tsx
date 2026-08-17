@@ -80,7 +80,8 @@ function CheckoutPage() {
   useEffect(() => {
     if (!billingCycle && activePrices.length > 0) {
       const monthly = activePrices.find((p: any) => p.cycle === "monthly");
-      setBillingCycle((monthly || activePrices[0]).cycle);
+      const chosen = monthly ?? activePrices[0];
+      if (chosen?.cycle) setBillingCycle(chosen.cycle);
     }
   }, [activePrices, billingCycle]);
 
