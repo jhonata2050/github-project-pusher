@@ -168,10 +168,17 @@ function Index() {
                         )}
                         <h3 className="text-lg font-semibold">{plan.name}</h3>
                         <p className="mt-1 text-sm text-muted-foreground line-clamp-2 min-h-[40px]">{plan.description}</p>
-                        <p className="mt-5 text-3xl font-semibold tracking-tight">
-                          {monthly ? brl.format(Number(monthly.price)) : "Sob consulta"}
-                          <span className="text-base font-normal text-muted-foreground">/mês</span>
-                        </p>
+                        <div className="mt-5 space-y-1">
+                          <p className="text-3xl font-semibold tracking-tight">
+                            {monthly ? brl.format(Number(monthly.price)) : "Sob consulta"}
+                            <span className="text-base font-normal text-muted-foreground">/mês</span>
+                          </p>
+                          {monthly && (
+                            <p className="text-xs text-muted-foreground">
+                              Total no ciclo: {brl.format(Number(monthly.price))}
+                            </p>
+                          )}
+                        </div>
                         <ul className="mt-5 flex-1 space-y-2 text-sm text-muted-foreground">
                           <li className="flex items-center gap-2">
                             <HardDrive className="size-4 text-brand" />
