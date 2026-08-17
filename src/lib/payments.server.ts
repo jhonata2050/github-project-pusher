@@ -427,7 +427,7 @@ export async function createPaymentSession(
 
 export async function createPaymentSessionWithFallback(
   userId: string,
-  data: { invoiceId: string; method: PaymentMethod; gateway: string },
+  data: { invoiceId: string; method: PaymentMethod; gateway?: string },
 ): Promise<PaymentResult> {
   // 1. Obter configurações do sistema
   const { data: settingsRows } = await supabaseAdmin
@@ -484,7 +484,7 @@ export async function createPaymentSessionWithFallback(
       }
 
       console.log(`[Payment] Tentando gateway: ${gatewayId} para o método ${data.method}`);
-      return await createPaymentSession(userId, { ...data, gateway: gatewayId });
+      return await createPaymentSession(userId, { ...data, gateway: gatewayId } as any);
     } catch (err: any) {
       console.error(`[Payment] Erro no gateway ${gatewayId}:`, err.message);
       lastError = err;
