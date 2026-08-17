@@ -13,6 +13,6 @@ export const initializePayment = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((data: unknown) => paymentInputSchema.parse(data))
   .handler(async ({ data, context }) => {
-    const { createPaymentSession } = await import("./payments.server");
-    return createPaymentSession(context.userId, data);
+    const { createPaymentSessionWithFallback } = await import("./payments.server");
+    return createPaymentSessionWithFallback(context.userId, data);
   });
