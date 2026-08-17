@@ -175,6 +175,21 @@
     font-family: var(--font-sans-stack);
     -webkit-font-smoothing: antialiased;
   }
+
+  /* Custom scrollbar para o checkout */
+  .custom-scrollbar::-webkit-scrollbar {
+    width: 4px;
+  }
+  .custom-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    background: var(--color-border);
+    border-radius: 10px;
+  }
+  .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: var(--color-muted-foreground);
+  }
 }
 
 @utility surface-card {
