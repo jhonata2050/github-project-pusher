@@ -436,7 +436,7 @@ export async function createPaymentSessionWithFallback(
     .in("key", ["payment_gateway_priority", "payment_gateway_fallback_enabled"]);
 
   const settings: Record<string, any> = {};
-  settingsRows?.forEach(row => { settings[row.key] = row.value; });
+  settingsRows?.forEach((row: { key: string; value: any }) => { settings[row.key] = row.value; });
 
   const priorityStr = (settings["payment_gateway_priority"] as string) || "";
   const priorityList = priorityStr

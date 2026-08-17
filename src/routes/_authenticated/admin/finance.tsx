@@ -157,6 +157,7 @@ function AdminFinanceSettingsPage() {
       auto_suspend: formData.get("auto_suspend") === "on",
       auto_delete_days: Number(formData.get("auto_delete_days")) || 30,
       payment_gateway_priority: formData.get("payment_gateway_priority") || "",
+      payment_gateway_fallback_enabled: formData.get("payment_gateway_fallback_enabled") === "on",
     };
     for (const gateway of GATEWAYS) {
       for (const field of gateway.fields) {
@@ -194,6 +195,14 @@ function AdminFinanceSettingsPage() {
                 </div>
                 <Switch name="auto_suspend" defaultChecked={settings?.["auto_suspend"] === true} />
               </div>
+              <div className="flex items-center justify-between py-2 border-b border-muted">
+                <div className="min-w-0">
+                  <p className="font-medium">Fallback Automático</p>
+                  <p className="text-xs text-muted-foreground">Tentar próximo gateway da lista caso o principal falhe.</p>
+                </div>
+                <Switch name="payment_gateway_fallback_enabled" defaultChecked={settings?.["payment_gateway_fallback_enabled"] !== false} />
+              </div>
+
               <div className="space-y-2">
                 <Label>Prioridade de Gateways (IDs separados por vírgula)</Label>
                 <Input 
