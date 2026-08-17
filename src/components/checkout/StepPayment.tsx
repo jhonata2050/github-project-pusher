@@ -14,13 +14,14 @@ export function StepPayment({
   cpfCnpj, 
   setCpfCnpj,
   pixResult,
-  isProcessingPix
+  isProcessingPix,
+  hasStartedAutoPix
 }: any) {
   
   // Efeito para gerar Pix automaticamente se CPF estiver preenchido e Pix selecionado
   useEffect(() => {
     let timer: any;
-    if (paymentMethod === "pix" && cpfCnpj?.length >= 11 && !pixResult && !isProcessingPix) {
+    if (paymentMethod === "pix" && cpfCnpj?.length >= 11 && !pixResult && !isProcessingPix && !hasStartedAutoPix) {
       timer = setTimeout(() => {
         onPay();
       }, 1000);
@@ -28,7 +29,7 @@ export function StepPayment({
     return () => {
       if (timer) clearTimeout(timer);
     };
-  }, [paymentMethod, cpfCnpj, pixResult, isProcessingPix, onPay]);
+  }, [paymentMethod, cpfCnpj, pixResult, isProcessingPix, onPay, hasStartedAutoPix]);
 
   const handleCopy = () => {
     if (pixResult?.pixCode) {
