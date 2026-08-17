@@ -249,13 +249,7 @@ function InvoiceDetailsPage() {
                           return (
                             <button
                               key={opt.id}
-                              onClick={() => {
-                                setPaymentMethod(opt.id);
-                                const supported = GATEWAYS.filter((g) => g.methods.includes(opt.id));
-                                if (!supported.some((g) => g.id === gateway)) {
-                                  setGateway(supported[0]?.id ?? "abacatepay");
-                                }
-                              }}
+                              onClick={() => setPaymentMethod(opt.id)}
                               className={cn(
                                 "flex w-full items-center gap-3 rounded-xl border p-4 text-left transition-all",
                                 paymentMethod === opt.id
@@ -271,24 +265,6 @@ function InvoiceDetailsPage() {
                             </button>
                           );
                         })}
-                      </div>
-                    </div>
-
-                    <div className="space-y-2">
-                      <p className="text-xs font-medium uppercase text-muted-foreground">
-                        Gateways com {METHOD_LABELS[paymentMethod].toLowerCase()}
-                      </p>
-                      <div className="grid grid-cols-2 gap-2">
-                        {GATEWAYS.filter((g) => g.methods.includes(paymentMethod)).map((g) => (
-                          <Button
-                            key={g.id}
-                            variant={gateway === g.id ? "default" : "outline"}
-                            className="h-9 rounded-xl px-1 text-[10px]"
-                            onClick={() => setGateway(g.id)}
-                          >
-                            {g.name}
-                          </Button>
-                        ))}
                       </div>
                     </div>
 
