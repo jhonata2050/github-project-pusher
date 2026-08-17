@@ -45,8 +45,11 @@ function CheckoutPage() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const executeCreateOrder = useServerFn(createOrder);
+  const startPayment = useServerFn(initializePayment);
   
   const [step, setStep] = useState(1);
+  const [pixResult, setPixResult] = useState<any>(null);
+  const [isProcessingPix, setIsProcessingPix] = useState(false);
   const [billingCycle, setBillingCycle] = useState<string>("monthly");
   const [domain, setDomain] = useState("");
   const [domainType, setDomainType] = useState("register");
