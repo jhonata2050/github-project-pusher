@@ -116,24 +116,27 @@ function CheckoutPage() {
       case "Configuração":
         return <StepVPSConfig config={vpsConfig} setConfig={setVpsConfig} />;
       case "Ciclo de Faturamento":
+        const monthlyRef = Number(product.data.product_prices?.find(pr => pr.cycle === "monthly")?.price || 0);
         return (
           <div className="space-y-6">
             <h2 className="text-lg font-semibold">Escolha o Ciclo de Faturamento</h2>
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               {product.data.product_prices?.map((p) => {
-                const monthlyPrice = Number(p.price);
-                const isAnnual = p.cycle === "annually";
-                const monthlyRef = Number(product.data.product_prices?.find(pr => pr.cycle === "monthly")?.price || 0);
-                
+                const cyclePrice = Number(p.price);
+                const months = p.cycle === "monthly" ? 1 : p.cycle === "semiannually" ? 6 : p.cycle === "annually" ? 12 : p.cycle === "biennially" ? 24 : 1;
+                const monthlyEquivalent = months > 1 ? cyclePrice / months : cyclePrice;
                 let savings = 0;
-                let monthlyEquivalent = monthlyPrice;
-                
-                if (isAnnual && monthlyRef > 0) {
-                  monthlyEquivalent = monthlyPrice / 12;
-                  savings = Math.round(((monthlyRef * 12 - monthlyPrice) / (monthlyRef * 12)) * 100);
+                if (months > 1 && monthlyRef > 0) {
+                  savings = Math.round(((monthlyRef * months - cyclePrice) / (monthlyRef * months)) * 100);
                 }
 
-                const cycleName = p.cycle === "monthly" ? "Mensal" : p.cycle === "annually" ? "Anual" : p.cycle;
+                const cycleNames: Record<string, string> = {
+                  monthly: "Mensal",
+                  semiannually: "Semestral",
+                  annually: "Anual",
+                  biennially: "Bienal",
+                };
+                const cycleName = cycleNames[p.cycle] || p.cycle;
 
                 return (
                   <button
@@ -146,14 +149,14 @@ function CheckoutPage() {
                         : "border-border hover:border-brand/50"
                     )}
                   >
-                    {isAnnual && savings > 0 && (
-                      <div className="absolute top-0 right-0 bg-brand text-brand-foreground text-[8px] font-bold px-2 py-0.5 rounded-bl-lg uppercase">
+                    {savings > 0 && (
+                      <div className="absolute top-0 right-0 bg-brand text-brand-foreground text-[10px] font-bold px-2 py-0.5 rounded-bl-lg uppercase">
                         Economize {savings}%
                       </div>
                     )}
                     <p className="font-semibold uppercase text-[10px] text-muted-foreground">{cycleName}</p>
-                    <p className="mt-1 font-bold">{brl.format(monthlyPrice)}</p>
-                    {isAnnual && (
+                    <p className="mt-1 font-bold text-lg">{brl.format(cyclePrice)}</p>
+                    {months > 1 && (
                       <p className="text-[10px] text-muted-foreground mt-1">
                         Equivalente a {brl.format(monthlyEquivalent)}/mês
                       </p>
