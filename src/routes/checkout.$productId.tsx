@@ -18,12 +18,23 @@ import { StepVPSConfig } from "@/components/checkout/StepVPSConfig";
 import { StepAuth } from "@/components/checkout/StepAuth";
 import { StepPayment } from "@/components/checkout/StepPayment";
 
+import { StepSummary } from "@/components/checkout/StepSummary";
+
 export const Route = createFileRoute("/checkout/$productId")({
-  head: () => ({
+  head: ({ data }: any) => ({
     meta: [
-      { title: "Checkout — HostPanel" },
+      { title: `Checkout - ${data?.product?.name || 'Hospedagem'} - HostPanel` },
     ],
   }),
+  loader: async ({ params }) => {
+    const { data: product, error } = await supabase
+      .from("products")
+      .select("*, product_prices(*)")
+      .eq("id", params.productId)
+      .single();
+    if (error) throw error;
+    return { product };
+  },
   component: CheckoutPage,
 });
 
@@ -129,31 +140,13 @@ function CheckoutPage() {
         return <StepAuth onComplete={() => setStep(s => s + 1)} />;
       case "Resumo":
         return (
-          <div className="space-y-6">
-            <h2 className="text-lg font-semibold">Resumo do Pedido</h2>
-            <div className="rounded-2xl border p-6 space-y-4 bg-sidebar">
-              <div className="flex justify-between items-center">
-                <span className="text-muted-foreground">Produto:</span>
-                <span className="font-bold">{product.data.name}</span>
-              </div>
-              {domain && (
-                <div className="flex justify-between items-center">
-                  <span className="text-muted-foreground">Domínio:</span>
-                  <span className="font-mono text-sm">{domain}</span>
-                </div>
-              )}
-              {productType === "vps" && (
-                <div className="flex justify-between items-center">
-                  <span className="text-muted-foreground">SO / Hostname:</span>
-                  <span className="text-sm">{vpsConfig.os} / {vpsConfig.hostname}</span>
-                </div>
-              )}
-              <div className="flex justify-between items-center pt-4 border-t">
-                <span className="text-lg font-bold">Total a pagar:</span>
-                <span className="text-2xl font-black text-brand">{brl.format(Number(currentPrice?.price ?? 0))}</span>
-              </div>
-            </div>
-          </div>
+          <StepSummary 
+            product={product.data}
+            currentPrice={currentPrice}
+            domain={domain}
+            vpsConfig={vpsConfig}
+            brl={brl}
+          />
         );
       case "Pagamento":
         return <StepPayment paymentMethod={paymentMethod} setPaymentMethod={setPaymentMethod} onPay={() => orderMutation.mutate()} />;
