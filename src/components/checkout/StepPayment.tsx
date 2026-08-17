@@ -47,23 +47,23 @@ export function StepPayment({
             "flex items-center space-x-3 border p-4 rounded-xl cursor-pointer transition-colors",
             paymentMethod === "pix" ? "border-brand bg-brand/5" : ""
           )}>
-            <RadioGroupItem value="pix" id="pix" />
-            <Label htmlFor="pix" className="flex-1 cursor-pointer font-medium">PIX (Aprovação imediata)</Label>
-          </div>
-          <div className={cn(
-            "flex items-center space-x-3 border p-4 rounded-xl cursor-pointer transition-colors",
-            paymentMethod === "credit_card" ? "border-brand bg-brand/5" : ""
-          )}>
-            <RadioGroupItem value="credit_card" id="cc" />
-            <Label htmlFor="cc" className="flex-1 cursor-pointer font-medium">Cartão de Crédito</Label>
-          </div>
-          <div className={cn(
-            "flex items-center space-x-3 border p-4 rounded-xl cursor-pointer transition-colors",
-            paymentMethod === "bank_transfer" ? "border-brand bg-brand/5" : ""
-          )}>
-            <RadioGroupItem value="bank_transfer" id="bt" />
-            <Label htmlFor="bt" className="flex-1 cursor-pointer font-medium">Boleto Bancário</Label>
-          </div>
+          <RadioGroupItem value="pix" id="pix" />
+          <Label htmlFor="pix" className="flex-1 cursor-pointer font-medium">PIX (Aprovação imediata)</Label>
+        </div>
+        <div className={cn(
+          "flex items-center space-x-3 border p-4 rounded-xl cursor-pointer transition-colors",
+          paymentMethod === "credit_card" ? "border-brand bg-brand/5" : ""
+        )}>
+          <RadioGroupItem value="credit_card" id="cc" />
+          <Label htmlFor="cc" className="flex-1 cursor-pointer font-medium">Cartão de Crédito</Label>
+        </div>
+        <div className={cn(
+          "flex items-center space-x-3 border p-4 rounded-xl cursor-pointer transition-colors",
+          paymentMethod === "boleto" ? "border-brand bg-brand/5" : ""
+        )}>
+          <RadioGroupItem value="boleto" id="bt" />
+          <Label htmlFor="boleto" className="flex-1 cursor-pointer font-medium">Boleto Bancário</Label>
+        </div>
         </RadioGroup>
       ) : (
         <div className="rounded-2xl border border-brand/20 bg-brand/5 p-6 animate-in fade-in zoom-in duration-300">

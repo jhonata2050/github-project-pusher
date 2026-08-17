@@ -5,7 +5,7 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
 const paymentInputSchema = z.object({
   invoiceId: z.string(),
-  method: z.enum(["pix", "credit_card", "bank_transfer"]),
+  method: z.enum(["pix", "credit_card", "boleto"]),
   gateway: z.string().optional(),
 });
 
