@@ -16,6 +16,6 @@ export const initializePayment = createServerFn({ method: "POST" })
     const { createPaymentSessionWithFallback } = await import("./payments.server");
     return createPaymentSessionWithFallback(context.userId, { 
       ...data, 
-      gateway: data.gateway || "abacatepay" 
+      gateway: data.gateway
     });
   });

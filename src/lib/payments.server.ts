@@ -466,9 +466,12 @@ export async function createPaymentSessionWithFallback(
 
   // 2. Construir lista de gateways para tentar
   // Se fallback estiver desativado, tentamos apenas o solicitado.
+  // 2. Construir lista de gateways para tentar
+  // Se o usuário solicitou um gateway específico, ele deve vir primeiro.
+  // Caso contrário, usamos a lista de prioridade.
   const gatewaysToTry = isFallbackEnabled 
-    ? Array.from(new Set([data.gateway, ...priorityList]))
-    : [data.gateway];
+    ? Array.from(new Set(data.gateway ? [data.gateway, ...priorityList] : priorityList))
+    : [data.gateway || priorityList[0]];
 
   let lastError: Error | null = null;
 
