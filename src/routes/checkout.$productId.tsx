@@ -1,7 +1,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Check, Receipt, Store, Ticket, ArrowRight, ArrowLeft } from "lucide-react";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { toast } from "sonner";
 
 import { AppShell } from "@/components/app/AppShell";
@@ -10,7 +10,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
-import { createOrder } from "@/lib/finance.functions";
+import { createOrder, getInvoiceDetails } from "@/lib/finance.functions";
+import { initializePayment } from "@/lib/payments.functions";
 import { useServerFn } from "@tanstack/react-start";
 
 import { StepDomain } from "@/components/checkout/StepDomain";
@@ -45,13 +46,17 @@ function CheckoutPage() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const executeCreateOrder = useServerFn(createOrder);
+  const startPayment = useServerFn(initializePayment);
   
   const [step, setStep] = useState(1);
+  const [pixResult, setPixResult] = useState<any>(null);
+  const [isProcessingPix, setIsProcessingPix] = useState(false);
   const [billingCycle, setBillingCycle] = useState<string>("monthly");
   const [domain, setDomain] = useState("");
   const [domainType, setDomainType] = useState("register");
   const [vpsConfig, setVpsConfig] = useState({ hostname: "", os: "", location: "" });
   const [paymentMethod, setPaymentMethod] = useState("pix");
+  const [hasStartedAutoPix, setHasStartedAutoPix] = useState(false);
   const [isDomainValid, setIsDomainValid] = useState(false);
   const [cpfCnpj, setCpfCnpj] = useState("");
 
@@ -83,28 +88,50 @@ function CheckoutPage() {
 
   const orderMutation = useMutation({
     mutationFn: async () => {
-      // Garante que existe uma sessão válida antes de chamar a função protegida
       const { data: sessionData } = await supabase.auth.getSession();
       if (!sessionData.session?.access_token) {
         throw new Error("SESSION_REQUIRED");
       }
-      return await executeCreateOrder({
+      
+      const order = await executeCreateOrder({
         data: {
           productId,
           billingCycle: billingCycle as any,
           domain: domain || undefined,
-          // Futuro: passar vpsConfig e paymentMethod para o servidor
         }
       });
+
+      if (paymentMethod === "pix") {
+        setIsProcessingPix(true);
+        try {
+          const pixData = await startPayment({ 
+            data: { 
+              invoiceId: order.invoiceId, 
+              method: "pix",
+              gateway: "cajupay" // Prioridade padrão ou fallback automático via serverFn
+            } 
+          });
+          setPixResult(pixData);
+        } catch (err) {
+          console.error("Erro ao gerar Pix:", err);
+          toast.error("Erro ao gerar QR Code Pix. Tente novamente ou mude o método.");
+        } finally {
+          setIsProcessingPix(false);
+        }
+      }
+
+      return order;
     },
-    onSuccess: () => {
-      toast.success("Pedido realizado com sucesso!");
-      navigate({ to: "/invoices" });
+    onSuccess: (data) => {
+      if (paymentMethod !== "pix") {
+        toast.success("Pedido realizado com sucesso!");
+        navigate({ to: "/invoices" });
+      }
     },
     onError: (error: any) => {
       const msg = String(error?.message || "");
       if (msg === "SESSION_REQUIRED" || msg.toLowerCase().includes("unauthorized")) {
-        toast.error("Sua sessão expirou ou não foi confirmada. Entre novamente para concluir o pedido.");
+        toast.error("Sua sessão expirou. Entre novamente.");
         const accountIdx = steps.indexOf("Conta");
         if (accountIdx >= 0) setStep(accountIdx + 1);
         return;
@@ -113,10 +140,17 @@ function CheckoutPage() {
     }
   });
 
-  if (product.isLoading) return <AppShell breadcrumb={<span>Checkout</span>}><Skeleton className="h-96 rounded-3xl" /></AppShell>;
-  if (!product.data) return <AppShell breadcrumb={<span>Checkout</span>}>Produto não encontrado</AppShell>;
+  useEffect(() => {
+    if (!user && !product.isLoading) {
+      navigate({ to: "/auth", search: { redirect: `/checkout/${productId}` } as any });
+    }
+  }, [user, product.isLoading, productId, navigate]);
 
-  const currentPrice = product.data.product_prices?.find((p) => p.cycle === billingCycle);
+  if (product.isLoading) return <AppShell area="client" breadcrumb={<span>Checkout</span>}><Skeleton className="h-96 rounded-3xl" /></AppShell>;
+  if (!product.data) return <AppShell area="client" breadcrumb={<span>Checkout</span>}>Produto não encontrado</AppShell>;
+  if (!user) return null;
+
+  const currentPrice = product.data.product_prices?.find((p) => p.cycle === billingCycle) || product.data.product_prices?.[0];
 
   const renderStep = () => {
     let currentStepIdx = step - 1;
@@ -199,9 +233,15 @@ function CheckoutPage() {
           <StepPayment 
             paymentMethod={paymentMethod} 
             setPaymentMethod={setPaymentMethod} 
-            onPay={() => orderMutation.mutate()} 
+            onPay={() => {
+              setHasStartedAutoPix(true);
+              orderMutation.mutate();
+            }} 
             cpfCnpj={cpfCnpj}
             setCpfCnpj={setCpfCnpj}
+            pixResult={pixResult}
+            isProcessingPix={isProcessingPix}
+            hasStartedAutoPix={hasStartedAutoPix}
           />
         );
       default:

@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { supabase } from "@/integrations/supabase/client";
 import { useBranding } from "@/hooks/use-branding";
+import { useAuth } from "@/hooks/use-auth";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 
@@ -34,6 +35,7 @@ export const Route = createFileRoute("/")({
 const brl = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" });
 
 function Index() {
+  const { user } = useAuth();
   const branding = useBranding();
   const groups = useQuery({
     queryKey: ["public-catalog-groups"],
@@ -199,8 +201,17 @@ function Index() {
                             Painel DirectAdmin incluído
                           </li>
                         </ul>
-                        <Button asChild className="mt-6 rounded-xl bg-primary text-primary-foreground hover:bg-primary/90">
-                          <Link to="/checkout/$productId" params={{ productId: plan.id }} search={{ }}>Contratar</Link>
+                        <Button 
+                          asChild 
+                          className="mt-6 rounded-xl bg-primary text-primary-foreground hover:bg-primary/90"
+                        >
+                          <Link 
+                            to={user ? "/checkout/$productId" : "/auth"} 
+                            params={user ? { productId: plan.id } : {}}
+                            search={user ? {} : { redirect: `/checkout/${plan.id}` } as any}
+                          >
+                            Contratar
+                          </Link>
                         </Button>
                       </article>
                     );
