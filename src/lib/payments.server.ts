@@ -427,7 +427,7 @@ export async function createPaymentSession(
 
 export async function createPaymentSessionWithFallback(
   userId: string,
-  data: { invoiceId: string; method: PaymentMethod; gateway: string },
+  data: { invoiceId: string; method: PaymentMethod; gateway?: string },
 ): Promise<PaymentResult> {
   // 1. Obter configurações do sistema
   const { data: settingsRows } = await supabaseAdmin
@@ -466,14 +466,18 @@ export async function createPaymentSessionWithFallback(
 
   // 2. Construir lista de gateways para tentar
   // Se fallback estiver desativado, tentamos apenas o solicitado.
+  // 2. Construir lista de gateways para tentar
+  // Se o usuário solicitou um gateway específico, ele deve vir primeiro.
+  // Caso contrário, usamos a lista de prioridade.
   const gatewaysToTry = isFallbackEnabled 
-    ? Array.from(new Set([data.gateway, ...priorityList]))
-    : [data.gateway];
+    ? Array.from(new Set(data.gateway ? [data.gateway, ...priorityList] : priorityList))
+    : [data.gateway || priorityList[0]];
 
   let lastError: Error | null = null;
 
   for (const gatewayId of gatewaysToTry) {
     try {
+      if (!gatewayId) continue;
       const def = gatewayById(gatewayId);
       if (!def || !def.methods.includes(data.method)) {
         console.log(`[Payment] Gateway ${gatewayId} ignorado (não suporta ${data.method})`);
@@ -481,7 +485,7 @@ export async function createPaymentSessionWithFallback(
       }
 
       console.log(`[Payment] Tentando gateway: ${gatewayId} para o método ${data.method}`);
-      return await createPaymentSession(userId, { ...data, gateway: gatewayId });
+      return await createPaymentSession(userId, { ...data, gateway: gatewayId } as any);
     } catch (err: any) {
       console.error(`[Payment] Erro no gateway ${gatewayId}:`, err.message);
       lastError = err;
