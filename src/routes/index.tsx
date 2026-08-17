@@ -199,11 +199,13 @@ function Index() {
                             Painel DirectAdmin incluído
                           </li>
                         </ul>
-                        <Button asChild className="mt-6 rounded-xl bg-primary text-primary-foreground hover:bg-primary/90">
+                        <Button 
+                          asChild 
+                          className="mt-6 rounded-xl bg-primary text-primary-foreground hover:bg-primary/90"
+                        >
                           <Link 
-                            to={branding.logo_url ? "/checkout/$productId" : "/auth"} 
-                            params={branding.logo_url ? { productId: plan.id } : {}}
-                            search={branding.logo_url ? {} : { redirect: `/checkout/${plan.id}`, mode: 'signup' }}
+                            to="/checkout/$productId" 
+                            params={{ productId: plan.id }}
                           >
                             Contratar
                           </Link>
