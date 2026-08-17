@@ -34,6 +34,7 @@ export const Route = createFileRoute("/")({
 const brl = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" });
 
 function Index() {
+  const { user } = useAuth();
   const branding = useBranding();
   const groups = useQuery({
     queryKey: ["public-catalog-groups"],
@@ -204,8 +205,9 @@ function Index() {
                           className="mt-6 rounded-xl bg-primary text-primary-foreground hover:bg-primary/90"
                         >
                           <Link 
-                            to="/checkout/$productId" 
-                            params={{ productId: plan.id }}
+                            to={user ? "/checkout/$productId" : "/auth"} 
+                            params={user ? { productId: plan.id } : {}}
+                            search={user ? {} : { redirect: `/checkout/${plan.id}`, mode: 'signup' }}
                           >
                             Contratar
                           </Link>
