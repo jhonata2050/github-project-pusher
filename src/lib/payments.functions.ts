@@ -14,8 +14,9 @@ export const initializePayment = createServerFn({ method: "POST" })
   .inputValidator((data: unknown) => paymentInputSchema.parse(data))
   .handler(async ({ data, context }) => {
     const { createPaymentSessionWithFallback } = await import("./payments.server");
-    return createPaymentSessionWithFallback(context.userId, { 
-      ...data, 
-      gateway: data.gateway
+    return createPaymentSessionWithFallback(context.userId, {
+      invoiceId: data.invoiceId,
+      method: data.method,
+      gateway: data.gateway,
     });
   });
