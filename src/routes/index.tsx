@@ -7,6 +7,8 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { supabase } from "@/integrations/supabase/client";
 import { useBranding } from "@/hooks/use-branding";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -33,20 +35,43 @@ const brl = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" 
 
 function Index() {
   const branding = useBranding();
-  const plans = useQuery({
-    queryKey: ["public-catalog"],
+  const groups = useQuery({
+    queryKey: ["public-catalog-groups"],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("products")
-        .select(
-          "id, name, description, disk_quota_mb, bandwidth_quota_mb, domains_limit, email_accounts_limit, is_featured, sort_order, product_prices(cycle, price)",
-        )
+        .from("product_groups")
+        .select(`
+          id, 
+          name, 
+          description, 
+          sort_order,
+          products(
+            id, 
+            name, 
+            description, 
+            disk_quota_mb, 
+            bandwidth_quota_mb, 
+            domains_limit, 
+            email_accounts_limit, 
+            is_featured, 
+            sort_order, 
+            is_visible,
+            product_prices(cycle, price, is_active)
+          )
+        `)
         .eq("is_visible", true)
         .order("sort_order");
+      
       if (error) throw error;
-      return data;
+
+      // Filtrar grupos que não possuem produtos visíveis
+      return (data ?? []).map(group => ({
+        ...group,
+        products: (group.products as any[]).filter(p => p.is_visible).sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0))
+      })).filter(group => group.products.length > 0);
     },
   });
+
 
   return (
     <div className="min-h-screen">
@@ -100,60 +125,83 @@ function Index() {
           Todos os planos incluem SSL grátis, backups diários e painel DirectAdmin.
         </p>
 
-        {plans.isLoading ? (
+        {groups.isLoading ? (
           <div className="mt-10 grid gap-6 md:grid-cols-3">
             {[0, 1, 2].map((i) => (
               <Skeleton key={i} className="h-80 rounded-3xl" />
             ))}
           </div>
+        ) : groups.data && groups.data.length > 0 ? (
+          <Tabs defaultValue={groups.data[0].id} className="mt-10 w-full">
+            <div className="flex justify-center">
+              <TabsList className="h-auto w-fit flex-wrap justify-center gap-2 rounded-2xl bg-muted/50 p-2 border border-border">
+                {groups.data.map((group) => (
+                  <TabsTrigger
+                    key={group.id}
+                    value={group.id}
+                    className="rounded-xl px-6 py-2.5 text-sm font-medium transition-all data-[state=active]:bg-background data-[state=active]:shadow-sm"
+                  >
+                    {group.name}
+                  </TabsTrigger>
+                ))}
+              </TabsList>
+            </div>
+
+            {groups.data.map((group) => (
+              <TabsContent key={group.id} value={group.id} className="mt-8 animate-in fade-in zoom-in duration-300">
+                <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                  {group.products.map((plan) => {
+                    const monthly = plan.product_prices?.find((p: any) => p.cycle === "monthly" && p.is_active);
+                    return (
+                      <article
+                        key={plan.id}
+                        className="flex flex-col rounded-3xl border border-border bg-card p-6 shadow-[var(--shadow-card)] transition-all hover:scale-[1.02]"
+                      >
+                        {plan.is_featured && (
+                          <span className="mb-3 w-fit rounded-full bg-primary px-3 py-1 text-xs font-medium text-primary-foreground">
+                            Mais vendido
+                          </span>
+                        )}
+                        <h3 className="text-lg font-semibold">{plan.name}</h3>
+                        <p className="mt-1 text-sm text-muted-foreground line-clamp-2 min-h-[40px]">{plan.description}</p>
+                        <p className="mt-5 text-3xl font-semibold tracking-tight">
+                          {monthly ? brl.format(Number(monthly.price)) : "Sob consulta"}
+                          <span className="text-base font-normal text-muted-foreground">/mês</span>
+                        </p>
+                        <ul className="mt-5 flex-1 space-y-2 text-sm text-muted-foreground">
+                          <li className="flex items-center gap-2">
+                            <HardDrive className="size-4 text-brand" />
+                            {plan.disk_quota_mb ? `${Math.round(plan.disk_quota_mb / 1024)} GB de disco` : "Disco flexível"}
+                          </li>
+                          <li className="flex items-center gap-2">
+                            <Server className="size-4 text-brand" />
+                            {plan.domains_limit ? `${plan.domains_limit} domínio(s)` : "Domínios ilimitados"}
+                          </li>
+                          <li className="flex items-center gap-2">
+                            <Mail className="size-4 text-brand" />
+                            {plan.email_accounts_limit
+                              ? `${plan.email_accounts_limit} contas de e-mail`
+                              : "E-mails ilimitados"}
+                          </li>
+                          <li className="flex items-center gap-2">
+                            <Check className="size-4 text-brand" />
+                            Painel DirectAdmin incluído
+                          </li>
+                        </ul>
+                        <Button asChild className="mt-6 rounded-xl bg-primary text-primary-foreground hover:bg-primary/90">
+                          <Link to="/checkout/$productId" params={{ productId: plan.id }}>Contratar</Link>
+                        </Button>
+                      </article>
+                    );
+                  })}
+                </div>
+              </TabsContent>
+            ))}
+          </Tabs>
         ) : (
-          <div className="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-            {(plans.data ?? []).map((plan) => {
-              const monthly = plan.product_prices?.find((p) => p.cycle === "monthly");
-              return (
-                <article
-                  key={plan.id}
-                  className="flex flex-col rounded-3xl border border-border bg-card p-6 shadow-[var(--shadow-card)]"
-                >
-                  {plan.is_featured && (
-                    <span className="mb-3 w-fit rounded-full bg-primary px-3 py-1 text-xs font-medium text-primary-foreground">
-                      Mais vendido
-                    </span>
-                  )}
-                  <h3 className="text-lg font-semibold">{plan.name}</h3>
-                  <p className="mt-1 text-sm text-muted-foreground">{plan.description}</p>
-                  <p className="mt-5 text-3xl font-semibold tracking-tight">
-                    {monthly ? brl.format(Number(monthly.price)) : "Sob consulta"}
-                    <span className="text-base font-normal text-muted-foreground">/mês</span>
-                  </p>
-                  <ul className="mt-5 flex-1 space-y-2 text-sm text-muted-foreground">
-                    <li className="flex items-center gap-2">
-                      <HardDrive className="size-4 text-brand" />
-                      {plan.disk_quota_mb ? `${Math.round(plan.disk_quota_mb / 1024)} GB de disco` : "Disco flexível"}
-                    </li>
-                    <li className="flex items-center gap-2">
-                      <Server className="size-4 text-brand" />
-                      {plan.domains_limit ? `${plan.domains_limit} domínio(s)` : "Domínios ilimitados"}
-                    </li>
-                    <li className="flex items-center gap-2">
-                      <Mail className="size-4 text-brand" />
-                      {plan.email_accounts_limit
-                        ? `${plan.email_accounts_limit} contas de e-mail`
-                        : "E-mails ilimitados"}
-                    </li>
-                    <li className="flex items-center gap-2">
-                      <Check className="size-4 text-brand" />
-                      Painel DirectAdmin incluído
-                    </li>
-                  </ul>
-                  <Button asChild className="mt-6 rounded-xl bg-primary text-primary-foreground hover:bg-primary/90">
-                    <Link to="/checkout/$productId" params={{ productId: plan.id }}>Contratar</Link>
-                  </Button>
-                </article>
-              );
-            })}
-          </div>
+          <p className="mt-20 text-center text-muted-foreground">Nenhum plano disponível no momento.</p>
         )}
+
       </section>
 
       <footer className="border-t border-border px-4 py-8 text-center text-sm text-muted-foreground">
