@@ -67,9 +67,12 @@ export async function validateGateway(gatewayId: string, credentials: Record<str
           method: "POST",
           headers: {
             "Content-Type": "application/x-www-form-urlencoded",
-            Authorization: `Basic ${btoa(`${credentials["cajupay_client_id"] || ""}:${credentials["cajupay_client_secret"] || ""}`)}`,
           },
-          body: new URLSearchParams({ grant_type: "client_credentials" }),
+          body: new URLSearchParams({
+            grant_type: "client_credentials",
+            client_id: credentials["cajupay_client_id"] || "",
+            client_secret: credentials["cajupay_client_secret"] || "",
+          }),
         });
         if (!res.ok) {
           const detail = (await res.text().catch(() => "")).slice(0, 200);
