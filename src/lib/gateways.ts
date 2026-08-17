@@ -91,12 +91,12 @@ export const GATEWAYS: GatewayDef[] = [
   {
     id: "cajupay",
     name: "CajuPay",
-    docs: "https://cajupay.com.br",
+    docs: "https://cajupay.com.br/docs",
     required: ["cajupay_client_id", "cajupay_client_secret"],
-    methods: ["pix", "credit_card", "boleto"],
+    methods: ["pix", "boleto"],
     fields: [
-      { key: "cajupay_client_id", label: "Client ID", secret: true },
-      { key: "cajupay_client_secret", label: "Client Secret", secret: true },
+      { key: "cajupay_client_id", label: "Public Key (X-API-Key)", secret: true },
+      { key: "cajupay_client_secret", label: "Secret Key (X-API-Secret)", secret: true },
       { key: "cajupay_base_url", label: "Base URL da API", placeholder: "https://api.cajupay.com.br", optional: true },
     ],
   },
