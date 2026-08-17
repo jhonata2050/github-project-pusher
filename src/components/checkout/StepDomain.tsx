@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -6,6 +6,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { validateDomain } from "@/lib/checkout.functions";
 import { useServerFn } from "@tanstack/react-start";
 import { Loader2, AlertCircle, CheckCircle2 } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 export function StepDomain({ domain, setDomain, domainType, setDomainType, onValidChange }: any) {
   const [isValidating, setIsValidating] = useState(false);
@@ -13,8 +14,9 @@ export function StepDomain({ domain, setDomain, domainType, setDomainType, onVal
   const [success, setSuccess] = useState(false);
   const checkDomain = useServerFn(validateDomain);
 
-  const handleBlur = async () => {
-    if (!domain || domain.length < 4 || !domain.includes(".")) {
+  const runValidation = useCallback(async (value: string) => {
+    const cleaned = value.trim().toLowerCase();
+    if (!cleaned || cleaned.length < 4 || !cleaned.includes(".")) {
       setError("Por favor, insira um domínio válido");
       setSuccess(false);
       onValidChange?.(false);
@@ -26,21 +28,35 @@ export function StepDomain({ domain, setDomain, domainType, setDomainType, onVal
     setSuccess(false);
     
     try {
-      const result = await checkDomain({ data: { domain } });
+      const result = await checkDomain({ data: { domain: cleaned } });
       if (!result.valid) {
         setError(result.message || "Domínio inválido");
+        setSuccess(false);
         onValidChange?.(false);
       } else {
+        setError(null);
         setSuccess(true);
         onValidChange?.(true);
       }
     } catch (err) {
       setError("Erro ao validar domínio. Tente novamente.");
+      setSuccess(false);
       onValidChange?.(false);
     } finally {
       setIsValidating(false);
     }
-  };
+  }, [checkDomain, onValidChange]);
+
+  useEffect(() => {
+    if (!domain || domain.length < 4 || !domain.includes(".")) {
+      setError(null);
+      setSuccess(false);
+      onValidChange?.(false);
+      return;
+    }
+    const timer = setTimeout(() => runValidation(domain), 600);
+    return () => clearTimeout(timer);
+  }, [domain, runValidation, onValidChange]);
 
   return (
     <div className="space-y-6">
@@ -61,11 +77,7 @@ export function StepDomain({ domain, setDomain, domainType, setDomainType, onVal
           value={domain}
           onChange={(e) => {
             setDomain(e.target.value);
-            setError(null);
-            setSuccess(false);
-            onValidChange?.(false);
           }}
-          onBlur={handleBlur}
           className={cn(
             "h-12 rounded-xl pr-10",
             error && "border-destructive focus-visible:ring-destructive",
@@ -78,10 +90,18 @@ export function StepDomain({ domain, setDomain, domainType, setDomainType, onVal
           {success && <CheckCircle2 className="size-4 text-green-500" />}
         </div>
       </div>
-      {error && <p className="text-xs text-destructive flex items-center gap-1"><AlertCircle className="size-3" /> {error}</p>}
-      {success && <p className="text-xs text-green-600 flex items-center gap-1"><CheckCircle2 className="size-3" /> Domínio disponível!</p>}
+      {error && (
+        <div className="rounded-lg border border-destructive/50 bg-destructive/10 p-3 text-sm text-destructive flex items-start gap-2">
+          <AlertCircle className="size-4 mt-0.5 shrink-0" />
+          <span>{error}</span>
+        </div>
+      )}
+      {success && (
+        <div className="rounded-lg border border-green-500/50 bg-green-500/10 p-3 text-sm text-green-700 flex items-start gap-2">
+          <CheckCircle2 className="size-4 mt-0.5 shrink-0" />
+          <span>Domínio disponível!</span>
+        </div>
+      )}
     </div>
   );
 }
-
-import { cn } from "@/lib/utils";
