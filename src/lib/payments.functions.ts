@@ -1,6 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
-
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
 const paymentInputSchema = z.object({
@@ -17,6 +16,6 @@ export const initializePayment = createServerFn({ method: "POST" })
     return createPaymentSessionWithFallback(context.userId, {
       invoiceId: data.invoiceId,
       method: data.method,
-      gateway: data.gateway,
+      gateway: data.gateway || undefined,
     });
   });
