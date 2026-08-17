@@ -1,3 +1,4 @@
+import React, { useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { AppShell } from "@/components/app/AppShell";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -26,7 +27,7 @@ export const Route = createFileRoute("/_authenticated/admin/finance")({
 });
 
 function GatewayCard({ gateway, settings, isVPS = false }: { gateway: GatewayDef, settings: any, isVPS?: boolean }) {
-  const [validating, setValidating] = React.useState(false);
+  const [validating, setValidating] = useState(false);
   const configured = isGatewayConfigured(gateway.id, settings as Record<string, unknown>);
 
   const handleTest = async () => {
