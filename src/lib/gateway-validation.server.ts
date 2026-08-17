@@ -16,7 +16,7 @@ export async function validateGateway(gatewayId: string, credentials: Record<str
     switch (gatewayId) {
       case "abacatepay": {
         const res = await fetch("https://api.abacatepay.com/v1/billing/list", {
-          headers: { Authorization: `Bearer ${credentials["abacatepay_api_key"]}` },
+          headers: { Authorization: `Bearer ${credentials["abacatepay_api_key"] || ""}` },
         });
         if (!res.ok) throw new Error(await handleGatewayError(res, "AbacatePay"));
         return { success: true, message: "Conexão com AbacatePay validada com sucesso!" };
@@ -70,8 +70,8 @@ export async function validateGateway(gatewayId: string, credentials: Record<str
           headers: { "Content-Type": "application/x-www-form-urlencoded" },
           body: new URLSearchParams({
             grant_type: "client_credentials",
-            client_id: credentials["cajupay_client_id"],
-            client_secret: credentials["cajupay_client_secret"],
+            client_id: credentials["cajupay_client_id"] || "",
+            client_secret: credentials["cajupay_client_secret"] || "",
           }),
         });
         if (!res.ok) throw new Error(await handleGatewayError(res, "CajuPay"));
@@ -84,10 +84,10 @@ export async function validateGateway(gatewayId: string, credentials: Record<str
           headers: { "Content-Type": "application/x-www-form-urlencoded" },
           body: new URLSearchParams({
             grant_type: "password",
-            client_id: credentials["contabo_client_id"],
-            client_secret: credentials["contabo_client_secret"],
-            username: credentials["contabo_api_user"],
-            password: credentials["contabo_api_password"],
+            client_id: credentials["contabo_client_id"] || "",
+            client_secret: credentials["contabo_client_secret"] || "",
+            username: credentials["contabo_api_user"] || "",
+            password: credentials["contabo_api_password"] || "",
           }),
         });
         if (!res.ok) throw new Error(await handleGatewayError(res, "Contabo"));
