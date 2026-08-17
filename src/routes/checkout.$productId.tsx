@@ -139,8 +139,15 @@ function CheckoutPage() {
     }
   });
 
+  useEffect(() => {
+    if (!user && !product.isLoading) {
+      navigate({ to: "/auth", search: { redirect: `/checkout/${productId}`, mode: 'signup' } });
+    }
+  }, [user, product.isLoading, productId, navigate]);
+
   if (product.isLoading) return <AppShell area="client" breadcrumb={<span>Checkout</span>}><Skeleton className="h-96 rounded-3xl" /></AppShell>;
   if (!product.data) return <AppShell area="client" breadcrumb={<span>Checkout</span>}>Produto não encontrado</AppShell>;
+  if (!user) return null;
 
   const currentPrice = product.data.product_prices?.find((p) => p.cycle === billingCycle);
 
