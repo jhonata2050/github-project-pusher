@@ -1,12 +1,11 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { Check, Receipt, Store, Ticket } from "lucide-react";
-import { useState } from "react";
+import { Check, Receipt, Store, Ticket, ArrowRight, ArrowLeft } from "lucide-react";
+import { useState, useMemo } from "react";
 import { toast } from "sonner";
 
 import { AppShell } from "@/components/app/AppShell";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
@@ -14,12 +13,28 @@ import { useAuth } from "@/hooks/use-auth";
 import { createOrder } from "@/lib/finance.functions";
 import { useServerFn } from "@tanstack/react-start";
 
+import { StepDomain } from "@/components/checkout/StepDomain";
+import { StepVPSConfig } from "@/components/checkout/StepVPSConfig";
+import { StepAuth } from "@/components/checkout/StepAuth";
+import { StepPayment } from "@/components/checkout/StepPayment";
+
+import { StepSummary } from "@/components/checkout/StepSummary";
+
 export const Route = createFileRoute("/checkout/$productId")({
-  head: () => ({
+  head: ({ data }: any) => ({
     meta: [
-      { title: "Checkout — HostPanel" },
+      { title: `Checkout - ${data?.product?.name || 'Hospedagem'} - HostPanel` },
     ],
   }),
+  loader: async ({ params }) => {
+    const { data: product, error } = await supabase
+      .from("products")
+      .select("*, product_prices(*)")
+      .eq("id", params.productId)
+      .single();
+    if (error) throw error;
+    return { product };
+  },
   component: CheckoutPage,
 });
 
@@ -31,9 +46,12 @@ function CheckoutPage() {
   const navigate = useNavigate();
   const executeCreateOrder = useServerFn(createOrder);
   
+  const [step, setStep] = useState(1);
   const [billingCycle, setBillingCycle] = useState<string>("monthly");
-  const [couponCode, setCouponCode] = useState("");
   const [domain, setDomain] = useState("");
+  const [domainType, setDomainType] = useState("register");
+  const [vpsConfig, setVpsConfig] = useState({ hostname: "", os: "", location: "" });
+  const [paymentMethod, setPaymentMethod] = useState("pix");
 
   const product = useQuery({
     queryKey: ["checkout-product", productId],
@@ -48,20 +66,33 @@ function CheckoutPage() {
     },
   });
 
+  const productType = product.data?.product_type?.toLowerCase() || "other";
+
+  const steps = useMemo(() => {
+    const list = [];
+    if (productType === "hosting") list.push("Domínio");
+    if (productType === "vps") list.push("Configuração");
+    list.push("Ciclo de Faturamento");
+    if (!user) list.push("Conta");
+    list.push("Resumo");
+    list.push("Pagamento");
+    return list;
+  }, [productType, user]);
+
   const orderMutation = useMutation({
     mutationFn: async () => {
       return await executeCreateOrder({
         data: {
           productId,
           billingCycle: billingCycle as any,
-          couponCode: couponCode || undefined,
           domain: domain || undefined,
+          // Futuro: passar vpsConfig e paymentMethod para o servidor
         }
       });
     },
     onSuccess: () => {
       toast.success("Pedido realizado com sucesso!");
-      navigate({ to: "/invoices" }); // Or a specific invoice page if we had one
+      navigate({ to: "/invoices" });
     },
     onError: (error: any) => {
       toast.error("Erro ao realizar pedido: " + error.message);
@@ -73,113 +104,141 @@ function CheckoutPage() {
 
   const currentPrice = product.data.product_prices?.find((p) => p.cycle === billingCycle);
 
+  const renderStep = () => {
+    let currentStepIdx = step - 1;
+    let stepName = steps[currentStepIdx];
+
+    switch (stepName) {
+      case "Domínio":
+        return <StepDomain domain={domain} setDomain={setDomain} domainType={domainType} setDomainType={setDomainType} />;
+      case "Configuração":
+        return <StepVPSConfig config={vpsConfig} setConfig={setVpsConfig} />;
+      case "Ciclo de Faturamento":
+        return (
+          <div className="space-y-6">
+            <h2 className="text-lg font-semibold">Escolha o Ciclo de Faturamento</h2>
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+              {product.data.product_prices?.map((p) => (
+                <button
+                  key={p.cycle}
+                  onClick={() => setBillingCycle(p.cycle)}
+                  className={cn(
+                    "rounded-xl border p-4 text-left transition-all",
+                    billingCycle === p.cycle
+                      ? "border-brand bg-brand/5 ring-1 ring-brand"
+                      : "border-border hover:border-brand/50"
+                  )}
+                >
+                  <p className="font-semibold uppercase text-[10px] text-muted-foreground">{p.cycle}</p>
+                  <p className="mt-1 font-bold">{brl.format(Number(p.price))}</p>
+                </button>
+              ))}
+            </div>
+          </div>
+        );
+      case "Conta":
+        return <StepAuth onComplete={() => setStep(s => s + 1)} />;
+      case "Resumo":
+        return (
+          <StepSummary 
+            product={product.data}
+            currentPrice={currentPrice}
+            domain={domain}
+            vpsConfig={vpsConfig}
+            brl={brl}
+          />
+        );
+      case "Pagamento":
+        return <StepPayment paymentMethod={paymentMethod} setPaymentMethod={setPaymentMethod} onPay={() => orderMutation.mutate()} />;
+      default:
+        return null;
+    }
+  };
+
+  const isNextDisabled = () => {
+    let stepName = steps[step - 1];
+    if (stepName === "Domínio" && !domain) return true;
+    if (stepName === "Configuração" && (!vpsConfig.hostname || !vpsConfig.os || !vpsConfig.location)) return true;
+    if (stepName === "Conta" && !user) return true;
+    return false;
+  };
+
   return (
     <AppShell
       area="client"
       breadcrumb={
         <>
-          <span className="flex items-center gap-2">
-            <Store className="size-4" />
-            Loja
-          </span>
+          <span className="flex items-center gap-2"><Store className="size-4" />Loja</span>
           <span>/</span>
-          <span className="flex items-center gap-2 font-medium text-foreground">
-            <Receipt className="size-4" />
-            Checkout
-          </span>
+          <span className="flex items-center gap-2 font-medium text-foreground"><Receipt className="size-4" />Checkout</span>
         </>
       }
     >
-      <div className="grid gap-8 lg:grid-cols-3">
-        <div className="lg:col-span-2 space-y-6">
-          <section className="rounded-2xl border border-border p-6">
-            <h2 className="text-lg font-semibold flex items-center gap-2">
-              <Check className="size-5 text-brand" />
-              1. Configuração do serviço
-            </h2>
-            <div className="mt-4 space-y-4">
-              <div>
-                <label className="text-sm font-medium">Ciclo de faturamento</label>
-                <div className="mt-2 grid grid-cols-2 gap-3 sm:grid-cols-3">
-                  {product.data.product_prices?.map((p) => (
-                    <button
-                      key={p.cycle}
-                      onClick={() => setBillingCycle(p.cycle)}
-                      className={cn(
-                        "rounded-xl border p-3 text-sm transition-all",
-                        billingCycle === p.cycle
-                          ? "border-brand bg-brand/5 ring-1 ring-brand"
-                          : "border-border hover:border-brand/50"
-                      )}
-                    >
-                      <p className="font-semibold uppercase text-[10px] text-muted-foreground">{p.cycle}</p>
-                      <p className="mt-1 font-bold">{brl.format(Number(p.price))}</p>
-                    </button>
-                  ))}
-                </div>
+      <div className="max-w-4xl mx-auto space-y-8">
+        {/* Progress Bar */}
+        <div className="flex items-center justify-between mb-8 px-4">
+          {steps.map((name, i) => (
+            <div key={name} className="flex flex-col items-center gap-2">
+              <div className={cn(
+                "size-8 rounded-full flex items-center justify-center text-xs font-bold border transition-colors",
+                step > i + 1 ? "bg-brand border-brand text-white" : step === i + 1 ? "border-brand text-brand" : "text-muted-foreground"
+              )}>
+                {step > i + 1 ? <Check className="size-4" /> : i + 1}
               </div>
-
-              <div>
-                <label className="text-sm font-medium">Domínio (opcional)</label>
-                <Input
-                  value={domain}
-                  onChange={(e) => setDomain(e.target.value)}
-                  placeholder="exemplo.com.br"
-                  className="mt-2 h-11 rounded-xl"
-                />
-              </div>
+              <span className={cn("text-[10px] font-medium uppercase hidden sm:block", step === i + 1 ? "text-foreground" : "text-muted-foreground")}>
+                {name}
+              </span>
             </div>
-          </section>
-
-          <section className="rounded-2xl border border-border p-6">
-            <h2 className="text-lg font-semibold flex items-center gap-2">
-              <Ticket className="size-5 text-brand" />
-              2. Cupom de desconto
-            </h2>
-            <div className="mt-4 flex gap-2">
-              <Input
-                value={couponCode}
-                onChange={(e) => setCouponCode(e.target.value)}
-                placeholder="Código do cupom"
-                className="h-11 rounded-xl"
-              />
-              <Button variant="outline" className="h-11 rounded-xl">Aplicar</Button>
-            </div>
-          </section>
+          ))}
         </div>
 
-        <div className="space-y-6">
-          <div className="rounded-2xl border border-border bg-sidebar p-6 sticky top-6">
-            <h2 className="text-lg font-semibold">Resumo do pedido</h2>
-            <div className="mt-6 space-y-3">
-              <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">{product.data.name}</span>
-                <span className="font-medium">{brl.format(Number(currentPrice?.price ?? 0))}</span>
-              </div>
-              <div className="border-t border-sidebar-border pt-3 flex justify-between font-bold">
-                <span>Total hoje</span>
-                <span className="text-brand">{brl.format(Number(currentPrice?.price ?? 0))}</span>
+        <div className="grid gap-8 lg:grid-cols-3">
+          <div className="lg:col-span-2">
+            <div className="bg-card border rounded-3xl p-8 shadow-sm min-h-[400px]">
+              {renderStep()}
+              
+              <div className="mt-12 flex justify-between items-center">
+                {step > 1 && steps[step-1] !== "Pagamento" && (
+                  <Button variant="ghost" onClick={() => setStep(s => s - 1)} className="gap-2">
+                    <ArrowLeft className="size-4" /> Voltar
+                  </Button>
+                )}
+                <div className="flex-1" />
+                {step < steps.length && steps[step-1] !== "Conta" && (
+                  <Button 
+                    onClick={() => setStep(s => s + 1)} 
+                    disabled={isNextDisabled()}
+                    className="gap-2 h-12 px-8 rounded-xl text-base font-semibold"
+                  >
+                    Próximo <ArrowRight className="size-4" />
+                  </Button>
+                )}
               </div>
             </div>
-            <Button 
-              className="mt-6 w-full h-12 rounded-xl text-lg font-semibold"
-              onClick={() => {
-                if (!user) {
-                  navigate({ 
-                    to: "/auth", 
-                    search: { redirect: window.location.pathname } 
-                  });
-                  return;
-                }
-                orderMutation.mutate();
-              }}
-              disabled={orderMutation.isPending}
-            >
-              {orderMutation.isPending ? "Processando..." : user ? "Confirmar pedido" : "Entrar para contratar"}
-            </Button>
-            <p className="mt-4 text-[10px] text-center text-muted-foreground">
-              Ao confirmar o pedido, você concorda com nossos Termos de Serviço.
-            </p>
+          </div>
+
+          <div className="space-y-6">
+            <div className="rounded-3xl border bg-sidebar p-6 sticky top-6">
+              <h2 className="text-lg font-semibold mb-4">Resumo rápido</h2>
+              <div className="space-y-3 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">{product.data.name}</span>
+                  <span className="font-medium">{brl.format(Number(currentPrice?.price ?? 0))}</span>
+                </div>
+                {domain && (
+                  <div className="flex justify-between border-t pt-2">
+                    <span className="text-muted-foreground">Domínio</span>
+                    <span className="font-mono text-[10px]">{domain}</span>
+                  </div>
+                )}
+                <div className="border-t border-sidebar-border pt-4 flex justify-between items-end">
+                  <span className="font-bold">Total hoje</span>
+                  <span className="text-xl font-black text-brand leading-none">
+                    {brl.format(Number(currentPrice?.price ?? 0))}
+                  </span>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
