@@ -212,7 +212,7 @@ export function AppShell({
   async function signOut() {
     await logSessionEvent({ data: { action: "logout", description: "Sessão encerrada pelo usuário" } });
     await supabase.auth.signOut();
-    await navigate({ to: "/auth" });
+    await navigate({ to: "/auth", search: { } });
   }
 
   const stopImpersonating = () => {
