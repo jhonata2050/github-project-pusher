@@ -55,7 +55,7 @@ function AuthPage() {
   const [checkEmail, setCheckEmail] = useState(false);
 
   useEffect(() => {
-    if (!loading && user) void navigate({ to: "/dashboard" });
+    if (!loading && user) void navigate({ to: (redirect as any) || "/dashboard" });
   }, [loading, user, navigate]);
 
   async function handleGoogle() {
@@ -73,7 +73,7 @@ function AuthPage() {
       return;
     }
     if (result.redirected) return;
-    await navigate({ to: "/dashboard" });
+    await navigate({ to: (redirect as any) || "/dashboard" });
   }
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
@@ -106,14 +106,14 @@ function AuthPage() {
           setCheckEmail(true);
           return;
         }
-        await navigate({ to: "/dashboard" });
+        await navigate({ to: (redirect as any) || "/dashboard" });
       } else {
         const { error } = await supabase.auth.signInWithPassword({
           email: parsedEmail.data,
           password: parsedPassword.data,
         });
         if (error) throw error;
-        await navigate({ to: "/dashboard" });
+        await navigate({ to: (redirect as any) || "/dashboard" });
       }
     } catch (error) {
       void logPublicAuthEvent({ data: {
