@@ -95,11 +95,15 @@ export function StepAuth({ onComplete }: any) {
         });
         if (error) throw error;
         if (!data.session) {
-          toast.info("Verifique seu e-mail para continuar.");
+          setFormError("Conta criada! Confirme seu e-mail e depois faça login aqui para concluir o pedido.");
+          setMode("signin");
+          setLoading(false);
+          return;
         }
       } else {
-        const { error } = await supabase.auth.signInWithPassword({ email, password });
+        const { data, error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
+        if (!data.session) throw new Error("Não foi possível iniciar a sessão. Tente novamente.");
       }
       onComplete?.();
     } catch (err: any) {
