@@ -141,7 +141,7 @@ function CheckoutPage() {
 
   useEffect(() => {
     if (!user && !product.isLoading) {
-      navigate({ to: "/auth", search: { redirect: `/checkout/${productId}`, mode: 'signup' } });
+      navigate({ to: "/auth", search: { redirect: `/checkout/${productId}` } as any });
     }
   }, [user, product.isLoading, productId, navigate]);
 
