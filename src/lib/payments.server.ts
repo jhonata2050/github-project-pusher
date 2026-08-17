@@ -235,7 +235,10 @@ export async function createPaymentSession(
     case "woovi": {
       const res = await fetch("https://api.woovi.com/api/openpix/v1/charge", {
         method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: cfg["woovi_app_id"] ?? "" },
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: cfg["woovi_app_id"] || "",
+        },
         body: JSON.stringify({
           correlationID: `invoice-${ref}`,
           value: cents,
@@ -250,11 +253,17 @@ export async function createPaymentSession(
       });
       const json: any = await res.json().catch(() => null);
       const charge = json?.charge;
-      if (!res.ok || !charge) throw new Error(`Woovi: ${json?.error || res.status}`);
+      if (!res.ok || !charge) {
+        throw new Error(`Woovi: ${json?.error || res.status} - ${JSON.stringify(json)}`);
+      }
       const transactionId = await recordTransaction({
-        userId, invoiceId: invoice.id, amount, gateway: def.id,
+        userId,
+        invoiceId: invoice.id,
+        amount,
+        gateway: def.id,
         reference: charge.correlationID || charge.identifier,
-        method: "pix", metadata: { checkoutUrl: charge.paymentLinkUrl },
+        method: "pix",
+        metadata: { checkoutUrl: charge.paymentLinkUrl },
       });
       return {
         ...base,
@@ -326,24 +335,36 @@ export async function createPaymentSession(
     // --------------------------------------------------------------- CajuPay
     case "cajupay": {
       const baseUrl = (cfg["cajupay_base_url"] || "https://api.cajupay.com.br").replace(/\/$/, "");
-      // OAuth2 client_credentials (par client_id + client_secret)
+      const clientId = cfg["cajupay_client_id"];
+      const clientSecret = cfg["cajupay_client_secret"];
+
+      if (!clientId || !clientSecret) {
+        throw new Error("CajuPay: Credenciais ausentes (client_id ou client_secret)");
+      }
+
+      // OAuth2 client_credentials
       const tokenRes = await fetch(`${baseUrl}/oauth/token`, {
         method: "POST",
         headers: {
           "Content-Type": "application/x-www-form-urlencoded",
-          Authorization: `Basic ${btoa(`${cfg["cajupay_client_id"]}:${cfg["cajupay_client_secret"]}`)}`,
+          Authorization: `Basic ${btoa(`${clientId}:${clientSecret}`)}`,
         },
         body: new URLSearchParams({ grant_type: "client_credentials" }),
       });
       const tokenJson: any = await tokenRes.json().catch(() => null);
       const accessToken = tokenJson?.access_token;
       if (!tokenRes.ok || !accessToken) {
-        throw new Error(`CajuPay: falha na autenticação (${tokenJson?.error || tokenRes.status})`);
+        throw new Error(
+          `CajuPay: falha na autenticação (${tokenJson?.error || tokenRes.statusText || tokenRes.status})`,
+        );
       }
 
       const res = await fetch(`${baseUrl}/v1/charges`, {
         method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${accessToken}` },
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${accessToken}`,
+        },
         body: JSON.stringify({
           reference: ref,
           amount: cents,
@@ -360,12 +381,19 @@ export async function createPaymentSession(
           },
         }),
       });
+
       const json: any = await res.json().catch(() => null);
-      if (!res.ok || !json) throw new Error(`CajuPay: ${json?.message || res.status}`);
+      if (!res.ok) {
+        throw new Error(`CajuPay API Error: ${json?.message || res.statusText || res.status}`);
+      }
 
       const transactionId = await recordTransaction({
-        userId, invoiceId: invoice.id, amount, gateway: def.id,
-        reference: json.id || json.charge_id || ref, method: data.method,
+        userId,
+        invoiceId: invoice.id,
+        amount,
+        gateway: def.id,
+        reference: json.id || json.charge_id || ref,
+        method: data.method,
         metadata: { checkoutUrl: json.checkout_url || json.payment_url },
       });
 

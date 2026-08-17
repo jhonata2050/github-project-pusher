@@ -46,6 +46,7 @@ function AdminFinanceSettingsPage() {
     const data: Record<string, any> = {
       auto_suspend: formData.get("auto_suspend") === "on",
       auto_delete_days: Number(formData.get("auto_delete_days")) || 30,
+      payment_gateway_priority: formData.get("payment_gateway_priority") || "",
     };
     for (const gateway of GATEWAYS) {
       for (const field of gateway.fields) {
@@ -84,8 +85,14 @@ function AdminFinanceSettingsPage() {
                 <Switch name="auto_suspend" defaultChecked={settings?.["auto_suspend"] === true} />
               </div>
               <div className="space-y-2">
-                <Label>Prazo para Deleção (dias)</Label>
-                <Input name="auto_delete_days" type="number" defaultValue={settings?.["auto_delete_days"] || 30} className="rounded-xl" />
+                <Label>Prioridade de Gateways (IDs separados por vírgula)</Label>
+                <Input 
+                  name="payment_gateway_priority" 
+                  placeholder="ex: abacatepay,cajupay,mercadopago" 
+                  defaultValue={settings?.["payment_gateway_priority"] || ""} 
+                  className="rounded-xl font-mono text-sm" 
+                />
+                <p className="text-[10px] text-muted-foreground">Define a ordem de fallback caso o principal falhe.</p>
               </div>
             </CardContent>
           </Card>
