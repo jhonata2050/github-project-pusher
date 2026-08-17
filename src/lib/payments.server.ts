@@ -429,37 +429,58 @@ export async function createPaymentSessionWithFallback(
   userId: string,
   data: { invoiceId: string; method: PaymentMethod; gateway: string },
 ): Promise<PaymentResult> {
-  // 1. Obter prioridade do sistema
-  const { data: settingsData } = await supabaseAdmin
+  // 1. Obter configurações do sistema
+  const { data: settingsRows } = await supabaseAdmin
     .from("system_settings")
     .select("*")
-    .eq("key", "payment_gateway_priority")
-    .maybeSingle();
+    .in("key", ["payment_gateway_priority", "payment_gateway_fallback_enabled"]);
 
-  const priorityStr = (settingsData?.value as string) || "";
+  const settings: Record<string, any> = {};
+  settingsRows?.forEach(row => { settings[row.key] = row.value; });
+
+  const priorityStr = (settings["payment_gateway_priority"] as string) || "";
   const priorityList = priorityStr
     .split(",")
     .map((s) => s.trim())
     .filter(Boolean);
 
+  const isFallbackEnabled = settings["payment_gateway_fallback_enabled"] !== false; // Padrão true se não existir
+
   // 2. Construir lista de gateways para tentar
-  const gatewaysToTry = Array.from(new Set([data.gateway, ...priorityList]));
+  // Se fallback estiver desativado, tentamos apenas o solicitado.
+  const gatewaysToTry = isFallbackEnabled 
+    ? Array.from(new Set([data.gateway, ...priorityList]))
+    : [data.gateway];
 
   let lastError: Error | null = null;
 
   for (const gatewayId of gatewaysToTry) {
     try {
+      const def = gatewayById(gatewayId);
+      if (!def || !def.methods.includes(data.method)) {
+        console.log(`[Payment] Gateway ${gatewayId} ignorado (não suporta ${data.method})`);
+        continue;
+      }
+
       console.log(`[Payment] Tentando gateway: ${gatewayId} para o método ${data.method}`);
       return await createPaymentSession(userId, { ...data, gateway: gatewayId });
     } catch (err: any) {
       console.error(`[Payment] Erro no gateway ${gatewayId}:`, err.message);
       lastError = err;
-      if (err.message.includes("Fatura já está paga") || err.message.includes("Fatura não encontrada")) {
+      
+      // Erros fatais que não devem disparar fallback
+      if (
+        err.message.includes("Fatura já está paga") || 
+        err.message.includes("Fatura não encontrada") ||
+        err.message.includes("já está disponível neste fluxo") // Ex: CajuPay + Cartão
+      ) {
         throw err;
       }
+      
+      if (!isFallbackEnabled) throw err;
       continue;
     }
   }
 
-  throw lastError || new Error("Nenhum gateway de pagamento disponível no momento.");
+  throw lastError || new Error("Nenhum gateway de pagamento disponível no momento para este método.");
 }
