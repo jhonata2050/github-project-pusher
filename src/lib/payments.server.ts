@@ -409,6 +409,8 @@ export async function createPaymentSession(
       return { ...base, transactionId, checkoutUrl: json.checkout_url || json.payment_url || json.boleto?.url };
     }
 
+    default:
+      throw new Error(`Gateway não implementado: ${def.id}`);
   }
 }
 
@@ -423,11 +425,13 @@ export async function createPaymentSessionWithFallback(
     .eq("key", "payment_gateway_priority")
     .maybeSingle();
 
-  const priorityStr = settingsData?.value as string || "";
-  const priorityList = priorityStr.split(",").map(s => s.trim()).filter(Boolean);
+  const priorityStr = (settingsData?.value as string) || "";
+  const priorityList = priorityStr
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean);
 
   // 2. Construir lista de gateways para tentar
-  // Começamos com o gateway solicitado, depois seguimos a prioridade, excluindo duplicatas
   const gatewaysToTry = Array.from(new Set([data.gateway, ...priorityList]));
 
   let lastError: Error | null = null;
@@ -439,14 +443,15 @@ export async function createPaymentSessionWithFallback(
     } catch (err: any) {
       console.error(`[Payment] Erro no gateway ${gatewayId}:`, err.message);
       lastError = err;
-      // Se for erro de validação (ex: método não suportado ou não configurado), continuamos para o próximo
-      // Se for erro crítico (fatura paga, não encontrada), paramos
       if (err.message.includes("Fatura já está paga") || err.message.includes("Fatura não encontrada")) {
         throw err;
       }
       continue;
     }
   }
+
+  throw lastError || new Error("Nenhum gateway de pagamento disponível no momento.");
+}
 
   throw lastError || new Error("Nenhum gateway de pagamento disponível no momento.");
 }
