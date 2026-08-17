@@ -347,9 +347,12 @@ export async function createPaymentSession(
         method: "POST",
         headers: {
           "Content-Type": "application/x-www-form-urlencoded",
-          Authorization: `Basic ${btoa(`${clientId}:${clientSecret}`)}`,
         },
-        body: new URLSearchParams({ grant_type: "client_credentials" }),
+        body: new URLSearchParams({
+          grant_type: "client_credentials",
+          client_id: clientId,
+          client_secret: clientSecret,
+        }),
       });
       const tokenJson: any = await tokenRes.json().catch(() => null);
       const accessToken = tokenJson?.access_token;
