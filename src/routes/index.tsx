@@ -95,7 +95,7 @@ function Index() {
           )}
         </span>
         <Button asChild variant="outline" className="rounded-xl">
-          <Link to="/auth">Área do cliente</Link>
+          <Link to="/auth" search={{ redirect: undefined }}>Área do cliente</Link>
         </Button>
       </header>
 
