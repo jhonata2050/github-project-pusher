@@ -185,7 +185,7 @@ export function AppShell({
   const [hideBanner, setHideBanner] = useState(false);
 
 
-  const isAdminArea = area ? area === "admin" : isStaff;
+  const isAdminArea = area ? area === "admin" : (user ? isStaff : false);
   const sections = isAdminArea ? ADMIN_SECTIONS : CLIENT_SECTIONS;
   const homeTo = isAdminArea ? "/admin" : "/dashboard";
 
@@ -206,7 +206,7 @@ export function AppShell({
 
   const hasOverdue = overdueInvoices && overdueInvoices.length > 0;
 
-  const name = profile?.full_name ?? user?.email ?? "Conta";
+  const name = profile?.full_name ?? user?.email ?? (user ? "Conta" : "Visitante");
   const initials = name.slice(0, 2).toUpperCase();
 
   async function signOut() {
@@ -435,26 +435,43 @@ export function AppShell({
                 {isAdminArea ? "Ver como cliente" : "Ir para administração"}
               </Link>
             )}
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <button
-                  type="button"
-                  className="flex w-full items-center gap-3 rounded-xl px-3 py-2 text-sm text-sidebar-foreground hover:bg-sidebar-accent"
-                >
-                  <Avatar className="size-7">
-                    <AvatarFallback className="bg-accent text-xs text-accent-foreground">{initials}</AvatarFallback>
-                  </Avatar>
-                  <span className="flex-1 truncate text-left">{name}</span>
-                  <MoreVertical className="size-4 text-muted-foreground" />
-                </button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="start" className="w-52">
-                <DropdownMenuItem asChild>
-                  <Link to="/profile">
-                    <UserIcon className="mr-2 size-4" />
-                    Meus dados
-                  </Link>
-                </DropdownMenuItem>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button
+                    type="button"
+                    className="flex w-full items-center gap-3 rounded-xl px-3 py-2 text-sm text-sidebar-foreground hover:bg-sidebar-accent"
+                  >
+                    <Avatar className="size-7">
+                      <AvatarFallback className="bg-accent text-xs text-accent-foreground">{initials}</AvatarFallback>
+                    </Avatar>
+                    <span className="flex-1 truncate text-left">{user ? name : "Entrar"}</span>
+                    <MoreVertical className="size-4 text-muted-foreground" />
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start" className="w-52">
+                  {user ? (
+                    <>
+                      <DropdownMenuItem asChild>
+                        <Link to="/profile">
+                          <UserIcon className="mr-2 size-4" />
+                          Meus dados
+                        </Link>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={signOut}>
+                        <LogOutIcon className="mr-2 size-4" />
+                        Sair
+                      </DropdownMenuItem>
+                    </>
+                  ) : (
+                    <DropdownMenuItem asChild>
+                      <Link to="/auth">
+                        <UserIcon className="mr-2 size-4" />
+                        Acessar Conta
+                      </Link>
+                    </DropdownMenuItem>
+                  )}
+                </DropdownMenuContent>
+              </DropdownMenu>
                 <DropdownMenuItem onClick={signOut}>
                   <LogOut className="mr-2 size-4" />
                   Sair

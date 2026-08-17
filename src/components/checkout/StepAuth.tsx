@@ -5,6 +5,7 @@ import { Label } from "@/components/ui/label";
 import { useAuth } from "@/hooks/use-auth";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { Check as CheckIcon } from "lucide-react";
 
 export function StepAuth({ onComplete }: any) {
   const { user } = useAuth();
@@ -14,7 +15,18 @@ export function StepAuth({ onComplete }: any) {
   const [fullName, setFullName] = useState("");
   const [loading, setLoading] = useState(false);
 
-  if (user) return <div className="p-6 text-center">Logado como {user.email}</div>;
+  if (user) return (
+    <div className="p-12 text-center space-y-4">
+      <div className="flex justify-center">
+        <div className="size-16 rounded-full bg-brand/10 flex items-center justify-center">
+          <CheckIcon className="size-8 text-brand" />
+        </div>
+      </div>
+      <h3 className="text-xl font-semibold">Autenticado com sucesso!</h3>
+      <p className="text-muted-foreground">Você está logado como <span className="font-medium text-foreground">{user.email}</span></p>
+      <Button onClick={onComplete} className="rounded-xl px-8">Continuar para o resumo</Button>
+    </div>
+  );
 
   const handleSubmit = async (e: any) => {
     e.preventDefault();
