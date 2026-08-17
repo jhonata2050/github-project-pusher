@@ -56,6 +56,7 @@ function CheckoutPage() {
   const [domainType, setDomainType] = useState("register");
   const [vpsConfig, setVpsConfig] = useState({ hostname: "", os: "", location: "" });
   const [paymentMethod, setPaymentMethod] = useState("pix");
+  const [hasStartedAutoPix, setHasStartedAutoPix] = useState(false);
   const [isDomainValid, setIsDomainValid] = useState(false);
   const [cpfCnpj, setCpfCnpj] = useState("");
 
@@ -149,7 +150,7 @@ function CheckoutPage() {
   if (!product.data) return <AppShell area="client" breadcrumb={<span>Checkout</span>}>Produto não encontrado</AppShell>;
   if (!user) return null;
 
-  const currentPrice = product.data.product_prices?.find((p) => p.cycle === billingCycle);
+  const currentPrice = product.data.product_prices?.find((p) => p.cycle === billingCycle) || product.data.product_prices?.[0];
 
   const renderStep = () => {
     let currentStepIdx = step - 1;
@@ -232,11 +233,15 @@ function CheckoutPage() {
           <StepPayment 
             paymentMethod={paymentMethod} 
             setPaymentMethod={setPaymentMethod} 
-            onPay={() => orderMutation.mutate()} 
+            onPay={() => {
+              setHasStartedAutoPix(true);
+              orderMutation.mutate();
+            }} 
             cpfCnpj={cpfCnpj}
             setCpfCnpj={setCpfCnpj}
             pixResult={pixResult}
             isProcessingPix={isProcessingPix}
+            hasStartedAutoPix={hasStartedAutoPix}
           />
         );
       default:
