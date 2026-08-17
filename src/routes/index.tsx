@@ -110,7 +110,7 @@ function Index() {
           </p>
           <div className="mt-8 flex flex-wrap justify-center gap-3">
             <Button asChild size="lg" className="rounded-xl bg-foreground text-background hover:bg-foreground/90">
-              <Link to="/auth">Criar minha conta</Link>
+              <Link to="/auth" search={{ }}>Criar minha conta</Link>
             </Button>
             <Button asChild size="lg" variant="outline" className="rounded-xl">
               <a href="#planos">Ver planos</a>
