@@ -22,20 +22,16 @@ import { StepPayment } from "@/components/checkout/StepPayment";
 import { StepSummary } from "@/components/checkout/StepSummary";
 
 export const Route = createFileRoute("/checkout/$productId")({
-  head: ({ data }: any) => ({
+  head: () => ({
     meta: [
-      { title: `Checkout - ${data?.product?.name || 'Hospedagem'} - HostPanel` },
+      { title: "Checkout - Contratar plano - HostPanel" },
+      { name: "description", content: "Finalize a contratação do seu plano de hospedagem com pagamento via Pix, cartão ou boleto." },
+      { property: "og:title", content: "Checkout - Contratar plano - HostPanel" },
+      { property: "og:description", content: "Finalize a contratação do seu plano de hospedagem com pagamento via Pix, cartão ou boleto." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
     ],
   }),
-  loader: async ({ params }) => {
-    const { data: product, error } = await supabase
-      .from("products")
-      .select("*, product_prices(*)")
-      .eq("id", params.productId)
-      .single();
-    if (error) throw error;
-    return { product };
-  },
   component: CheckoutPage,
 });
 
@@ -51,7 +47,7 @@ function CheckoutPage() {
   const [step, setStep] = useState(1);
   const [pixResult, setPixResult] = useState<any>(null);
   const [isProcessingPix, setIsProcessingPix] = useState(false);
-  const [billingCycle, setBillingCycle] = useState<string>("monthly");
+  const [billingCycle, setBillingCycle] = useState<string>("");
   const [domain, setDomain] = useState("");
   const [domainType, setDomainType] = useState("register");
   const [vpsConfig, setVpsConfig] = useState({ hostname: "", os: "", location: "" });
@@ -74,6 +70,19 @@ function CheckoutPage() {
   });
 
   const productType = product.data?.product_type?.toLowerCase() || "other";
+
+  const activePrices = useMemo(
+    () => (product.data?.product_prices || []).filter((p: any) => p.is_active !== false),
+    [product.data],
+  );
+
+  // Seleciona automaticamente o primeiro ciclo disponível (evita "Preço não encontrado para este ciclo")
+  useEffect(() => {
+    if (!billingCycle && activePrices.length > 0) {
+      const monthly = activePrices.find((p: any) => p.cycle === "monthly");
+      setBillingCycle((monthly || activePrices[0]).cycle);
+    }
+  }, [activePrices, billingCycle]);
 
   const steps = useMemo(() => {
     const list = [];
