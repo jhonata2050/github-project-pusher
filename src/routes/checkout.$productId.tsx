@@ -118,9 +118,9 @@ function CheckoutPage() {
       case "Ciclo de Faturamento":
         const monthlyRef = Number(product.data.product_prices?.find(pr => pr.cycle === "monthly")?.price || 0);
         return (
-          <div className="space-y-6">
-            <h2 className="text-lg font-semibold">Escolha o Ciclo de Faturamento</h2>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div className="space-y-4">
+            <h2 className="text-base font-semibold">Escolha o Ciclo de Faturamento</h2>
+            <div className="grid grid-cols-2 gap-3">
               {product.data.product_prices?.map((p) => {
                 const cyclePrice = Number(p.price);
                 const months = p.cycle === "monthly" ? 1 : p.cycle === "semiannually" ? 6 : p.cycle === "annually" ? 12 : p.cycle === "biennially" ? 24 : 1;
@@ -143,24 +143,27 @@ function CheckoutPage() {
                     key={p.cycle}
                     onClick={() => setBillingCycle(p.cycle)}
                     className={cn(
-                      "rounded-xl border p-4 text-left transition-all relative overflow-hidden",
+                      "rounded-xl border p-3 text-left transition-all relative overflow-hidden group",
                       billingCycle === p.cycle
                         ? "border-brand bg-brand/5 ring-1 ring-brand"
                         : "border-border hover:border-brand/50"
                     )}
                   >
                     {savings > 0 && (
-                      <div className="absolute top-0 right-0 bg-brand text-brand-foreground text-[10px] font-bold px-2 py-0.5 rounded-bl-lg uppercase">
-                        Economize {savings}%
+                      <div className="absolute top-0 right-0 bg-brand text-brand-foreground text-[8px] font-bold px-1.5 py-0.5 rounded-bl-lg uppercase">
+                        -{savings}%
                       </div>
                     )}
-                    <p className="font-semibold uppercase text-[10px] text-muted-foreground">{cycleName}</p>
-                    <p className="mt-1 font-bold text-lg">{brl.format(cyclePrice)}</p>
-                    {months > 1 && (
-                      <p className="text-[10px] text-muted-foreground mt-1">
-                        Equivalente a {brl.format(monthlyEquivalent)}/mês
+                    <p className="font-semibold uppercase text-[9px] text-muted-foreground">{cycleName}</p>
+                    <div className="mt-1">
+                      <p className="font-bold text-base leading-none">
+                        {brl.format(monthlyEquivalent)}
+                        <span className="text-[10px] font-normal text-muted-foreground ml-0.5">/mês</span>
                       </p>
-                    )}
+                      <p className="text-[9px] text-muted-foreground mt-0.5">
+                        Total no ciclo: {brl.format(cyclePrice)}
+                      </p>
+                    </div>
                   </button>
                 );
               })}
@@ -214,32 +217,34 @@ function CheckoutPage() {
         </>
       }
     >
-      <div className="max-w-4xl mx-auto space-y-8">
+      <div className="max-w-5xl mx-auto flex flex-col h-full lg:overflow-hidden">
         {/* Progress Bar */}
-        <div className="flex items-center justify-between mb-8 px-4">
+        <div className="flex items-center justify-between mb-4 px-4 shrink-0">
           {steps.map((name, i) => (
-            <div key={name} className="flex flex-col items-center gap-2">
+            <div key={name} className="flex flex-col items-center gap-1.5">
               <div className={cn(
-                "size-8 rounded-full flex items-center justify-center text-xs font-bold border transition-colors",
+                "size-7 rounded-full flex items-center justify-center text-[10px] font-bold border transition-colors",
                 step > i + 1 ? "bg-brand border-brand text-white" : step === i + 1 ? "border-brand text-brand" : "text-muted-foreground"
               )}>
-                {step > i + 1 ? <Check className="size-4" /> : i + 1}
+                {step > i + 1 ? <Check className="size-3.5" /> : i + 1}
               </div>
-              <span className={cn("text-[10px] font-medium uppercase hidden sm:block", step === i + 1 ? "text-foreground" : "text-muted-foreground")}>
+              <span className={cn("text-[9px] font-medium uppercase hidden sm:block", step === i + 1 ? "text-foreground" : "text-muted-foreground")}>
                 {name}
               </span>
             </div>
           ))}
         </div>
 
-        <div className="grid gap-8 lg:grid-cols-3">
-          <div className="lg:col-span-2">
-            <div className="bg-card border rounded-3xl p-8 shadow-sm min-h-[400px]">
-              {renderStep()}
+        <div className="grid gap-4 lg:grid-cols-3 flex-1 min-h-0">
+          <div className="lg:col-span-2 flex flex-col min-h-0">
+            <div className="bg-card border rounded-3xl p-6 shadow-sm flex flex-col flex-1 min-h-0 overflow-hidden">
+              <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar">
+                {renderStep()}
+              </div>
               
-              <div className="mt-12 flex justify-between items-center">
+              <div className="mt-6 flex justify-between items-center shrink-0 border-t pt-4">
                 {step > 1 && steps[step-1] !== "Pagamento" && (
-                  <Button variant="ghost" onClick={() => setStep(s => s - 1)} className="gap-2">
+                  <Button variant="ghost" onClick={() => setStep(s => s - 1)} className="gap-2 h-10 px-4 rounded-xl text-sm">
                     <ArrowLeft className="size-4" /> Voltar
                   </Button>
                 )}
@@ -248,7 +253,7 @@ function CheckoutPage() {
                   <Button 
                     onClick={() => setStep(s => s + 1)} 
                     disabled={isNextDisabled()}
-                    className="gap-2 h-12 px-8 rounded-xl text-base font-semibold"
+                    className="gap-2 h-11 px-6 rounded-xl text-sm font-semibold"
                   >
                     Próximo <ArrowRight className="size-4" />
                   </Button>
@@ -257,23 +262,23 @@ function CheckoutPage() {
             </div>
           </div>
 
-          <div className="space-y-6">
-            <div className="rounded-3xl border bg-sidebar p-6 sticky top-6">
-              <h2 className="text-lg font-semibold mb-4">Resumo rápido</h2>
+          <div className="flex flex-col min-h-0">
+            <div className="rounded-3xl border bg-sidebar p-5 sticky top-6">
+              <h2 className="text-base font-semibold mb-4">Resumo rápido</h2>
               <div className="space-y-3 text-sm">
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">{product.data.name}</span>
-                  <span className="font-medium">{brl.format(Number(currentPrice?.price ?? 0))}</span>
+                  <span className="text-muted-foreground text-xs">{product.data.name}</span>
+                  <span className="font-medium text-xs">{brl.format(Number(currentPrice?.price ?? 0))}</span>
                 </div>
                 {domain && (
                   <div className="flex justify-between border-t pt-2">
-                    <span className="text-muted-foreground">Domínio</span>
-                    <span className="font-mono text-[10px]">{domain}</span>
+                    <span className="text-muted-foreground text-[10px]">Domínio</span>
+                    <span className="font-mono text-[9px] truncate ml-2">{domain}</span>
                   </div>
                 )}
                 <div className="border-t border-sidebar-border pt-4 flex justify-between items-end">
-                  <span className="font-bold">Total hoje</span>
-                  <span className="text-xl font-black text-brand leading-none">
+                  <span className="font-bold text-sm">Total hoje</span>
+                  <span className="text-lg font-black text-brand leading-none">
                     {brl.format(Number(currentPrice?.price ?? 0))}
                   </span>
                 </div>
