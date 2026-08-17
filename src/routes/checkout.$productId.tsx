@@ -83,6 +83,11 @@ function CheckoutPage() {
 
   const orderMutation = useMutation({
     mutationFn: async () => {
+      // Garante que existe uma sessão válida antes de chamar a função protegida
+      const { data: sessionData } = await supabase.auth.getSession();
+      if (!sessionData.session?.access_token) {
+        throw new Error("SESSION_REQUIRED");
+      }
       return await executeCreateOrder({
         data: {
           productId,
@@ -97,7 +102,14 @@ function CheckoutPage() {
       navigate({ to: "/invoices" });
     },
     onError: (error: any) => {
-      toast.error("Erro ao realizar pedido: " + error.message);
+      const msg = String(error?.message || "");
+      if (msg === "SESSION_REQUIRED" || msg.toLowerCase().includes("unauthorized")) {
+        toast.error("Sua sessão expirou ou não foi confirmada. Entre novamente para concluir o pedido.");
+        const accountIdx = steps.indexOf("Conta");
+        if (accountIdx >= 0) setStep(accountIdx + 1);
+        return;
+      }
+      toast.error("Erro ao realizar pedido: " + msg);
     }
   });
 
