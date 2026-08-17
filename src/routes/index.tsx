@@ -132,8 +132,8 @@ function Index() {
             ))}
           </div>
         ) : groups.data && groups.data.length > 0 ? (
-            {groups.data && groups.data.length > 0 && (
-              <Tabs defaultValue={groups.data[0].id} className="mt-10 w-full">
+          <Tabs defaultValue={groups.data[0].id} className="mt-10 w-full">
+
 
             <div className="flex justify-center">
               <TabsList className="h-auto w-fit flex-wrap justify-center gap-2 rounded-2xl bg-muted/50 p-2 border border-border">
@@ -199,8 +199,8 @@ function Index() {
                 </div>
               </TabsContent>
             ))}
-              </Tabs>
-            )}
+          </Tabs>
+
 
         ) : (
           <p className="mt-20 text-center text-muted-foreground">Nenhum plano disponível no momento.</p>
