@@ -352,24 +352,50 @@ export async function createPaymentSession(
         throw new Error("CajuPay: Credenciais ausentes (client_id ou client_secret)");
       }
 
-      // OAuth2 client_credentials
-      const tokenRes = await fetch(`${baseUrl}/oauth/token`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/x-www-form-urlencoded",
+      // OAuth2 client_credentials — a API aceita formatos diferentes conforme a versão,
+      // então tentamos as variações mais comuns até obter o token.
+      const basic = btoa(`${clientId}:${clientSecret}`);
+      const attempts: Array<{ headers: Record<string, string>; body: string }> = [
+        {
+          headers: { "Content-Type": "application/x-www-form-urlencoded", Authorization: `Basic ${basic}` },
+          body: new URLSearchParams({ grant_type: "client_credentials" }).toString(),
         },
-        body: new URLSearchParams({
-          grant_type: "client_credentials",
-          client_id: clientId,
-          client_secret: clientSecret,
-        }),
-      });
-      const tokenJson: any = await tokenRes.json().catch(() => null);
-      const accessToken = tokenJson?.access_token;
-      if (!tokenRes.ok || !accessToken) {
-        throw new Error(
-          `CajuPay: falha na autenticação (${tokenJson?.error || tokenRes.statusText || tokenRes.status})`,
-        );
+        {
+          headers: { "Content-Type": "application/x-www-form-urlencoded" },
+          body: new URLSearchParams({
+            grant_type: "client_credentials",
+            client_id: clientId,
+            client_secret: clientSecret,
+          }).toString(),
+        },
+        {
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            grant_type: "client_credentials",
+            client_id: clientId,
+            client_secret: clientSecret,
+          }),
+        },
+      ];
+
+      let accessToken: string | undefined;
+      let lastError = "credenciais inválidas";
+      for (const attempt of attempts) {
+        const tokenRes = await fetch(`${baseUrl}/oauth/token`, {
+          method: "POST",
+          headers: attempt.headers,
+          body: attempt.body,
+        });
+        const tokenJson: any = await tokenRes.json().catch(() => null);
+        if (tokenRes.ok && tokenJson?.access_token) {
+          accessToken = tokenJson.access_token;
+          break;
+        }
+        lastError =
+          tokenJson?.error_description || tokenJson?.error || tokenRes.statusText || String(tokenRes.status);
+      }
+      if (!accessToken) {
+        throw new Error(`CajuPay: falha na autenticação (${lastError})`);
       }
 
       const res = await fetch(`${baseUrl}/v1/charges`, {
