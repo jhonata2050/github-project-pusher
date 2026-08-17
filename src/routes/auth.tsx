@@ -14,8 +14,8 @@ import { logPublicAuthEvent, logSessionEvent } from "@/lib/audit.functions";
 export const Route = createFileRoute("/auth")({
   validateSearch: (search: Record<string, unknown>) => {
     return {
-      redirect: typeof search['redirect'] === 'string' ? search['redirect'] : undefined,
-    };
+      redirect: (search['redirect'] as string) || undefined,
+    } as { redirect?: string };
   },
   head: () => ({
     meta: [
