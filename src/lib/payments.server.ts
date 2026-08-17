@@ -477,6 +477,7 @@ export async function createPaymentSessionWithFallback(
 
   for (const gatewayId of gatewaysToTry) {
     try {
+      if (!gatewayId) continue;
       const def = gatewayById(gatewayId);
       if (!def || !def.methods.includes(data.method)) {
         console.log(`[Payment] Gateway ${gatewayId} ignorado (não suporta ${data.method})`);
