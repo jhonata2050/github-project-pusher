@@ -14,7 +14,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { createOrder } from "@/lib/finance.functions";
 import { useServerFn } from "@tanstack/react-start";
 
-export const Route = createFileRoute("/_authenticated/checkout/$productId")({
+export const Route = createFileRoute("/checkout/$productId")({
   head: () => ({
     meta: [
       { title: "Checkout — HostPanel" },
