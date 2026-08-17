@@ -52,6 +52,8 @@ function CheckoutPage() {
   const [domainType, setDomainType] = useState("register");
   const [vpsConfig, setVpsConfig] = useState({ hostname: "", os: "", location: "" });
   const [paymentMethod, setPaymentMethod] = useState("pix");
+  const [isDomainValid, setIsDomainValid] = useState(false);
+  const [cpfCnpj, setCpfCnpj] = useState("");
 
   const product = useQuery({
     queryKey: ["checkout-product", productId],
@@ -110,7 +112,7 @@ function CheckoutPage() {
 
     switch (stepName) {
       case "Domínio":
-        return <StepDomain domain={domain} setDomain={setDomain} domainType={domainType} setDomainType={setDomainType} />;
+        return <StepDomain domain={domain} setDomain={setDomain} domainType={domainType} setDomainType={setDomainType} onValidChange={setIsDomainValid} />;
       case "Configuração":
         return <StepVPSConfig config={vpsConfig} setConfig={setVpsConfig} />;
       case "Ciclo de Faturamento":
@@ -118,21 +120,47 @@ function CheckoutPage() {
           <div className="space-y-6">
             <h2 className="text-lg font-semibold">Escolha o Ciclo de Faturamento</h2>
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-              {product.data.product_prices?.map((p) => (
-                <button
-                  key={p.cycle}
-                  onClick={() => setBillingCycle(p.cycle)}
-                  className={cn(
-                    "rounded-xl border p-4 text-left transition-all",
-                    billingCycle === p.cycle
-                      ? "border-brand bg-brand/5 ring-1 ring-brand"
-                      : "border-border hover:border-brand/50"
-                  )}
-                >
-                  <p className="font-semibold uppercase text-[10px] text-muted-foreground">{p.cycle}</p>
-                  <p className="mt-1 font-bold">{brl.format(Number(p.price))}</p>
-                </button>
-              ))}
+              {product.data.product_prices?.map((p) => {
+                const monthlyPrice = Number(p.price);
+                const isAnnual = p.cycle === "annually";
+                const monthlyRef = Number(product.data.product_prices?.find(pr => pr.cycle === "monthly")?.price || 0);
+                
+                let savings = 0;
+                let monthlyEquivalent = monthlyPrice;
+                
+                if (isAnnual && monthlyRef > 0) {
+                  monthlyEquivalent = monthlyPrice / 12;
+                  savings = Math.round(((monthlyRef * 12 - monthlyPrice) / (monthlyRef * 12)) * 100);
+                }
+
+                const cycleName = p.cycle === "monthly" ? "Mensal" : p.cycle === "annually" ? "Anual" : p.cycle;
+
+                return (
+                  <button
+                    key={p.cycle}
+                    onClick={() => setBillingCycle(p.cycle)}
+                    className={cn(
+                      "rounded-xl border p-4 text-left transition-all relative overflow-hidden",
+                      billingCycle === p.cycle
+                        ? "border-brand bg-brand/5 ring-1 ring-brand"
+                        : "border-border hover:border-brand/50"
+                    )}
+                  >
+                    {isAnnual && savings > 0 && (
+                      <div className="absolute top-0 right-0 bg-brand text-brand-foreground text-[8px] font-bold px-2 py-0.5 rounded-bl-lg uppercase">
+                        Economize {savings}%
+                      </div>
+                    )}
+                    <p className="font-semibold uppercase text-[10px] text-muted-foreground">{cycleName}</p>
+                    <p className="mt-1 font-bold">{brl.format(monthlyPrice)}</p>
+                    {isAnnual && (
+                      <p className="text-[10px] text-muted-foreground mt-1">
+                        Equivalente a {brl.format(monthlyEquivalent)}/mês
+                      </p>
+                    )}
+                  </button>
+                );
+              })}
             </div>
           </div>
         );
@@ -149,7 +177,15 @@ function CheckoutPage() {
           />
         );
       case "Pagamento":
-        return <StepPayment paymentMethod={paymentMethod} setPaymentMethod={setPaymentMethod} onPay={() => orderMutation.mutate()} />;
+        return (
+          <StepPayment 
+            paymentMethod={paymentMethod} 
+            setPaymentMethod={setPaymentMethod} 
+            onPay={() => orderMutation.mutate()} 
+            cpfCnpj={cpfCnpj}
+            setCpfCnpj={setCpfCnpj}
+          />
+        );
       default:
         return null;
     }
@@ -157,9 +193,10 @@ function CheckoutPage() {
 
   const isNextDisabled = () => {
     let stepName = steps[step - 1];
-    if (stepName === "Domínio" && !domain) return true;
+    if (stepName === "Domínio" && (!domain || !isDomainValid)) return true;
     if (stepName === "Configuração" && (!vpsConfig.hostname || !vpsConfig.os || !vpsConfig.location)) return true;
     if (stepName === "Conta" && !user) return true;
+    if (stepName === "Pagamento" && paymentMethod === "pix" && !cpfCnpj) return true;
     return false;
   };
 
