@@ -5,10 +5,34 @@ import { Label } from "@/components/ui/label";
 import { useAuth } from "@/hooks/use-auth";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Check as CheckIcon, Info, Globe } from "lucide-react";
+import { Check as CheckIcon, Info, Globe, AlertCircle, XCircle } from "lucide-react";
 import { checkEmailExists } from "@/lib/checkout.functions";
 import { useServerFn } from "@tanstack/react-start";
 import { useProfile } from "@/hooks/use-auth";
+
+function translateAuthError(message: string): string {
+  if (!message) return "Ocorreu um erro. Tente novamente.";
+  const lower = message.toLowerCase();
+  if (lower.includes("weak") || lower.includes("easy to guess")) {
+    return "Senha muito fraca. Use pelo menos 8 caracteres, incluindo letras, números e símbolos.";
+  }
+  if (lower.includes("invalid login credentials")) {
+    return "E-mail ou senha incorretos.";
+  }
+  if (lower.includes("email not confirmed") || lower.includes("email address is not confirmed")) {
+    return "E-mail ainda não confirmado. Verifique sua caixa de entrada.";
+  }
+  if (lower.includes("user already registered")) {
+    return "Este e-mail já está cadastrado. Faça login.";
+  }
+  if (lower.includes("password should be")) {
+    return "A senha não atende aos requisitos mínimos de segurança.";
+  }
+  if (lower.includes("unable to validate email")) {
+    return "E-mail inválido. Verifique o endereço digitado.";
+  }
+  return message;
+}
 
 export function StepAuth({ onComplete }: any) {
   const { user } = useAuth();
@@ -19,6 +43,7 @@ export function StepAuth({ onComplete }: any) {
   const [phone, setPhone] = useState("");
   const [loading, setLoading] = useState(false);
   const [emailChecked, setEmailChecked] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
   
   const checkEmail = useServerFn(checkEmailExists);
 
@@ -60,6 +85,7 @@ export function StepAuth({ onComplete }: any) {
   const handleSubmit = async (e: any) => {
     e.preventDefault();
     setLoading(true);
+    setFormError(null);
     try {
       if (mode === "signup") {
         const { data, error } = await supabase.auth.signUp({
@@ -68,14 +94,18 @@ export function StepAuth({ onComplete }: any) {
           options: { data: { full_name: fullName, phone: phone } }
         });
         if (error) throw error;
-        if (!data.session) toast.info("Verifique seu e-mail para continuar.");
+        if (!data.session) {
+          toast.info("Verifique seu e-mail para continuar.");
+        }
       } else {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
       }
       onComplete?.();
     } catch (err: any) {
-      toast.error(err.message);
+      const pt = translateAuthError(err.message);
+      setFormError(pt);
+      toast.error(pt);
     } finally {
       setLoading(false);
     }
@@ -85,6 +115,12 @@ export function StepAuth({ onComplete }: any) {
     <div className="space-y-6 max-w-md mx-auto">
       <h2 className="text-lg font-semibold text-center">{mode === "signup" ? "Criar conta" : "Entrar"}</h2>
       <form onSubmit={handleSubmit} className="space-y-4">
+        {formError && (
+          <div className="rounded-lg border border-destructive/50 bg-destructive/10 p-3 text-sm text-destructive flex items-start gap-2">
+            <XCircle className="size-4 mt-0.5 shrink-0" />
+            <span>{formError}</span>
+          </div>
+        )}
         {mode === "signup" && (
           <div className="space-y-2">
             <Label>Nome Completo</Label>
@@ -125,7 +161,7 @@ export function StepAuth({ onComplete }: any) {
         <Button type="submit" disabled={loading} className="w-full h-12 rounded-xl">
           {loading ? "Processando..." : (mode === "signup" ? "Criar conta" : "Entrar")}
         </Button>
-        <button type="button" onClick={() => setMode(mode === "signup" ? "signin" : "signup")} className="w-full text-xs text-brand hover:underline">
+        <button type="button" onClick={() => { setMode(mode === "signup" ? "signin" : "signup"); setFormError(null); }} className="w-full text-xs text-brand hover:underline">
           {mode === "signup" ? "Já tem conta? Entre aqui" : "Novo por aqui? Crie uma conta"}
         </button>
       </form>
