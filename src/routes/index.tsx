@@ -132,7 +132,8 @@ function Index() {
             ))}
           </div>
         ) : groups.data && groups.data.length > 0 ? (
-          <Tabs defaultValue={groups.data[0].id} className="mt-10 w-full">
+          <Tabs defaultValue={groups.data[0]?.id} className="mt-10 w-full">
+
 
 
             <div className="flex justify-center">
