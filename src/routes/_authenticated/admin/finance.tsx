@@ -44,10 +44,13 @@ function GatewayCard({ gateway, settings, isVPS = false }: { gateway: GatewayDef
     setValidating(true);
     try {
       const res = await testGatewayConnection({ data: { gatewayId: gateway.id, credentials } });
-      if (res.success) toast.success(res.message);
-      else toast.error(res.message);
+      if (res.success) {
+        toast.success(res.message);
+      } else {
+        toast.error(res.message || "Falha na validação das credenciais.");
+      }
     } catch (e: any) {
-      toast.error(e.message || "Erro ao validar integração.");
+      toast.error(e.message || "Erro técnico ao tentar validar conexão.");
     } finally {
       setValidating(false);
     }
