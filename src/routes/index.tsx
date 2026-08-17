@@ -208,7 +208,7 @@ function Index() {
                           <Link 
                             to={user ? "/checkout/$productId" : "/auth"} 
                             params={user ? { productId: plan.id } : {}}
-                            search={user ? {} : { redirect: `/checkout/${plan.id}`, mode: 'signup' }}
+                            search={user ? {} : { redirect: `/checkout/${plan.id}` } as any}
                           >
                             Contratar
                           </Link>
