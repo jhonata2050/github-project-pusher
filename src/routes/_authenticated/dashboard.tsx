@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { Gauge, Receipt, Server, Store } from "lucide-react";
+import { Gauge, Monitor, Receipt, Server, Store } from "lucide-react";
 
 import { AppShell } from "@/components/app/AppShell";
 import { Button } from "@/components/ui/button";
@@ -85,24 +85,24 @@ function ClientDashboardPage() {
       </div>
 
       <div className="mt-6 grid gap-4 lg:grid-cols-2">
-        <div className="rounded-2xl border border-border p-6">
+        <div className="rounded-2xl border border-border p-6 flex flex-col">
           <h2 className="flex items-center gap-2 text-sm font-medium">
             <Server className="size-4 text-muted-foreground" />
             Minhas hospedagens
           </h2>
-          <p className="mt-2 text-sm text-muted-foreground">
+          <p className="mt-2 text-sm text-muted-foreground flex-1">
             {stats.data?.totalServices
               ? `Você possui ${stats.data.totalServices} serviço(s) contratado(s).`
               : "Você ainda não tem serviços contratados."}
           </p>
           <div className="mt-4 flex flex-wrap gap-2">
             <Button asChild className="rounded-xl">
-              <Link to="/services">Ver meus serviços</Link>
+              <Link to="/services">Ver hospedagens</Link>
             </Button>
             <Button asChild variant="outline" className="rounded-xl">
-              <Link to="/">
-                <Store className="mr-2 size-4" />
-                Contratar plano
+              <Link to="/vps">
+                <Monitor className="mr-2 size-4" />
+                Gerenciar VPS
               </Link>
             </Button>
           </div>
