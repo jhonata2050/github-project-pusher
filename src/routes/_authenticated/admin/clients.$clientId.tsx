@@ -18,7 +18,8 @@ import {
   Save,
   LogIn,
   Edit2,
-  ExternalLink
+  ExternalLink,
+  Link2,
 } from "lucide-react";
 
 import { useState } from "react";
@@ -337,7 +338,7 @@ function ClientDetailPage() {
                         <TableRow>
                           <TableHead className="whitespace-nowrap">Serviço</TableHead>
                           <TableHead className="whitespace-nowrap">Domínio</TableHead>
-                          <TableHead className="hidden sm:table-cell">Servidor</TableHead>
+                          <TableHead className="hidden sm:table-cell">Servidor / VPS</TableHead>
                           <TableHead className="hidden md:table-cell">Vencimento</TableHead>
                           <TableHead>Status</TableHead>
                           <TableHead className="w-20 text-right">Ações</TableHead>
@@ -364,6 +365,13 @@ function ClientDetailPage() {
                                 <span className="text-xs">
                                   {(s.servers?.hostname || servers?.find(sv => sv.id === s.server_id)?.hostname) || "Servidor"}
                                 </span>
+                              ) : (s.products?.product_type === 'vps' || s.billing_cycle === 'vps') ? (
+                                <Link 
+                                  to="/admin/vps" 
+                                  className="text-[10px] text-brand hover:underline flex items-center gap-1"
+                                >
+                                  <Link2 className="size-3" /> Vincular VPS
+                                </Link>
                               ) : (
                                 <span className="text-[10px] text-destructive italic">Não vinculado</span>
                               )}
