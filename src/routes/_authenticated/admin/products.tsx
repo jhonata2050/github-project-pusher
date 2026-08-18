@@ -379,17 +379,24 @@ function ProductsPage() {
                         } />
                       </SelectTrigger>
                       <SelectContent className="rounded-xl border-none shadow-xl">
-                        {contaboPlans.data?.map((plan: any) => (
-                          <SelectItem key={plan.productId} value={plan.productId}>
-                            {plan.name} ({plan.productId}) — {plan.vCpu} / {plan.ramTitle} / {plan.diskGb}
-                          </SelectItem>
+                        {contaboPlans.data?.map((cat: any) => (
+                          <div key={cat.category}>
+                            <div className="px-2 py-1.5 text-xs font-bold text-brand bg-brand/5 uppercase tracking-wider sticky top-0">
+                              {cat.category}
+                            </div>
+                            {cat.items.map((plan: any) => (
+                              <SelectItem key={plan.productId} value={plan.productId}>
+                                {plan.name} — {plan.vCpu} / {plan.ramTitle} / {plan.diskGb}
+                              </SelectItem>
+                            ))}
+                          </div>
                         ))}
                         {(!contaboPlans.data || contaboPlans.data.length === 0) && !contaboPlans.isLoading && (
                           <div className="p-4 text-xs text-center text-muted-foreground">
                             {contaboPlans.error ? (
                               <div className="text-destructive font-medium">
                                 Falha na API Contabo. <br/>
-                                Certifique-se de que as credenciais em Financeiro estão corretas.
+                                Certifique-se de que as credenciais em Sistema > Servidores estão corretas.
                               </div>
                             ) : "Nenhum plano encontrado na API"}
                           </div>

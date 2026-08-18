@@ -132,24 +132,22 @@ export async function getContaboProductTypes() {
     const response = await res.json();
     const allProducts = response.data || [];
     
-    // Mapear para o formato esperado pela UI (productId, name, etc)
-    // A API /v1/products retorna itens dentro de priceItem
-    const formattedProducts = allProducts.map((p: any) => {
+    // Mapear e categorizar produtos
+    const categorized: Record<string, any[]> = {};
+
+    allProducts.forEach((p: any) => {
       const priceItem = p.priceItem || {};
       const specs = priceItem.specs || [];
       
-      // Encontrar especificações nos títulos dos itens de specs
       const cpuSpec = specs.find((s: any) => s.type === 'cpu' || s.title?.toLowerCase().includes('cpu'));
       const ramSpec = specs.find((s: any) => s.type === 'ram' || s.title?.toLowerCase().includes('ram'));
       const diskSpec = specs.find((s: any) => s.type === 'storage' || s.title?.toLowerCase().includes('ssd') || s.title?.toLowerCase().includes('nvme') || s.title?.toLowerCase().includes('disk'));
       
-      // Tentar extrair apenas o número da RAM para compatibilidade com o parser antigo se necessário,
-      // mas aqui vamos manter a string do título para maior clareza já que a UI agora formata.
       const ramTitle = ramSpec?.title || '';
       const ramMbMatch = ramTitle.match(/(\d+)\s*GB/i);
       const ramMb = ramMbMatch ? parseInt(ramMbMatch[1]) * 1024 : 0;
 
-      return {
+      const product = {
         productId: priceItem.itemId || priceItem.key,
         name: priceItem.name,
         vCpu: cpuSpec?.title || 'N/A',
@@ -157,10 +155,28 @@ export async function getContaboProductTypes() {
         ramTitle: ramTitle || 'N/A',
         diskGb: diskSpec?.title || 'N/A'
       };
-    }).filter((p: any) => p.productId && p.name);
 
-    console.log(`[Contabo] ${formattedProducts.length} produtos formatados.`);
-    return formattedProducts;
+      if (!product.productId || !product.name) return;
+
+      // Determinar categoria pelo nome
+      let category = "Outros";
+      const name = product.name.toLowerCase();
+      if (name.includes("vds")) category = "VDS (Dedicated Servers)";
+      else if (name.includes("vps") && name.includes("storage")) category = "Storage VPS";
+      else if (name.includes("vps")) category = "Cloud VPS";
+
+      if (!categorized[category]) categorized[category] = [];
+      categorized[category].push(product);
+    });
+
+    // Converter para array ordenado por categoria
+    const result = Object.entries(categorized).map(([category, items]) => ({
+      category,
+      items: items.sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true }))
+    })).sort((a, b) => a.category.localeCompare(b.category));
+
+    console.log(`[Contabo] ${allProducts.length} produtos processados em ${result.length} categorias.`);
+    return result;
   } catch (err: any) {
     console.error("[Contabo] Exceção em getContaboProductTypes:", err.message);
     throw err;
