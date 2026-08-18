@@ -218,15 +218,11 @@ export async function getContaboInstanceDetails(externalId: string) {
   };
 }
 
-// A API da Contabo não fornece métricas de uso em tempo real (CPU/RAM/Disco) via API REST v1 básica.
-// Essas métricas geralmente exigem um agente instalado na máquina ou o uso do painel da Contabo.
-// No entanto, para fornecer uma experiência de usuário "real", tentamos buscar o que for possível
-// ou fornecemos uma estimativa baseada no status da instância.
 export async function getContaboInstanceStats(externalId: string) {
   try {
     const token = await getContaboToken();
-    // Tentamos o endpoint de monitoramento se existir (algumas contas tem acesso a métricas via API)
-    // Se falhar, retornaremos um objeto que o frontend tratará como "em carregamento" ou simulado.
+    
+    // Tentar buscar métricas do endpoint de monitoramento
     const res = await fetch(`https://api.contabo.com/v1/compute/instances/${externalId}/monitoring`, {
       headers: { 
         'Authorization': `Bearer ${token}`,
@@ -236,13 +232,12 @@ export async function getContaboInstanceStats(externalId: string) {
 
     if (res.ok) {
       const monitoringData = await res.json();
-      // Mapear dados reais se disponíveis
       if (monitoringData.data && monitoringData.data.length > 0) {
         const latest = monitoringData.data[0];
         return {
-          cpu: { usage: latest.cpuUsage || 0 },
-          ram: { usage: latest.ramUsage || 0 },
-          disk: { usage: latest.diskUsage || 0 },
+          cpu: { usage: Math.round(latest.cpuUsage || 0) },
+          ram: { usage: Math.round(latest.ramUsage || 0) },
+          disk: { usage: Math.round(latest.diskUsage || 0) },
           network: {
             inbound: (latest.netIn || 0).toFixed(2),
             outbound: (latest.netOut || 0).toFixed(2)
@@ -251,20 +246,20 @@ export async function getContaboInstanceStats(externalId: string) {
           lastUpdate: new Date().toISOString()
         };
       }
+    } else if (res.status === 404 || res.status === 403) {
+      console.warn(`[Contabo] Endpoint de monitoramento não disponível para a instância ${externalId} (Status: ${res.status}).`);
     }
-  } catch (e) {
-    console.warn("[Contabo] Monitoring endpoint not available, using simulated values for UI consistency.");
+  } catch (e: any) {
+    console.warn("[Contabo] Erro ao buscar métricas reais:", e.message);
   }
 
-  // Fallback para simulação realista se a API não retornar métricas
+  // Se não conseguirmos dados reais, retornamos null para as métricas dinâmicas
+  // O frontend decidirá se mostra um estado "Indisponível" ou dados baseados em status estático.
   return {
-    cpu: { usage: Math.floor(Math.random() * 15) + 2 }, // 2-17% (idle realistic)
-    ram: { usage: Math.floor(Math.random() * 20) + 15 }, // 15-35%
-    disk: { usage: Math.floor(Math.random() * 10) + 10 }, // 10-20%
-    network: {
-      inbound: (Math.random() * 2 + 0.1).toFixed(2),
-      outbound: (Math.random() * 0.5 + 0.05).toFixed(2)
-    },
+    cpu: null,
+    ram: null,
+    disk: null,
+    network: null,
     realData: false,
     lastUpdate: new Date().toISOString()
   };
