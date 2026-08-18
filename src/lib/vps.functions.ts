@@ -43,19 +43,21 @@ export const contaboAction = createServerFn({ method: "POST" })
     if (!userId) throw new Error("Unauthorized");
 
     // Validar propriedade da instância antes de permitir ação
-    const { data: svc, error: svcError } = await supabase
+    const { data: services, error: svcError } = await supabase
       .from('services')
-      .select('id, user_id')
-      .eq('user_id', userId)
-      .maybeSingle();
+      .select('id')
+      .eq('user_id', userId);
 
-    if (svcError || !svc) throw new Error("Acesso negado ao serviço relacionado");
+    if (svcError || !services) throw new Error("Erro ao validar acesso aos serviços");
+    
+    const serviceIds = services.map((s: any) => s.id);
+    if (serviceIds.length === 0) throw new Error("Nenhum serviço encontrado para este usuário");
 
     const { data: instance, error: instError } = await supabase
       .from('vps_instances')
-      .select('id, service_id')
+      .select('id')
       .eq('id', data.instanceId)
-      .eq('service_id', svc.id)
+      .in('service_id', serviceIds)
       .maybeSingle();
 
     if (instError || !instance) throw new Error("Acesso negado à instância VPS");
