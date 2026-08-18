@@ -77,7 +77,7 @@ function VPSDetailsPage() {
     );
   }
 
-  const stats = vps.stats || { cpu: { usage: 0 }, ram: { usage: 0 }, disk: { usage: 0 }, network: { inbound: '0', outbound: '0' } };
+  const stats = vps.stats || { cpu: null, ram: null, disk: null, network: null };
   const details = vps.externalDetails || {};
 
   return (
