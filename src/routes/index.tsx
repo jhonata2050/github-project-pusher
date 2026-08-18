@@ -14,13 +14,13 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "HostPanel — Hospedagem web com painel completo" },
+      { title: "HostPanel — Gestão de serviços de hospedagem" },
       {
         name: "description",
         content:
-          "Planos de hospedagem web com provisionamento automático no DirectAdmin, faturas em Pix, cartão e boleto, e suporte por tickets.",
+          "Gestão de serviços de hospedagem com provisionamento automático no DirectAdmin, faturas em Pix, cartão e boleto, e suporte por tickets.",
       },
-      { property: "og:title", content: "HostPanel — Hospedagem web com painel completo" },
+      { property: "og:title", content: "HostPanel — Gestão de serviços de hospedagem" },
       {
         property: "og:description",
         content: "Hospedagem com DirectAdmin, faturas em Pix, cartão e boleto e suporte por tickets.",
@@ -104,7 +104,7 @@ function Index() {
       <section className="lime-backdrop px-4 py-20">
         <div className="mx-auto max-w-3xl text-center">
           <h1 className="text-4xl font-semibold leading-tight tracking-tight sm:text-5xl">
-            Hospedagem web com <span className="text-brand">painel próprio</span> e sem burocracia
+            Serviços de hospedagem com <span className="text-brand">painel próprio</span> e sem burocracia
           </h1>
           <p className="mt-5 text-lg text-muted-foreground">
             Contas criadas automaticamente no DirectAdmin, faturas em Pix, cartão e boleto, tickets de
@@ -229,7 +229,7 @@ function Index() {
       </section>
 
       <footer className="border-t border-border px-4 py-8 text-center text-sm text-muted-foreground">
-        {branding.app_name} — plataforma de gestão de hospedagem web.
+        {branding.app_name} — plataforma de gestão de serviços de hospedagem.
       </footer>
     </div>
   );

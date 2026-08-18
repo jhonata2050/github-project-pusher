@@ -80,13 +80,13 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "HostPanel — Gestão de hospedagem web" },
+      { title: "HostPanel — Gestão de serviços de hospedagem" },
       {
         name: "description",
         content:
           "Plataforma de hospedagem com DirectAdmin, faturas, tickets e automação financeira.",
       },
-      { property: "og:title", content: "HostPanel — Gestão de hospedagem web" },
+      { property: "og:title", content: "HostPanel — Gestão de serviços de hospedagem" },
       {
         property: "og:description",
         content: "Plataforma de hospedagem com DirectAdmin, faturas, tickets e automação financeira.",

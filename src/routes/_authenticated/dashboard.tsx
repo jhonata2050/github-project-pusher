@@ -66,7 +66,7 @@ function ClientDashboardPage() {
         Olá, {profile?.full_name?.split(" ")[0] ?? "bem-vindo"}
       </h1>
       <p className="mt-1 text-sm text-muted-foreground">
-        Aqui você acompanha suas hospedagens, faturas e atendimentos.
+        Aqui você acompanha seus serviços, faturas e atendimentos.
       </p>
 
       <div className="mt-6 grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
@@ -88,7 +88,7 @@ function ClientDashboardPage() {
         <div className="rounded-2xl border border-border p-6 flex flex-col">
           <h2 className="flex items-center gap-2 text-sm font-medium">
             <Server className="size-4 text-muted-foreground" />
-            Minhas hospedagens
+            Meus serviços
           </h2>
           <p className="mt-2 text-sm text-muted-foreground flex-1">
             {stats.data?.totalServices
@@ -97,7 +97,7 @@ function ClientDashboardPage() {
           </p>
           <div className="mt-4 flex flex-wrap gap-2">
             <Button asChild className="rounded-xl">
-              <Link to="/services">Ver hospedagens</Link>
+              <Link to="/services">Ver serviços</Link>
             </Button>
             <Button asChild variant="outline" className="rounded-xl">
               <Link to="/vps">
