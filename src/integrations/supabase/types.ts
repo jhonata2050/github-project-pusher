@@ -838,6 +838,7 @@ export type Database = {
           external_id: string | null
           id: string
           ip_address: string | null
+          last_metrics: Json | null
           provider_id: string | null
           provider_name: string | null
           service_id: string | null
@@ -848,6 +849,7 @@ export type Database = {
           external_id?: string | null
           id?: string
           ip_address?: string | null
+          last_metrics?: Json | null
           provider_id?: string | null
           provider_name?: string | null
           service_id?: string | null
@@ -858,6 +860,7 @@ export type Database = {
           external_id?: string | null
           id?: string
           ip_address?: string | null
+          last_metrics?: Json | null
           provider_id?: string | null
           provider_name?: string | null
           service_id?: string | null
