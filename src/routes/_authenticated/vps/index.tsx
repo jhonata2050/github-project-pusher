@@ -84,7 +84,7 @@ function VPSManagementPage() {
                       <Clock className="h-4 w-4 text-orange-500" />
                     )}
                   </div>
-                  <CardTitle className="text-xl font-bold">{vps.ip_address || 'Provisionando...'}</CardTitle>
+                  <CardTitle className="text-xl font-bold">{vps.ip_address || 'VPS em Operação'}</CardTitle>
                   <CardDescription className="font-mono text-xs">
                     ID: {vps.external_id}
                   </CardDescription>
