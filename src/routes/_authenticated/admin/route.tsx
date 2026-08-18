@@ -1,9 +1,11 @@
-import { createFileRoute, Outlet, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Outlet, useNavigate, useRouterState } from "@tanstack/react-router";
 import { ShieldAlert } from "lucide-react";
+import { useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useIsStaff, useRoles } from "@/hooks/use-auth";
 import { useBranding } from "@/hooks/use-branding";
+import { logSessionEvent } from "@/lib/audit.functions";
 
 
 export const Route = createFileRoute("/_authenticated/admin")({
@@ -15,8 +17,21 @@ function AdminLayout() {
   const { data: roles, error, isLoading: rolesLoading } = useRoles();
   const { isStaff, isLoading: staffLoading } = useIsStaff();
   const navigate = useNavigate();
-
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
   const loading = staffLoading || rolesLoading;
+
+  useEffect(() => {
+    if (!loading && !isStaff) {
+      void logSessionEvent({
+        data: {
+          action: "security.unauthorized_access",
+          description: `Tentativa de acesso à rota administrativa: ${pathname}`,
+          entityType: "security_event",
+          entityId: "unauthorized_admin_access"
+        }
+      });
+    }
+  }, [loading, isStaff, pathname]);
 
   if (loading) {
     return (
