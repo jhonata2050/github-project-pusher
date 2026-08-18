@@ -346,9 +346,9 @@ export async function createPaymentSession(
       const slip = r.bank_slip?.url_slip_pdf || r.bank_slip?.url_slip;
       const transactionId = await recordTransaction({
         userId: ownerId, invoiceId: invoice.id, amount, gateway: def.id, reference: r.transaction_id,
-        method: "boleto", metadata: { checkoutUrl: slip, digitable_line: r.bank_slip?.digitable_line },
+        method: "boleto", metadata: { checkoutUrl: slip, digitableLine: r.bank_slip?.digitable_line },
       });
-      return { ...base, transactionId, checkoutUrl: slip };
+      return { ...base, transactionId, checkoutUrl: slip, digitableLine: r.bank_slip?.digitable_line };
     }
 
     // --------------------------------------------------------------- CajuPay
