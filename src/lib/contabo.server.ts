@@ -203,8 +203,19 @@ export async function getContaboInstanceDetails(externalId: string) {
   }
   
   const response = await res.json();
-  // A API retorna um objeto { data: [instance] }
-  return response.data?.[0];
+  const instance = response.data?.[0];
+  
+  if (!instance) return null;
+
+  // Enriquecer com dados de imagem se disponíveis no catálogo
+  return {
+    ...instance,
+    ipAddress: instance.ipAddress || (instance.addOnIps?.[0]?.ip) || 'N/A',
+    displayName: instance.displayName || instance.name || `VPS ${instance.instanceId}`,
+    regionName: instance.region || 'Desconhecida',
+    createdDate: instance.createdDate,
+    productName: instance.productName || instance.productId,
+  };
 }
 
 // A API da Contabo não fornece métricas de uso em tempo real (CPU/RAM/Disco) via API REST v1 básica.
