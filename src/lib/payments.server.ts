@@ -311,6 +311,7 @@ export async function createPaymentSession(
         days_due_date: "3",
         fixed_description: true,
         items: [{ description, quantity: "1", item_id: "1", price_cents: String(cents) }],
+        type_bank_slip: "boletoA4",
       };
 
       const res = await fetch(endpoint, {
