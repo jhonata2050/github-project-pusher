@@ -98,8 +98,13 @@ function VPSDetailsPage() {
                   vps.status === 'active' ? "bg-lime-500" : "bg-orange-500"
                 )} />
                 <span className="text-sm text-muted-foreground capitalize">
-                  {vps.status} • {vps.provider_name} ({vps.external_id})
+                  {details.status || vps.status} • {vps.provider_name} ({vps.external_id})
                 </span>
+                {stats.lastUpdate && (
+                  <span className="text-[10px] text-muted-foreground ml-2">
+                    • Atualizado em: {new Date(stats.lastUpdate).toLocaleTimeString()}
+                  </span>
+                )}
               </div>
             </div>
           </div>
