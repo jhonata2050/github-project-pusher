@@ -75,12 +75,24 @@ export const getVPSDetails = createServerFn({ method: "GET" })
     // Verificar posse
     const { data: vps, error: instError } = await supabase
       .from('vps_instances')
-      .select('*, service:services(*)')
+      .select('*')
       .eq('id', data.instanceId)
-      .single();
+      .maybeSingle();
 
     if (instError || !vps) throw new Error("Instância não encontrada");
-    if (vps.service.user_id !== userId) throw new Error("Acesso negado");
+
+    let service: any = null;
+    if (vps.service_id) {
+      const { data: svc } = await supabase
+        .from('services')
+        .select('*')
+        .eq('id', vps.service_id)
+        .maybeSingle();
+      service = svc ?? null;
+    }
+
+    const { data: isStaff } = await supabase.rpc('is_staff', { _user_id: userId });
+    if (!isStaff && service?.user_id !== userId) throw new Error("Acesso negado");
 
     const { getContaboInstanceDetails, getContaboInstanceStats } = await import("./contabo.server");
 
@@ -90,6 +102,7 @@ export const getVPSDetails = createServerFn({ method: "GET" })
 
       return {
         ...vps,
+        service,
         externalDetails,
         stats
       };
@@ -98,6 +111,7 @@ export const getVPSDetails = createServerFn({ method: "GET" })
       // Retornar dados parciais do banco se a API falhar
       return {
         ...vps,
+        service,
         apiError: err.message
       };
     }
