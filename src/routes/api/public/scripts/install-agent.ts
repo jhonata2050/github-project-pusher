@@ -31,24 +31,38 @@ if command -v apt-get &> /dev/null; then
     fi
 fi
 
-cat << EOF > /usr/local/bin/hostpanel-agent.sh
+cat << 'EOF' > /usr/local/bin/hostpanel-agent.sh
 #!/bin/bash
-VPS_ID="$VPS_ID"
-API_URL="$API_URL"
+VPS_ID="REPLACE_VPS_ID"
+API_URL="REPLACE_API_URL"
 
-CPU_USAGE=\$(top -bn1 | grep "Cpu(s)" | sed "s/.*, *\\([0-9.]*\\)%* id.*/\\1/" | awk '{print 100 - \$1}')
-RAM_USAGE=\$(free | grep Mem | awk '{print \$3/\$2 * 100.0}')
-DISK_USAGE=\$(df / | grep / | tail -n 1 | awk '{print \$5}' | sed 's/%//')
+# Coleta de CPU (robusta)
+CPU_IDLE=$(top -bn1 | grep "Cpu(s)" | awk '{print $8}' | grep -oE '[0-9.]+' | head -1)
+if [ -z "$CPU_IDLE" ]; then CPU_IDLE=100; fi
+CPU_USAGE=$(echo "100 - $CPU_IDLE" | bc 2>/dev/null || awk "BEGIN {print 100 - $CPU_IDLE}")
 
-# Garantir que os valores sejam números válidos ou 0
-CPU_USAGE=\${CPU_USAGE:-0}
-RAM_USAGE=\${RAM_USAGE:-0}
-DISK_USAGE=\${DISK_USAGE:-0}
+# Coleta de RAM
+RAM_TOTAL=$(free | grep Mem | awk '{print $2}')
+RAM_USED=$(free | grep Mem | awk '{print $3}')
+RAM_USAGE=$(echo "$RAM_USED / $RAM_TOTAL * 100" | bc -l 2>/dev/null || awk "BEGIN {print $RAM_USED / $RAM_TOTAL * 100}")
 
-curl -s -X POST "\$API_URL" \\
-     -H "Content-Type: application/json" \\
-     -d "{\\"vps_id\\": \\"$VPS_ID\\", \\"cpu\\": \$CPU_USAGE, \\"ram\\": \$RAM_USAGE, \\"disk\\": \$DISK_USAGE}"
+# Coleta de Disco
+DISK_USAGE=$(df / | grep / | tail -n 1 | awk '{print $5}' | grep -oE '[0-9.]+' | head -1)
+
+# Limpeza e fallback para zero
+CPU_USAGE=$(echo "$CPU_USAGE" | grep -oE '^[0-9.]+' || echo "0")
+RAM_USAGE=$(echo "$RAM_USAGE" | grep -oE '^[0-9.]+' || echo "0")
+DISK_USAGE=$(echo "$DISK_USAGE" | grep -oE '^[0-9.]+' || echo "0")
+
+# Enviar métricas
+curl -s -X POST "$API_URL" \
+     -H "Content-Type: application/json" \
+     -d "{\"vps_id\": \"$VPS_ID\", \"cpu\": $CPU_USAGE, \"ram\": $RAM_USAGE, \"disk\": $DISK_USAGE}"
 EOF
+
+# Substituir placeholders pelo valor real
+sed -i "s|REPLACE_VPS_ID|$VPS_ID|g" /usr/local/bin/hostpanel-agent.sh
+sed -i "s|REPLACE_API_URL|$API_URL|g" /usr/local/bin/hostpanel-agent.sh
 
 chmod +x /usr/local/bin/hostpanel-agent.sh
 
