@@ -84,7 +84,7 @@ const ADMIN_SECTIONS: NavSection[] = [
     label: "Sistema",
     icon: Cog,
     links: [
-      { label: "Servidores DirectAdmin", to: "/admin/servers", icon: Server },
+      { label: "Servidores", to: "/admin/servers", icon: Server },
       { label: "Financeiro e Gateways", to: "/admin/finance", icon: Wallet },
       { label: "E-mails e SMTP", to: "/admin/emails", icon: Mail },
       { label: "Domínios", to: "/admin/domains", icon: Globe },
