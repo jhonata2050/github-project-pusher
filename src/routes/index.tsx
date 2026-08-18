@@ -104,7 +104,7 @@ function Index() {
       <section className="lime-backdrop px-4 py-20">
         <div className="mx-auto max-w-3xl text-center">
           <h1 className="text-4xl font-semibold leading-tight tracking-tight sm:text-5xl">
-            Hospedagem web com <span className="text-brand">painel próprio</span> e sem burocracia
+            Serviços de hospedagem com <span className="text-brand">painel próprio</span> e sem burocracia
           </h1>
           <p className="mt-5 text-lg text-muted-foreground">
             Contas criadas automaticamente no DirectAdmin, faturas em Pix, cartão e boleto, tickets de
