@@ -77,7 +77,7 @@ function VPSDetailsPage() {
     );
   }
 
-  const stats = vps.stats || { cpu: null, ram: null, disk: null, network: null };
+  const stats = vps.stats || { cpu: null, ram: null, disk: null, network: null, agentRequired: false };
   const details = vps.externalDetails || {};
   const ipAddress = vps.ip_address || details.ipConfig?.v4?.ip || (details.ipAddress !== 'N/A' ? details.ipAddress : null);
 
@@ -99,7 +99,7 @@ function VPSDetailsPage() {
                   vps.status === 'active' ? "bg-lime-500" : "bg-orange-500"
                 )} />
                 <span className="text-sm text-muted-foreground capitalize">
-                  {details.status || vps.status} • {vps.provider_name} ({vps.external_id})
+                  {details.status || vps.status} • Cloud Server ({vps.external_id})
                 </span>
                 {stats.lastUpdate && (
                   <span className="text-[10px] text-muted-foreground ml-2">
@@ -114,7 +114,7 @@ function VPSDetailsPage() {
             size="sm" 
             onClick={() => {
               refetch();
-              toast.info("Sincronizando dados com a Contabo...");
+              toast.info("Sincronizando dados com o servidor...");
             }} 
             className="rounded-xl"
             disabled={isLoading}
@@ -177,6 +177,29 @@ function VPSDetailsPage() {
             </CardContent>
           </Card>
         </div>
+        
+        {stats.agentRequired && (
+          <Card className="rounded-3xl border-2 border-primary/20 bg-primary/5">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Activity className="h-5 w-5 text-primary" /> 
+                Métricas em tempo real não disponíveis
+              </CardTitle>
+              <CardDescription>
+                Seu servidor não está enviando estatísticas automaticamente. Para visualizar o uso de CPU, RAM e Disco, instale nosso agente de monitoramento.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="bg-slate-950 p-4 rounded-xl font-mono text-xs text-slate-200 overflow-x-auto border border-slate-800">
+                <p className="text-slate-500 mb-2"># Execute como root no terminal do seu servidor:</p>
+                <code>curl -sSL https://raw.githubusercontent.com/jhonata2050/host-boss-buddy/main/scripts/install-agent.sh | bash -s -- {vps.id}</code>
+              </div>
+              <p className="text-sm text-muted-foreground italic">
+                Nota: O agente é leve e consome menos de 10MB de RAM.
+              </p>
+            </CardContent>
+          </Card>
+        )}
 
         <div className="grid gap-6 md:grid-cols-2">
           {/* Ações e Status */}
@@ -263,7 +286,7 @@ function VPSDetailsPage() {
                 </div>
                 <div className="flex justify-between py-2">
                   <span className="text-muted-foreground flex items-center gap-2">
-                    <Database className="h-4 w-4" /> Plano Contratado
+                    <Database className="h-4 w-4" /> Plano do Servidor
                   </span>
                   <span className="font-medium">{details.productName || vps.service?.product?.name || 'VPS'}</span>
                 </div>
