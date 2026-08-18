@@ -261,6 +261,7 @@ export async function getContaboInstanceStats(externalId: string) {
     disk: null,
     network: null,
     realData: false,
+    agentRequired: true,
     lastUpdate: new Date().toISOString()
   };
 }
