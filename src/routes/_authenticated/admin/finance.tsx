@@ -268,17 +268,7 @@ function AdminFinanceSettingsPage() {
             ))}
           </div>
 
-          <div className="space-y-6">
-            <h2 className="text-xl font-bold tracking-tight text-foreground flex items-center gap-2">
-              <Server className="h-5 w-5 text-brand" />
-              Provedores de Infraestrutura (VPS)
-            </h2>
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {GATEWAYS.filter(g => g.id === 'contabo').map((gateway) => (
-                <GatewayCard key={gateway.id} gateway={gateway} settings={settings} isVPS />
-              ))}
-            </div>
-          </div>
+          <div className="flex justify-end gap-4">
 
           <div className="flex justify-end gap-4">
             <Button
