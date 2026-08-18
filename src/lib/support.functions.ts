@@ -78,6 +78,12 @@ export const getTicketDetails = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .inputValidator((data: unknown) => z.string().parse(data))
   .handler(async ({ data: ticketId, context }) => {
+    // SECURITY: If not admin, verify ownership of the ticket
+    const { data: isAdmin } = await context.supabase.rpc("has_role", {
+      _user_id: context.userId,
+      _role: "admin",
+    });
+
     const { data: ticket, error: ticketError } = await context.supabase
       .from("tickets")
       .select(`
@@ -88,6 +94,11 @@ export const getTicketDetails = createServerFn({ method: "GET" })
       .single();
 
     if (ticketError) throw new Error(ticketError.message);
+
+    // If not admin, the ticket must belong to the user
+    if (!isAdmin && ticket.user_id !== context.userId) {
+      throw new Error("Acesso negado: Você não possui permissão para acessar este ticket.");
+    }
 
     const { data: messages, error: messagesError } = await context.supabase
       .from("ticket_messages")
