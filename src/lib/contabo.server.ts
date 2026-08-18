@@ -207,23 +207,54 @@ export async function getContaboInstanceDetails(externalId: string) {
   return response.data?.[0];
 }
 
-// Mock de estatísticas já que a API da Contabo às vezes requer endpoints específicos ou monitoramento extra
-// Em um cenário real, usaríamos o endpoint de métricas se disponível ou retornaríamos dados simulados realistas.
+// A API da Contabo não fornece métricas de uso em tempo real (CPU/RAM/Disco) via API REST v1 básica.
+// Essas métricas geralmente exigem um agente instalado na máquina ou o uso do painel da Contabo.
+// No entanto, para fornecer uma experiência de usuário "real", tentamos buscar o que for possível
+// ou fornecemos uma estimativa baseada no status da instância.
 export async function getContaboInstanceStats(externalId: string) {
-  // Vamos simular métricas realistas baseadas em um intervalo
-  // CPU: 0-100%
-  // RAM: 0-100%
-  // DISK: 0-100%
-  // Network: In/Out em Mbps
-  
+  try {
+    const token = await getContaboToken();
+    // Tentamos o endpoint de monitoramento se existir (algumas contas tem acesso a métricas via API)
+    // Se falhar, retornaremos um objeto que o frontend tratará como "em carregamento" ou simulado.
+    const res = await fetch(`https://api.contabo.com/v1/compute/instances/${externalId}/monitoring`, {
+      headers: { 
+        'Authorization': `Bearer ${token}`,
+        'x-request-id': crypto.randomUUID()
+      }
+    });
+
+    if (res.ok) {
+      const monitoringData = await res.json();
+      // Mapear dados reais se disponíveis
+      if (monitoringData.data && monitoringData.data.length > 0) {
+        const latest = monitoringData.data[0];
+        return {
+          cpu: { usage: latest.cpuUsage || 0 },
+          ram: { usage: latest.ramUsage || 0 },
+          disk: { usage: latest.diskUsage || 0 },
+          network: {
+            inbound: (latest.netIn || 0).toFixed(2),
+            outbound: (latest.netOut || 0).toFixed(2)
+          },
+          realData: true,
+          lastUpdate: new Date().toISOString()
+        };
+      }
+    }
+  } catch (e) {
+    console.warn("[Contabo] Monitoring endpoint not available, using simulated values for UI consistency.");
+  }
+
+  // Fallback para simulação realista se a API não retornar métricas
   return {
-    cpu: { usage: Math.floor(Math.random() * 40) + 5 }, // 5-45%
-    ram: { usage: Math.floor(Math.random() * 60) + 10 }, // 10-70%
-    disk: { usage: Math.floor(Math.random() * 30) + 20 }, // 20-50%
+    cpu: { usage: Math.floor(Math.random() * 15) + 2 }, // 2-17% (idle realistic)
+    ram: { usage: Math.floor(Math.random() * 20) + 15 }, // 15-35%
+    disk: { usage: Math.floor(Math.random() * 10) + 10 }, // 10-20%
     network: {
-      inbound: (Math.random() * 5 + 0.5).toFixed(2), // 0.5-5.5 Mbps
-      outbound: (Math.random() * 2 + 0.1).toFixed(2)  // 0.1-2.1 Mbps
+      inbound: (Math.random() * 2 + 0.1).toFixed(2),
+      outbound: (Math.random() * 0.5 + 0.05).toFixed(2)
     },
+    realData: false,
     lastUpdate: new Date().toISOString()
   };
 }

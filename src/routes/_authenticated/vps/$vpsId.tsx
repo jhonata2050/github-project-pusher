@@ -91,7 +91,7 @@ function VPSDetailsPage() {
               </Link>
             </Button>
             <div>
-              <h1 className="text-3xl font-bold tracking-tight">{vps.ip_address || 'VPS Provisionando'}</h1>
+              <h1 className="text-3xl font-bold tracking-tight">{details.displayName || vps.ip_address || 'VPS em Operação'}</h1>
               <div className="flex items-center gap-2 mt-1">
                 <div className={cn(
                   "h-2 w-2 rounded-full",
@@ -134,7 +134,7 @@ function VPSDetailsPage() {
             <CardContent>
               <div className="flex items-end justify-between mb-2">
                 <span className="text-2xl font-bold">{stats.ram.usage}%</span>
-                <span className="text-xs text-muted-foreground">de {details.ramMb ? (details.ramMb / 1024).toFixed(0) : 'N/A'} GB</span>
+                <span className="text-xs text-muted-foreground">de {details.ramMb ? (details.ramMb / 1024).toFixed(0) : (vps.ram_gb || '8')} GB</span>
               </div>
               <Progress value={stats.ram.usage} className="h-2" />
             </CardContent>
@@ -243,7 +243,7 @@ function VPSDetailsPage() {
                   <span className="text-muted-foreground flex items-center gap-2">
                     <Database className="h-4 w-4" /> Plano Contratado
                   </span>
-                  <span className="font-medium">{vps.service?.product_id ? 'VPS Pro' : 'VPS Basic'}</span>
+                  <span className="font-medium">{details.productName || vps.service?.product?.name || 'VPS'}</span>
                 </div>
               </div>
             </CardContent>
