@@ -1,0 +1,2 @@
+DELETE FROM public.vps_instances a USING public.vps_instances b WHERE a.service_id = b.service_id AND a.service_id IS NOT NULL AND a.created_at < b.created_at;
+CREATE UNIQUE INDEX IF NOT EXISTS vps_instances_service_id_key ON public.vps_instances (service_id) WHERE service_id IS NOT NULL;
