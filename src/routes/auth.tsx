@@ -6,7 +6,7 @@ import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { useAuth } from "@/hooks/use-auth";
+import { useAuth, useIsStaff } from "@/hooks/use-auth";
 import { lovable } from "@/integrations/lovable/index";
 import { supabase } from "@/integrations/supabase/client";
 import { logPublicAuthEvent, logSessionEvent } from "@/lib/audit.functions";
@@ -46,7 +46,8 @@ const passwordSchema = z
 function AuthPage() {
   const navigate = useNavigate();
   const { redirect } = Route.useSearch();
-  const { user, loading } = useAuth();
+  const { user, loading: authLoading } = useAuth();
+  const { isStaff, isLoading: staffLoading } = useIsStaff();
   const [mode, setMode] = useState<"signin" | "signup">("signin");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -54,9 +55,14 @@ function AuthPage() {
   const [busy, setBusy] = useState(false);
   const [checkEmail, setCheckEmail] = useState(false);
 
+  const loading = authLoading || (!!user && staffLoading);
+
   useEffect(() => {
-    if (!loading && user) void navigate({ to: (redirect as any) || "/dashboard" });
-  }, [loading, user, navigate]);
+    if (!loading && user) {
+      const defaultDest = isStaff ? "/admin" : "/dashboard";
+      void navigate({ to: (redirect as any) || defaultDest });
+    }
+  }, [loading, user, isStaff, navigate, redirect]);
 
   async function handleGoogle() {
     setBusy(true);
@@ -73,7 +79,7 @@ function AuthPage() {
       return;
     }
     if (result.redirected) return;
-    await navigate({ to: (redirect as any) || "/dashboard" });
+    // Pós-redirecionamento OAuth, o useEffect cuidará do destino correto baseado no papel
   }
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
@@ -106,14 +112,13 @@ function AuthPage() {
           setCheckEmail(true);
           return;
         }
-        await navigate({ to: (redirect as any) || "/dashboard" });
+        // O useEffect acima cuidará do redirecionamento após a sessão ser injetada
       } else {
         const { error } = await supabase.auth.signInWithPassword({
           email: parsedEmail.data,
           password: parsedPassword.data,
         });
         if (error) throw error;
-        await navigate({ to: (redirect as any) || "/dashboard" });
       }
     } catch (error) {
       void logPublicAuthEvent({ data: {
