@@ -143,7 +143,7 @@ function CheckoutPage() {
             window.location.href = paymentData.checkoutUrl;
             // IMPORTANTE: Não resetamos o loading aqui para manter o estado visual até que a página mude
             return order; 
-          } else if (paymentMethod === "pix" && paymentData.pixCode) {
+          } else if (paymentData.pixCode) {
             // Caso raro onde o método mudou no meio ou fallback retornou pix
             setPixResult(paymentData);
             setIsProcessingPix(false);
