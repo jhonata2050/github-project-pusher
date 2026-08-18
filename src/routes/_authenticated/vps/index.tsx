@@ -1,9 +1,10 @@
 import { createFileRoute } from '@tanstack/react-router';
-import { useSuspenseQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getMyVPSInstances, contaboAction } from '@/lib/vps.functions';
 import { AppShell } from '@/components/app/AppShell';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Skeleton } from '@/components/ui/skeleton';
 import { Power, RotateCcw, Monitor, ShieldAlert, CheckCircle2, Clock } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -12,7 +13,7 @@ export const Route = createFileRoute('/_authenticated/vps/')({
 });
 
 function VPSManagementPage() {
-  const { data: instances } = useSuspenseQuery({
+  const { data: instances, isLoading } = useQuery({
     queryKey: ['vps-instances'],
     queryFn: () => getMyVPSInstances(),
   });
@@ -41,7 +42,17 @@ function VPSManagementPage() {
           </p>
         </div>
 
-        {instances?.length === 0 ? (
+        {isLoading ? (
+          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+            {[1, 2, 3].map((i) => (
+              <Card key={i} className="rounded-3xl border-none shadow-sm h-64">
+                <CardContent className="p-6">
+                  <Skeleton className="h-full w-full rounded-2xl" />
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        ) : instances?.length === 0 ? (
           <Card className="rounded-3xl border-dashed">
             <CardContent className="flex flex-col items-center justify-center py-12 text-center">
               <Monitor className="h-12 w-12 text-muted-foreground mb-4" />
