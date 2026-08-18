@@ -64,3 +64,41 @@ export const contaboAction = createServerFn({ method: "POST" })
 
     return performContaboAction(data.instanceId, data.action, userId);
   });
+
+export const getVPSDetails = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data) => z.object({ instanceId: z.string() }).parse(data))
+  .handler(async ({ data, context }) => {
+    const { supabase, userId } = context as any;
+    if (!userId) throw new Error("Unauthorized");
+
+    // Verificar posse
+    const { data: vps, error: instError } = await supabase
+      .from('vps_instances')
+      .select('*, service:services(*)')
+      .eq('id', data.instanceId)
+      .single();
+
+    if (instError || !vps) throw new Error("Instância não encontrada");
+    if (vps.service.user_id !== userId) throw new Error("Acesso negado");
+
+    const { getContaboInstanceDetails, getContaboInstanceStats } = await import("./contabo.server");
+
+    try {
+      const externalDetails = await getContaboInstanceDetails(vps.external_id);
+      const stats = await getContaboInstanceStats(vps.external_id);
+
+      return {
+        ...vps,
+        externalDetails,
+        stats
+      };
+    } catch (err: any) {
+      console.error("Erro ao buscar detalhes na Contabo:", err.message);
+      // Retornar dados parciais do banco se a API falhar
+      return {
+        ...vps,
+        apiError: err.message
+      };
+    }
+  });
