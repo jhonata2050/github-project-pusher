@@ -867,7 +867,7 @@ export type Database = {
           {
             foreignKeyName: "vps_instances_service_id_fkey"
             columns: ["service_id"]
-            isOneToOne: false
+            isOneToOne: true
             referencedRelation: "services"
             referencedColumns: ["id"]
           },
