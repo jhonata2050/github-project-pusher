@@ -14,6 +14,7 @@ export const sessionEventSchema = z.object({
     "password.changed",
     "impersonation.started",
     "impersonation.ended",
+    "security.unauthorized_access",
   ]),
   description: z.string().trim().min(1).max(300),
   entityType: z.string().trim().max(80).optional(),
