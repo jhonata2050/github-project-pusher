@@ -408,7 +408,7 @@ export async function createPaymentSession(
         gateway: def.id,
         reference: json.payment_id || json.transaction_id || ref,
         method: data.method,
-        metadata: { pix_key: json.pix_key, digitable_line: json.digitable_line },
+        metadata: { pix_key: json.pix_key, digitableLine: json.digitable_line },
       });
 
       if (isPix) {
@@ -419,7 +419,7 @@ export async function createPaymentSession(
           qrCodeUrl: json.pix_qr_code,
         };
       }
-      return { ...base, transactionId, checkoutUrl: json.boleto_url || json.pdf_url || json.url };
+      return { ...base, transactionId, checkoutUrl: json.boleto_url || json.pdf_url || json.url, digitableLine: json.digitable_line };
     }
 
     default:
