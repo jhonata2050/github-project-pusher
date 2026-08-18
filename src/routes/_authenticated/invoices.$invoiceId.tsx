@@ -93,10 +93,6 @@ function InvoiceDetailsPage() {
       toast.error("Erro ao processar pagamento: " + (error.message || "Tente outro método."));
     }
   });
-    onError: (error: any) => {
-      toast.error("Erro ao processar pagamento: " + error.message);
-    }
-  });
 
   if (invoice.isLoading) return <AppShell breadcrumb={<span>Carregando fatura...</span>}><Skeleton className="h-96 rounded-3xl" /></AppShell>;
   if (!invoice.data) return <AppShell breadcrumb={<span>Fatura não encontrada</span>}>Fatura não encontrada</AppShell>;
