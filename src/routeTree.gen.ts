@@ -41,6 +41,7 @@ import { Route as AuthenticatedServicesServiceIdRouteImport } from './routes/_au
 import { Route as AuthenticatedTicketsIndexRouteImport } from './routes/_authenticated/tickets.index'
 import { Route as AuthenticatedTicketsTicketIdRouteImport } from './routes/_authenticated/tickets.$ticketId'
 import { Route as AuthenticatedVpsIndexRouteImport } from './routes/_authenticated/vps/index'
+import { Route as AuthenticatedVpsVpsIdRouteImport } from './routes/_authenticated/vps/$vpsId'
 import { Route as ApiPublicBrandingRouteImport } from './routes/api/public/branding'
 import { Route as ApiPublicPasswordResetRouteImport } from './routes/api/public/password-reset'
 import { Route as AuthenticatedAdminClientsIndexRouteImport } from './routes/_authenticated/admin/clients.index'
@@ -232,6 +233,11 @@ const AuthenticatedVpsIndexRoute = AuthenticatedVpsIndexRouteImport.update({
   path: '/vps/',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedVpsVpsIdRoute = AuthenticatedVpsVpsIdRouteImport.update({
+  id: '/vps/$vpsId',
+  path: '/vps/$vpsId',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const ApiPublicBrandingRoute = ApiPublicBrandingRouteImport.update({
   id: '/api/public/branding',
   path: '/api/public/branding',
@@ -333,6 +339,7 @@ export interface FileRoutesByFullPath {
   '/invoices/$invoiceId': typeof AuthenticatedInvoicesInvoiceIdRoute
   '/services/$serviceId': typeof AuthenticatedServicesServiceIdRoute
   '/tickets/$ticketId': typeof AuthenticatedTicketsTicketIdRoute
+  '/vps/$vpsId': typeof AuthenticatedVpsVpsIdRoute
   '/api/public/branding': typeof ApiPublicBrandingRoute
   '/api/public/password-reset': typeof ApiPublicPasswordResetRoute
   '/admin/': typeof AuthenticatedAdminIndexRoute
@@ -374,6 +381,7 @@ export interface FileRoutesByTo {
   '/invoices/$invoiceId': typeof AuthenticatedInvoicesInvoiceIdRoute
   '/services/$serviceId': typeof AuthenticatedServicesServiceIdRoute
   '/tickets/$ticketId': typeof AuthenticatedTicketsTicketIdRoute
+  '/vps/$vpsId': typeof AuthenticatedVpsVpsIdRoute
   '/api/public/branding': typeof ApiPublicBrandingRoute
   '/api/public/password-reset': typeof ApiPublicPasswordResetRoute
   '/admin': typeof AuthenticatedAdminIndexRoute
@@ -422,6 +430,7 @@ export interface FileRoutesById {
   '/_authenticated/invoices/$invoiceId': typeof AuthenticatedInvoicesInvoiceIdRoute
   '/_authenticated/services/$serviceId': typeof AuthenticatedServicesServiceIdRoute
   '/_authenticated/tickets/$ticketId': typeof AuthenticatedTicketsTicketIdRoute
+  '/_authenticated/vps/$vpsId': typeof AuthenticatedVpsVpsIdRoute
   '/api/public/branding': typeof ApiPublicBrandingRoute
   '/api/public/password-reset': typeof ApiPublicPasswordResetRoute
   '/_authenticated/admin/': typeof AuthenticatedAdminIndexRoute
@@ -470,6 +479,7 @@ export interface FileRouteTypes {
     | '/invoices/$invoiceId'
     | '/services/$serviceId'
     | '/tickets/$ticketId'
+    | '/vps/$vpsId'
     | '/api/public/branding'
     | '/api/public/password-reset'
     | '/admin/'
@@ -511,6 +521,7 @@ export interface FileRouteTypes {
     | '/invoices/$invoiceId'
     | '/services/$serviceId'
     | '/tickets/$ticketId'
+    | '/vps/$vpsId'
     | '/api/public/branding'
     | '/api/public/password-reset'
     | '/admin'
@@ -558,6 +569,7 @@ export interface FileRouteTypes {
     | '/_authenticated/invoices/$invoiceId'
     | '/_authenticated/services/$serviceId'
     | '/_authenticated/tickets/$ticketId'
+    | '/_authenticated/vps/$vpsId'
     | '/api/public/branding'
     | '/api/public/password-reset'
     | '/_authenticated/admin/'
@@ -821,6 +833,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedVpsIndexRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/vps/$vpsId': {
+      id: '/_authenticated/vps/$vpsId'
+      path: '/vps/$vpsId'
+      fullPath: '/vps/$vpsId'
+      preLoaderRoute: typeof AuthenticatedVpsVpsIdRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/api/public/branding': {
       id: '/api/public/branding'
       path: '/api/public/branding'
@@ -1024,6 +1043,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedProfileRoute: typeof AuthenticatedProfileRoute
   AuthenticatedServicesRoute: typeof AuthenticatedServicesRouteWithChildren
   AuthenticatedTicketsRoute: typeof AuthenticatedTicketsRouteWithChildren
+  AuthenticatedVpsVpsIdRoute: typeof AuthenticatedVpsVpsIdRoute
   AuthenticatedVpsIndexRoute: typeof AuthenticatedVpsIndexRoute
 }
 
@@ -1034,6 +1054,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedProfileRoute: AuthenticatedProfileRoute,
   AuthenticatedServicesRoute: AuthenticatedServicesRouteWithChildren,
   AuthenticatedTicketsRoute: AuthenticatedTicketsRouteWithChildren,
+  AuthenticatedVpsVpsIdRoute: AuthenticatedVpsVpsIdRoute,
   AuthenticatedVpsIndexRoute: AuthenticatedVpsIndexRoute,
 }
 

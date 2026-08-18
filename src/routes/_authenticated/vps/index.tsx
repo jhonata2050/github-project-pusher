@@ -1,12 +1,13 @@
-import { createFileRoute } from '@tanstack/react-router';
+import { createFileRoute, Link } from '@tanstack/react-router';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getMyVPSInstances, contaboAction } from '@/lib/vps.functions';
 import { AppShell } from '@/components/app/AppShell';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Power, RotateCcw, Monitor, ShieldAlert, CheckCircle2, Clock } from 'lucide-react';
+import { Power, RotateCcw, Monitor, ShieldAlert, CheckCircle2, Clock, Activity } from 'lucide-react';
 import { toast } from 'sonner';
+import { cn } from '@/lib/utils';
 
 export const Route = createFileRoute('/_authenticated/vps/')({
   component: VPSManagementPage,
@@ -65,13 +66,16 @@ function VPSManagementPage() {
         ) : (
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
             {instances?.map((vps: any) => (
-              <Card key={vps.id} className="rounded-3xl overflow-hidden border-2 hover:border-lime-500 transition-all">
+              <Card key={vps.id} className="rounded-3xl overflow-hidden border-2 hover:border-primary transition-all">
                 <CardHeader className="bg-muted/50 pb-4">
                   <div className="flex items-center justify-between mb-2">
                     <div className="flex items-center gap-2">
-                      <div className="h-2 w-2 rounded-full bg-lime-500" />
+                      <div className={cn(
+                        "h-2 w-2 rounded-full",
+                        vps.status === 'active' ? "bg-lime-500" : "bg-orange-500"
+                      )} />
                       <span className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                        {vps.vps_type || 'VPS Contabo'}
+                        {vps.provider_name || 'VPS'}
                       </span>
                     </div>
                     {vps.status === 'active' ? (
@@ -85,58 +89,22 @@ function VPSManagementPage() {
                     ID: {vps.external_id}
                   </CardDescription>
                 </CardHeader>
-                <CardContent className="pt-6 space-y-4">
-                  <div className="grid grid-cols-2 gap-4 text-sm">
+                <CardContent className="pt-6">
+                  <div className="grid grid-cols-2 gap-4 text-sm mb-6">
                     <div>
-                      <p className="text-muted-foreground">Região</p>
+                      <p className="text-muted-foreground text-xs">Região</p>
                       <p className="font-semibold">{vps.region || 'N/A'}</p>
                     </div>
                     <div>
-                      <p className="text-muted-foreground">Sistema</p>
-                      <p className="font-semibold">{vps.os_template || 'N/A'}</p>
+                      <p className="text-muted-foreground text-xs">Sistema</p>
+                      <p className="font-semibold truncate">{vps.os_template || 'N/A'}</p>
                     </div>
                   </div>
-
-                  <div className="pt-4 grid grid-cols-3 gap-2">
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
-                      className="rounded-xl flex-1"
-                      onClick={() => actionMutation.mutate({ instanceId: vps.id, action: 'start' })}
-                      disabled={actionMutation.isPending}
-                    >
-                      <Power className="mr-2 h-3 w-3 text-lime-600" /> Ligar
-                    </Button>
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
-                      className="rounded-xl flex-1"
-                      onClick={() => actionMutation.mutate({ instanceId: vps.id, action: 'stop' })}
-                      disabled={actionMutation.isPending}
-                    >
-                      <ShieldAlert className="mr-2 h-3 w-3 text-red-500" /> Parar
-                    </Button>
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
-                      className="rounded-xl flex-1"
-                      onClick={() => actionMutation.mutate({ instanceId: vps.id, action: 'restart' })}
-                      disabled={actionMutation.isPending}
-                    >
-                      <RotateCcw className="mr-2 h-3 w-3 text-blue-500" /> Reset
-                    </Button>
-                  </div>
                   
-                  <Button 
-                    variant="ghost" 
-                    className="w-full text-xs text-muted-foreground hover:text-red-500"
-                    onClick={() => {
-                      if (confirm("Tem certeza que deseja reinstalar? Todos os dados serão perdidos.")) {
-                        actionMutation.mutate({ instanceId: vps.id, action: 'reinstall' });
-                      }
-                    }}
-                  >
-                    Reinstalar Sistema Operacional
+                  <Button asChild className="w-full rounded-xl gap-2">
+                    <Link to="/vps/$vpsId" params={{ vpsId: vps.id }}>
+                      Ver Detalhes <Activity className="h-4 w-4" />
+                    </Link>
                   </Button>
                 </CardContent>
               </Card>
