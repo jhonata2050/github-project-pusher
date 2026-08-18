@@ -153,9 +153,11 @@ function VPSDetailsPage() {
             </CardHeader>
             <CardContent>
               <div className="flex items-end justify-between mb-2">
-                <span className="text-2xl font-bold">{stats.disk.usage}%</span>
+                <span className="text-2xl font-bold">
+                  {stats.disk?.usage !== null && stats.disk?.usage !== undefined ? `${stats.disk.usage}%` : 'N/A'}
+                </span>
               </div>
-              <Progress value={stats.disk.usage} className="h-2" />
+              <Progress value={stats.disk?.usage || 0} className="h-2" />
             </CardContent>
           </Card>
         </div>
