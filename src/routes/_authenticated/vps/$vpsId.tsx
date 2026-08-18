@@ -103,8 +103,18 @@ function VPSDetailsPage() {
               </div>
             </div>
           </div>
-          <Button variant="outline" size="sm" onClick={() => refetch()} className="rounded-xl">
-            <RefreshCw className="mr-2 h-4 w-4" /> Atualizar
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={() => {
+              refetch();
+              toast.info("Sincronizando dados com a Contabo...");
+            }} 
+            className="rounded-xl"
+            disabled={isLoading}
+          >
+            <RefreshCw className={cn("mr-2 h-4 w-4", isLoading && "animate-spin")} /> 
+            {isLoading ? "Sincronizando..." : "Sincronizar"}
           </Button>
         </div>
 
