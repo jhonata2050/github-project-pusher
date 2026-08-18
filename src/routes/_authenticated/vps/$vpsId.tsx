@@ -95,7 +95,7 @@ function VPSDetailsPage() {
   } : stats;
 
   const ipAddress = vps.ip_address || details.ipConfig?.v4?.ip || (details.ipAddress !== 'N/A' ? details.ipAddress : null);
-  const installCommand = `curl -sSL ${window.location.origin}/scripts/install-agent.sh | bash -s -- ${vps.id}`;
+  const installCommand = `curl -sSL ${window.location.origin}/api/public/scripts/install-agent | bash -s -- ${vps.id}`;
 
 
   return (
