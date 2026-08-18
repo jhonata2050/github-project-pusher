@@ -118,9 +118,10 @@ function VPSDetailsPage() {
                 <span className="text-sm text-muted-foreground capitalize">
                   {details.status || vps.status} • Cloud Server ({vps.external_id})
                 </span>
-                {stats.lastUpdate && (
+                {(displayStats.lastUpdate) && (
                   <span className="text-[10px] text-muted-foreground ml-2">
-                    • Atualizado em: {new Date(stats.lastUpdate).toLocaleTimeString()}
+                    • Atualizado em: {new Date(displayStats.lastUpdate).toLocaleTimeString()}
+                    {displayStats.isAgent && " (via Agente)"}
                   </span>
                 )}
               </div>
@@ -152,10 +153,10 @@ function VPSDetailsPage() {
             <CardContent>
               <div className="flex items-end justify-between mb-2">
                 <span className="text-2xl font-bold">
-                  {stats.cpu?.usage !== null && stats.cpu?.usage !== undefined ? `${stats.cpu.usage}%` : 'N/A'}
+                  {displayStats.cpu?.usage !== null && displayStats.cpu?.usage !== undefined ? `${displayStats.cpu.usage}%` : 'N/A'}
                 </span>
               </div>
-              <Progress value={stats.cpu?.usage || 0} className="h-2" />
+              <Progress value={displayStats.cpu?.usage || 0} className="h-2" />
             </CardContent>
           </Card>
 
@@ -169,11 +170,11 @@ function VPSDetailsPage() {
             <CardContent>
               <div className="flex items-end justify-between mb-2">
                 <span className="text-2xl font-bold">
-                  {stats.ram?.usage !== null && stats.ram?.usage !== undefined ? `${stats.ram.usage}%` : 'N/A'}
+                  {displayStats.ram?.usage !== null && displayStats.ram?.usage !== undefined ? `${displayStats.ram.usage}%` : 'N/A'}
                 </span>
                 <span className="text-xs text-muted-foreground">de {details.ramMb ? (details.ramMb / 1024).toFixed(0) : (vps.ram_gb || '8')} GB</span>
               </div>
-              <Progress value={stats.ram?.usage || 0} className="h-2" />
+              <Progress value={displayStats.ram?.usage || 0} className="h-2" />
             </CardContent>
           </Card>
 
@@ -187,15 +188,15 @@ function VPSDetailsPage() {
             <CardContent>
               <div className="flex items-end justify-between mb-2">
                 <span className="text-2xl font-bold">
-                  {stats.disk?.usage !== null && stats.disk?.usage !== undefined ? `${stats.disk.usage}%` : 'N/A'}
+                  {displayStats.disk?.usage !== null && displayStats.disk?.usage !== undefined ? `${displayStats.disk.usage}%` : 'N/A'}
                 </span>
               </div>
-              <Progress value={stats.disk?.usage || 0} className="h-2" />
+              <Progress value={displayStats.disk?.usage || 0} className="h-2" />
             </CardContent>
           </Card>
         </div>
         
-        {stats.agentRequired && (
+        {(stats.agentRequired && !isAgentDataFresh) && (
           <Card className="rounded-3xl border-2 border-primary/20 bg-primary/5">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -209,7 +210,7 @@ function VPSDetailsPage() {
             <CardContent className="space-y-4">
               <div className="bg-slate-950 p-4 rounded-xl font-mono text-xs text-slate-200 overflow-x-auto border border-slate-800">
                 <p className="text-slate-500 mb-2"># Execute como root no terminal do seu servidor:</p>
-                <code>curl -sSL https://raw.githubusercontent.com/jhonata2050/host-boss-buddy/main/scripts/install-agent.sh | bash -s -- {vps.id}</code>
+                <code>{installCommand}</code>
               </div>
               <p className="text-sm text-muted-foreground italic">
                 Nota: O agente é leve e consome menos de 10MB de RAM.
@@ -298,7 +299,7 @@ function VPSDetailsPage() {
                     <Network className="h-4 w-4" /> Tráfego de Rede
                   </span>
                   <span className="font-medium text-xs">
-                    {stats.network && stats.network.outbound != null ? `↑ ${stats.network.outbound} Mbps / ↓ ${stats.network.inbound} Mbps` : 'Dados indisponíveis'}
+                    {displayStats.network && displayStats.network.outbound != null ? `↑ ${displayStats.network.outbound} Mbps / ↓ ${displayStats.network.inbound} Mbps` : 'Dados indisponíveis'}
                   </span>
                 </div>
                 <div className="flex justify-between py-2">
