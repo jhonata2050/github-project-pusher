@@ -79,9 +79,10 @@ function VPSDetailsPage() {
 
   const stats = vps.stats || { cpu: null, ram: null, disk: null, network: null };
   const details = vps.externalDetails || {};
+  const ipAddress = vps.ip_address || details.ipConfig?.v4?.ip || (details.ipAddress !== 'N/A' ? details.ipAddress : null);
 
   return (
-    <AppShell breadcrumb={vps.ip_address || 'Detalhes da VPS'}>
+    <AppShell breadcrumb={ipAddress || 'Detalhes da VPS'}>
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
@@ -91,7 +92,7 @@ function VPSDetailsPage() {
               </Link>
             </Button>
             <div>
-              <h1 className="text-3xl font-bold tracking-tight">{details.displayName || vps.ip_address || 'VPS em Operação'}</h1>
+              <h1 className="text-3xl font-bold tracking-tight">{details.displayName || ipAddress || 'VPS em Operação'}</h1>
               <div className="flex items-center gap-2 mt-1">
                 <div className={cn(
                   "h-2 w-2 rounded-full",
@@ -242,7 +243,7 @@ function VPSDetailsPage() {
                   <span className="text-muted-foreground flex items-center gap-2">
                     <Monitor className="h-4 w-4" /> Endereço IP
                   </span>
-                  <span className="font-mono font-medium">{vps.ip_address || 'N/A'}</span>
+                  <span className="font-mono font-medium">{ipAddress || 'N/A'}</span>
                 </div>
                 <div className="flex justify-between py-2 border-b">
                   <span className="text-muted-foreground">Sistema Operacional</span>
@@ -250,7 +251,7 @@ function VPSDetailsPage() {
                 </div>
                 <div className="flex justify-between py-2 border-b">
                   <span className="text-muted-foreground">Região / Datacenter</span>
-                  <span className="font-medium">{details.region || vps.region || 'N/A'}</span>
+                  <span className="font-medium">{details.regionName || details.dataCenter || vps.region || 'N/A'}</span>
                 </div>
                 <div className="flex justify-between py-2 border-b">
                   <span className="text-muted-foreground flex items-center gap-2">
