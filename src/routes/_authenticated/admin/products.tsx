@@ -396,7 +396,7 @@ function ProductsPage() {
                             {contaboPlans.error ? (
                               <div className="text-destructive font-medium">
                                 Falha na API Contabo. <br/>
-                                Certifique-se de que as credenciais em Sistema > Servidores estão corretas.
+                                Certifique-se de que as credenciais em Sistema {"/ >"} Servidores estão corretas.
                               </div>
                             ) : "Nenhum plano encontrado na API"}
                           </div>
