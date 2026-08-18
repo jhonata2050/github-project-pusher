@@ -286,7 +286,7 @@ function VPSDetailsPage() {
                 </div>
                 <div className="flex justify-between py-2">
                   <span className="text-muted-foreground flex items-center gap-2">
-                    <Database className="h-4 w-4" /> Plano Contratado
+                    <Database className="h-4 w-4" /> Plano do Servidor
                   </span>
                   <span className="font-medium">{details.productName || vps.service?.product?.name || 'VPS'}</span>
                 </div>
