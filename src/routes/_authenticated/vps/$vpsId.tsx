@@ -246,7 +246,7 @@ function VPSDetailsPage() {
                 </div>
                 <div className="flex justify-between py-2 border-b">
                   <span className="text-muted-foreground">Sistema Operacional</span>
-                  <span className="font-medium">{details.osName || vps.os_template || 'N/A'}</span>
+                  <span className="font-medium">{details.osName || details.imageName || vps.os_template || 'N/A'}</span>
                 </div>
                 <div className="flex justify-between py-2 border-b">
                   <span className="text-muted-foreground">Região / Datacenter</span>
