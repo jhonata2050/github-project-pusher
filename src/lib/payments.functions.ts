@@ -13,10 +13,26 @@ export const initializePayment = createServerFn({ method: "POST" })
   .inputValidator((data: unknown) => paymentInputSchema.parse(data))
   .handler(async ({ data, context }) => {
     const { createPaymentSessionWithFallback } = await import("./payments.server");
-    const result = await createPaymentSessionWithFallback(context.userId, {
-      invoiceId: data.invoiceId,
-      method: data.method,
-      gateway: data.gateway,
-    } as any);
-    return result;
+    
+    // Log para depuração
+    console.log(`[initializePayment] Iniciando pagamento: Invoice=${data.invoiceId}, Method=${data.method}, Gateway=${data.gateway || 'fallback-auto'}`);
+    
+    try {
+      const result = await createPaymentSessionWithFallback(context.userId, {
+        invoiceId: data.invoiceId,
+        method: data.method,
+        gateway: data.gateway,
+      } as any);
+      
+      console.log(`[initializePayment] Sucesso:`, { 
+        gateway: result.gateway, 
+        hasUrl: !!result.checkoutUrl,
+        hasPix: !!result.pixCode
+      });
+      
+      return result;
+    } catch (error: any) {
+      console.error(`[initializePayment] Erro crítico:`, error.message);
+      throw error;
+    }
   });

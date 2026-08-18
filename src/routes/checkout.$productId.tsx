@@ -118,7 +118,6 @@ function CheckoutPage() {
             data: { 
               invoiceId: order.invoiceId, 
               method: "pix",
-              // Deixar o gateway vazio para usar a prioridade automática definida no admin
             } 
           });
           setPixResult(pixData);
@@ -128,9 +127,32 @@ function CheckoutPage() {
         } finally {
           setIsProcessingPix(false);
         }
+      } else if (paymentMethod === "credit_card") {
+        setIsProcessingPix(true);
+        try {
+          const paymentData = await startPayment({
+            data: {
+              invoiceId: order.invoiceId,
+              method: "credit_card",
+            }
+          });
+          
+          if (paymentData.checkoutUrl) {
+            window.location.href = paymentData.checkoutUrl;
+            return order; // Interrompe para evitar o navigate padrão do onSuccess
+          } else {
+            throw new Error("URL de pagamento não gerada.");
+          }
+        } catch (err: any) {
+          console.error("Erro ao processar cartão:", err);
+          toast.error("Erro ao processar pagamento com cartão: " + (err.message || "Tente outro método."));
+          setIsProcessingPix(false);
+          throw err;
+        }
       }
 
       return order;
+
     },
     onSuccess: (data) => {
       if (paymentMethod !== "pix") {
