@@ -77,7 +77,7 @@ function VPSDetailsPage() {
     );
   }
 
-  const stats = vps.stats || { cpu: { usage: 0 }, ram: { usage: 0 }, disk: { usage: 0 }, network: { inbound: '0', outbound: '0' } };
+  const stats = vps.stats || { cpu: null, ram: null, disk: null, network: null };
   const details = vps.externalDetails || {};
 
   return (
@@ -98,13 +98,28 @@ function VPSDetailsPage() {
                   vps.status === 'active' ? "bg-lime-500" : "bg-orange-500"
                 )} />
                 <span className="text-sm text-muted-foreground capitalize">
-                  {vps.status} • {vps.provider_name} ({vps.external_id})
+                  {details.status || vps.status} • {vps.provider_name} ({vps.external_id})
                 </span>
+                {stats.lastUpdate && (
+                  <span className="text-[10px] text-muted-foreground ml-2">
+                    • Atualizado em: {new Date(stats.lastUpdate).toLocaleTimeString()}
+                  </span>
+                )}
               </div>
             </div>
           </div>
-          <Button variant="outline" size="sm" onClick={() => refetch()} className="rounded-xl">
-            <RefreshCw className="mr-2 h-4 w-4" /> Atualizar
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={() => {
+              refetch();
+              toast.info("Sincronizando dados com a Contabo...");
+            }} 
+            className="rounded-xl"
+            disabled={isLoading}
+          >
+            <RefreshCw className={cn("mr-2 h-4 w-4", isLoading && "animate-spin")} /> 
+            {isLoading ? "Sincronizando..." : "Sincronizar"}
           </Button>
         </div>
 
@@ -118,9 +133,11 @@ function VPSDetailsPage() {
             </CardHeader>
             <CardContent>
               <div className="flex items-end justify-between mb-2">
-                <span className="text-2xl font-bold">{stats.cpu.usage}%</span>
+                <span className="text-2xl font-bold">
+                  {stats.cpu?.usage !== null && stats.cpu?.usage !== undefined ? `${stats.cpu.usage}%` : 'N/A'}
+                </span>
               </div>
-              <Progress value={stats.cpu.usage} className="h-2" />
+              <Progress value={stats.cpu?.usage || 0} className="h-2" />
             </CardContent>
           </Card>
 
@@ -133,10 +150,12 @@ function VPSDetailsPage() {
             </CardHeader>
             <CardContent>
               <div className="flex items-end justify-between mb-2">
-                <span className="text-2xl font-bold">{stats.ram.usage}%</span>
+                <span className="text-2xl font-bold">
+                  {stats.ram?.usage !== null && stats.ram?.usage !== undefined ? `${stats.ram.usage}%` : 'N/A'}
+                </span>
                 <span className="text-xs text-muted-foreground">de {details.ramMb ? (details.ramMb / 1024).toFixed(0) : (vps.ram_gb || '8')} GB</span>
               </div>
-              <Progress value={stats.ram.usage} className="h-2" />
+              <Progress value={stats.ram?.usage || 0} className="h-2" />
             </CardContent>
           </Card>
 
@@ -149,9 +168,11 @@ function VPSDetailsPage() {
             </CardHeader>
             <CardContent>
               <div className="flex items-end justify-between mb-2">
-                <span className="text-2xl font-bold">{stats.disk.usage}%</span>
+                <span className="text-2xl font-bold">
+                  {stats.disk?.usage !== null && stats.disk?.usage !== undefined ? `${stats.disk.usage}%` : 'N/A'}
+                </span>
               </div>
-              <Progress value={stats.disk.usage} className="h-2" />
+              <Progress value={stats.disk?.usage || 0} className="h-2" />
             </CardContent>
           </Card>
         </div>
@@ -225,7 +246,7 @@ function VPSDetailsPage() {
                 </div>
                 <div className="flex justify-between py-2 border-b">
                   <span className="text-muted-foreground">Sistema Operacional</span>
-                  <span className="font-medium">{details.osName || vps.os_template || 'N/A'}</span>
+                  <span className="font-medium">{details.osName || details.imageName || vps.os_template || 'N/A'}</span>
                 </div>
                 <div className="flex justify-between py-2 border-b">
                   <span className="text-muted-foreground">Região / Datacenter</span>
@@ -236,7 +257,7 @@ function VPSDetailsPage() {
                     <Network className="h-4 w-4" /> Tráfego de Rede
                   </span>
                   <span className="font-medium text-xs">
-                    ↑ {stats.network.outbound} Mbps / ↓ {stats.network.inbound} Mbps
+                    {stats.network?.outbound !== null ? `↑ ${stats.network.outbound} Mbps / ↓ ${stats.network.inbound} Mbps` : 'Dados indisponíveis'}
                   </span>
                 </div>
                 <div className="flex justify-between py-2">
