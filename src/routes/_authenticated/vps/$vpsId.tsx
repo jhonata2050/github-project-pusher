@@ -257,7 +257,7 @@ function VPSDetailsPage() {
                     <Network className="h-4 w-4" /> Tráfego de Rede
                   </span>
                   <span className="font-medium text-xs">
-                    {stats.network?.outbound !== null ? `↑ ${stats.network.outbound} Mbps / ↓ ${stats.network.inbound} Mbps` : 'Dados indisponíveis'}
+                    {stats.network && stats.network.outbound != null ? `↑ ${stats.network.outbound} Mbps / ↓ ${stats.network.inbound} Mbps` : 'Dados indisponíveis'}
                   </span>
                 </div>
                 <div className="flex justify-between py-2">
