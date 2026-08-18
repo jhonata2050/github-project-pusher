@@ -3,18 +3,87 @@ import { AppShell } from "@/components/app/AppShell";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { getServers, createServerDA, testDAConnection, getDAPackagesList, updateServerDA, deleteServerDA } from "@/lib/support.functions";
+import { 
+  getServers, 
+  createServerDA, 
+  testDAConnection, 
+  getDAPackagesList, 
+  updateServerDA, 
+  deleteServerDA,
+  getSystemSettings,
+  updateSystemSettings
+} from "@/lib/support.functions";
 
-import { Plus, Server, Globe, Shield, Activity, Trash2, RefreshCw, CheckCircle2, Pencil } from "lucide-react";
+import { Plus, Server, Globe, Shield, Activity, Trash2, RefreshCw, CheckCircle2, Pencil, Wallet, ExternalLink, Save } from "lucide-react";
 import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
+import { GATEWAYS, isGatewayConfigured, type GatewayDef } from "@/lib/gateways";
 
 export const Route = createFileRoute("/_authenticated/admin/servers")({
   component: AdminServersPage,
 });
+
+function GatewayCard({ gateway, settings }: { gateway: GatewayDef, settings: any }) {
+  const [validating, setValidating] = useState(false);
+  const configured = isGatewayConfigured(gateway.id, settings as Record<string, unknown>);
+
+  const handleTest = async () => {
+    // No context of the full form here, we'll just show the state
+    toast.info("Para testar, salve as configurações primeiro.");
+  };
+
+  return (
+    <Card className="rounded-3xl border-none shadow-sm">
+      <CardHeader className="space-y-3">
+        <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3">
+          <div className="flex min-w-0 items-center gap-3">
+            <Server className="h-5 w-5 shrink-0 text-brand" />
+            <CardTitle className="truncate text-lg">{gateway.name}</CardTitle>
+          </div>
+          <div className="flex items-center gap-2">
+            <Badge
+              variant={configured ? "default" : "secondary"}
+              className="shrink-0 rounded-full text-[10px] uppercase"
+            >
+              {configured ? "Ativo" : "Inativo"}
+            </Badge>
+          </div>
+        </div>
+        <div className="flex items-center gap-1.5">
+          <a
+            href={gateway.docs}
+            target="_blank"
+            rel="noreferrer"
+            className="ml-auto inline-flex items-center gap-1 text-[10px] text-muted-foreground hover:text-foreground"
+          >
+            Docs <ExternalLink className="size-3" />
+          </a>
+        </div>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {gateway.fields.map((field) => (
+          <div key={field.key} className="space-y-2">
+            <Label className="flex items-center gap-2">
+              {field.label}
+              {field.optional && <span className="text-[10px] text-muted-foreground">(opcional)</span>}
+            </Label>
+            <Input
+              name={field.key}
+              type={field.secret ? "password" : "text"}
+              placeholder={field.placeholder}
+              defaultValue={(settings?.[field.key] as string) ?? ""}
+              className="rounded-xl"
+            />
+          </div>
+        ))}
+      </CardContent>
+    </Card>
+  );
+}
 
 type ServerRow = {
   id: string;
@@ -30,6 +99,19 @@ function AdminServersPage() {
   const [editingServer, setEditingServer] = useState<ServerRow | null>(null);
   const [syncResults, setSyncResults] = useState<Record<string, { packages: string[]; syncedAt: string }>>({});
   const queryClient = useQueryClient();
+  const { data: settings } = useQuery({
+    queryKey: ["system-settings"],
+    queryFn: () => getSystemSettings(),
+  });
+
+  const updateSettingsMutation = useMutation({
+    mutationFn: (vars: Record<string, any>) => updateSystemSettings({ data: vars }),
+    onSuccess: () => {
+      toast.success("Configurações salvas!");
+      queryClient.invalidateQueries({ queryKey: ["system-settings"] });
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
 
   const updateServerMutation = useMutation({
     mutationFn: (payload: {
@@ -137,7 +219,7 @@ function AdminServersPage() {
       <div className="space-y-8">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold tracking-tight text-foreground">Servidores DirectAdmin</h1>
+            <h1 className="text-3xl font-bold tracking-tight text-foreground">Servidores</h1>
             <p className="text-muted-foreground mt-2">
               Gerencie a infraestrutura de hospedagem e provisionamento automático.
             </p>
@@ -335,6 +417,44 @@ function AdminServersPage() {
             )}
           </DialogContent>
         </Dialog>
+        <div className="mt-12 space-y-6">
+          <div className="flex items-center gap-3">
+            <Server className="h-6 w-6 text-brand" />
+            <h2 className="text-2xl font-bold tracking-tight text-foreground">Provedores Externos</h2>
+          </div>
+          <p className="text-muted-foreground">
+            Configure as credenciais de API para provedores de infraestrutura como a Contabo.
+          </p>
+          
+          <form onSubmit={(e) => {
+            e.preventDefault();
+            const formData = new FormData(e.currentTarget);
+            const data: Record<string, any> = {};
+            const contaboGateway = GATEWAYS.find(g => g.id === 'contabo');
+            if (contaboGateway) {
+              contaboGateway.fields.forEach(f => {
+                data[f.key] = formData.get(f.key) || "";
+              });
+              updateSettingsMutation.mutate(data);
+            }
+          }} className="space-y-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {GATEWAYS.filter(g => g.id === 'contabo').map((gateway) => (
+                <GatewayCard key={gateway.id} gateway={gateway} settings={settings} />
+              ))}
+            </div>
+            <div className="flex justify-end">
+              <Button
+                type="submit"
+                disabled={updateSettingsMutation.isPending}
+                className="bg-brand text-brand-foreground hover:bg-brand/90 rounded-2xl px-8 font-bold"
+              >
+                <Save className="mr-2 h-4 w-4" />
+                {updateSettingsMutation.isPending ? "Salvando..." : "Salvar Configurações Externas"}
+              </Button>
+            </div>
+          </form>
+        </div>
       </div>
     </AppShell>
   );
