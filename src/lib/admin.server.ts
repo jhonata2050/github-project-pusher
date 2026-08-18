@@ -101,8 +101,18 @@ export async function updateBrandingImplementation(
 
 export async function updateClientProfileImplementation(
   data: any,
-  context: { supabase: SupabaseClient<Database> },
+  context: { supabase: SupabaseClient<Database>; userId: string },
 ) {
+  // SECURITY: Check if admin
+  const { data: isAdmin } = await context.supabase.rpc("has_role", {
+    _user_id: context.userId,
+    _role: "admin",
+  });
+
+  if (!isAdmin) {
+    throw new Error("Acesso negado. Apenas administradores podem atualizar perfis de terceiros.");
+  }
+
   const { id, ...updates } = data;
 
   const sanitizedUpdates: Record<string, any> = {};

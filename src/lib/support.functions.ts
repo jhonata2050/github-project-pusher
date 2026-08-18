@@ -178,9 +178,16 @@ export const replyTicket = createServerFn({ method: "POST" })
 export const getServers = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
-    // Admin check is handled by RLS if policy exists, but let's be explicit if needed
-    // or use supabaseAdmin if we want to ensure admin always sees it.
-    // For now, let's stick to context.supabase and fix RLS.
+    // SECURITY: Only admins can list servers
+    const { data: isAdmin } = await context.supabase.rpc("has_role", {
+      _user_id: context.userId,
+      _role: "admin",
+    });
+
+    if (!isAdmin) {
+      throw new Error("Acesso negado: Apenas administradores podem listar servidores.");
+    }
+
     const { data, error } = await context.supabase
       .from("servers")
       .select("*");
@@ -273,7 +280,17 @@ export const deleteServerDA = createServerFn({ method: "POST" })
 export const testDAConnection = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((data: unknown) => z.string().parse(data))
-  .handler(async ({ data: serverId }) => {
+  .handler(async ({ data: serverId, context }) => {
+    // SECURITY: Only admins can test connections
+    const { data: isAdmin } = await context.supabase.rpc("has_role", {
+      _user_id: context.userId,
+      _role: "admin",
+    });
+
+    if (!isAdmin) {
+      throw new Error("Acesso negado: Apenas administradores podem testar conexões.");
+    }
+
     const { testDAConnectionDetails } = await import("./directadmin.server");
     try {
       return await testDAConnectionDetails(serverId);
@@ -302,7 +319,17 @@ export const getAllProducts = createServerFn({ method: "GET" })
 export const getDAPackagesList = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .inputValidator((data: unknown) => z.string().parse(data))
-  .handler(async ({ data: serverId }) => {
+  .handler(async ({ data: serverId, context }) => {
+    // SECURITY: Only admins can list packages
+    const { data: isAdmin } = await context.supabase.rpc("has_role", {
+      _user_id: context.userId,
+      _role: "admin",
+    });
+
+    if (!isAdmin) {
+      throw new Error("Acesso negado: Apenas administradores podem listar pacotes.");
+    }
+
     const { getDAPackages } = await import("./directadmin.server");
     return await getDAPackages(serverId);
   });
@@ -344,6 +371,12 @@ export const getServiceServerDetails = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .inputValidator((data: unknown) => z.string().parse(data))
   .handler(async ({ data: serviceId, context }) => {
+    // SECURITY: Verify ownership of the service
+    const { data: isAdmin } = await context.supabase.rpc("has_role", {
+      _user_id: context.userId,
+      _role: "admin",
+    });
+
     const { data: service, error } = await context.supabase
       .from("services")
       .select("*, servers(*)")
@@ -351,6 +384,11 @@ export const getServiceServerDetails = createServerFn({ method: "GET" })
       .single();
 
     if (error || !service) throw new Error("Serviço não encontrado");
+
+    // If not admin, the service must belong to the user
+    if (!isAdmin && service.user_id !== context.userId) {
+      throw new Error("Acesso negado: Você não possui permissão para acessar este serviço.");
+    }
     
     // Se for DirectAdmin, poderíamos buscar estatísticas reais aqui futuramente
     // Por enquanto retornamos os dados do banco e as capacidades do servidor
@@ -361,6 +399,9 @@ export const getServiceServerDetails = createServerFn({ method: "GET" })
 export const getProductGroups = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
+    // Public routes use this, but authenticated ones also do.
+    // If it's a security risk to list all groups to any client, we should restrict.
+    // However, product groups are usually public.
     const { data, error } = await context.supabase
       .from("product_groups")
       .select("*")
