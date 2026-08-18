@@ -135,10 +135,12 @@ function VPSDetailsPage() {
             </CardHeader>
             <CardContent>
               <div className="flex items-end justify-between mb-2">
-                <span className="text-2xl font-bold">{stats.ram.usage}%</span>
+                <span className="text-2xl font-bold">
+                  {stats.ram?.usage !== null && stats.ram?.usage !== undefined ? `${stats.ram.usage}%` : 'N/A'}
+                </span>
                 <span className="text-xs text-muted-foreground">de {details.ramMb ? (details.ramMb / 1024).toFixed(0) : (vps.ram_gb || '8')} GB</span>
               </div>
-              <Progress value={stats.ram.usage} className="h-2" />
+              <Progress value={stats.ram?.usage || 0} className="h-2" />
             </CardContent>
           </Card>
 
