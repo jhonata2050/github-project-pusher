@@ -70,15 +70,29 @@ function InvoiceDetailsPage() {
   });
 
   const paymentMutation = useMutation({
-    mutationFn: (method: "pix" | "credit_card" | "boleto") => 
-      startPayment({ data: { invoiceId, method, gateway } }),
-    onSuccess: (data) => {
+    mutationFn: async (method: "pix" | "credit_card" | "boleto") => {
+      console.log(`[Invoice] Iniciando pagamento ${method} para fatura ${invoiceId}`);
+      const data = await startPayment({ data: { invoiceId, method } });
+      
       if (data.method === "pix") {
         setPixResult(data);
       } else if (data.checkoutUrl) {
+        console.log(`[Invoice] Redirecionando para ${data.checkoutUrl}`);
         window.location.href = data.checkoutUrl;
+      } else {
+        throw new Error("Não foi possível gerar o link de pagamento. Tente novamente.");
+      }
+      return data;
+    },
+    onSuccess: () => {
+      if (paymentMethod !== "pix") {
+        toast.success("Redirecionando para o pagamento...");
       }
     },
+    onError: (error: any) => {
+      toast.error("Erro ao processar pagamento: " + (error.message || "Tente outro método."));
+    }
+  });
     onError: (error: any) => {
       toast.error("Erro ao processar pagamento: " + error.message);
     }
