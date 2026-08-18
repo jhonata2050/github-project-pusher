@@ -127,25 +127,32 @@ function CheckoutPage() {
         } finally {
           setIsProcessingPix(false);
         }
-      } else if (paymentMethod === "credit_card") {
+      } else if (paymentMethod === "credit_card" || paymentMethod === "boleto") {
         setIsProcessingPix(true);
         try {
+          console.log(`[Checkout] Iniciando pagamento ${paymentMethod} para fatura ${order.invoiceId}`);
           const paymentData = await startPayment({
             data: {
               invoiceId: order.invoiceId,
-              method: "credit_card",
+              method: paymentMethod,
             }
           });
           
           if (paymentData.checkoutUrl) {
+            console.log(`[Checkout] Redirecionando para ${paymentData.checkoutUrl}`);
             window.location.href = paymentData.checkoutUrl;
-            return order; // Interrompe para evitar o navigate padrão do onSuccess
+            // IMPORTANTE: Não resetamos o loading aqui para manter o estado visual até que a página mude
+            return order; 
+          } else if (paymentMethod === "pix" && paymentData.pixCode) {
+            // Caso raro onde o método mudou no meio ou fallback retornou pix
+            setPixResult(paymentData);
+            setIsProcessingPix(false);
           } else {
-            throw new Error("URL de pagamento não gerada.");
+            throw new Error("URL de pagamento não gerada pelo gateway.");
           }
         } catch (err: any) {
-          console.error("Erro ao processar cartão:", err);
-          toast.error("Erro ao processar pagamento com cartão: " + (err.message || "Tente outro método."));
+          console.error(`[Checkout] Erro ao processar ${paymentMethod}:`, err);
+          toast.error(`Erro ao processar pagamento: ${err.message || "Tente outro método."}`);
           setIsProcessingPix(false);
           throw err;
         }

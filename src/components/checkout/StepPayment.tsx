@@ -136,7 +136,12 @@ export function StepPayment({
           disabled={isProcessingPix}
           className="w-full h-12 rounded-xl text-lg font-bold"
         >
-          {isProcessingPix ? "Gerando..." : "Pagar Agora"}
+          {isProcessingPix ? (
+            <span className="flex items-center gap-2">
+              <span className="animate-spin size-4 border-2 border-background border-t-transparent rounded-full" />
+              Processando...
+            </span>
+          ) : "Pagar Agora"}
         </Button>
       )}
     </div>
