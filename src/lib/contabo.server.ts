@@ -166,7 +166,7 @@ export async function getContaboProductTypes() {
       else if (name.includes("vps")) category = "Cloud VPS";
 
       if (!categorized[category]) categorized[category] = [];
-      categorized[category].push(product);
+      categorized[category]?.push(product);
     });
 
     // Converter para array ordenado por categoria
