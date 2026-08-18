@@ -269,8 +269,6 @@ function AdminFinanceSettingsPage() {
           </div>
 
           <div className="flex justify-end gap-4">
-
-          <div className="flex justify-end gap-4">
             <Button
               type="submit"
               disabled={updateSettingsMutation.isPending}
