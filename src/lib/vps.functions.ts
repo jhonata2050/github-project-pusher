@@ -11,13 +11,25 @@ export const getMyVPSInstances = createServerFn({ method: "GET" })
     const { supabase, userId } = context as any;
     if (!userId) throw new Error("Unauthorized");
 
+    const { data: services, error: svcError } = await supabase
+      .from('services')
+      .select('*')
+      .eq('user_id', userId);
+    if (svcError) throw svcError;
+
+    const serviceIds = (services ?? []).map((s: any) => s.id);
+    if (serviceIds.length === 0) return [];
+
     const { data: instances, error } = await supabase
       .from('vps_instances')
-      .select('*, service!inner(*)')
-      .eq('service.user_id', userId);
-
+      .select('*')
+      .in('service_id', serviceIds);
     if (error) throw error;
-    return instances;
+
+    return (instances ?? []).map((i: any) => ({
+      ...i,
+      service: (services ?? []).find((s: any) => s.id === i.service_id) ?? null,
+    }));
   });
 
 export const contaboAction = createServerFn({ method: "POST" })
