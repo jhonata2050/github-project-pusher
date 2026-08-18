@@ -29,6 +29,7 @@ import {
   LogOut as LogOutIcon,
   Menu,
   Palette,
+  ShieldAlert,
 } from "lucide-react";
 
 import { useState, type ReactNode } from "react";
@@ -189,7 +190,8 @@ export function AppShell({
   const isGuest = !user;
   const hideSidebar = isCheckout && isGuest;
 
-  const isAdminArea = area ? area === "admin" : (user ? isStaff : false);
+  // Corrigida detecção de área administrativa: apenas se o usuário for staff E a rota começar com /admin
+  const isAdminArea = area ? area === "admin" : (user ? (isStaff && pathname.startsWith("/admin")) : false);
   const sections = isAdminArea ? ADMIN_SECTIONS : CLIENT_SECTIONS;
   const homeTo = isAdminArea ? "/admin" : "/dashboard";
 
@@ -431,13 +433,22 @@ export function AppShell({
           </nav>
 
           <div className="space-y-1 border-t border-sidebar-border pt-3">
-            {isStaff && (
+            {isStaff && pathname.startsWith("/admin") && (
               <Link
-                to={isAdminArea ? "/dashboard" : "/admin"}
+                to="/dashboard"
                 className="flex items-center gap-3 rounded-xl px-3 py-2 text-sm text-sidebar-foreground hover:bg-sidebar-accent"
               >
                 <PanelsTopLeft className="size-4 text-muted-foreground" />
-                {isAdminArea ? "Ver como cliente" : "Ir para administração"}
+                Ver como cliente
+              </Link>
+            )}
+            {isStaff && !pathname.startsWith("/admin") && (
+              <Link
+                to="/admin"
+                className="flex items-center gap-3 rounded-xl px-3 py-2 text-sm text-sidebar-foreground hover:bg-sidebar-accent"
+              >
+                <ShieldAlert className="size-4 text-muted-foreground" />
+                Ir para administração
               </Link>
             )}
             <DropdownMenu>
