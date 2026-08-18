@@ -11,6 +11,7 @@ type PaymentResult = {
   checkoutUrl?: string | undefined;
   pixCode?: string | undefined;
   qrCodeUrl?: string | undefined;
+  digitableLine?: string | undefined;
 };
 
 function publicUrl() {
@@ -346,9 +347,9 @@ export async function createPaymentSession(
       const slip = r.bank_slip?.url_slip_pdf || r.bank_slip?.url_slip;
       const transactionId = await recordTransaction({
         userId: ownerId, invoiceId: invoice.id, amount, gateway: def.id, reference: r.transaction_id,
-        method: "boleto", metadata: { checkoutUrl: slip, digitable_line: r.bank_slip?.digitable_line },
+        method: "boleto", metadata: { checkoutUrl: slip, digitableLine: r.bank_slip?.digitable_line },
       });
-      return { ...base, transactionId, checkoutUrl: slip };
+      return { ...base, transactionId, checkoutUrl: slip, digitableLine: r.bank_slip?.digitable_line };
     }
 
     // --------------------------------------------------------------- CajuPay
@@ -407,7 +408,7 @@ export async function createPaymentSession(
         gateway: def.id,
         reference: json.payment_id || json.transaction_id || ref,
         method: data.method,
-        metadata: { pix_key: json.pix_key, digitable_line: json.digitable_line },
+        metadata: { pix_key: json.pix_key, digitableLine: json.digitable_line },
       });
 
       if (isPix) {
@@ -418,7 +419,7 @@ export async function createPaymentSession(
           qrCodeUrl: json.pix_qr_code,
         };
       }
-      return { ...base, transactionId, checkoutUrl: json.boleto_url || json.pdf_url || json.url };
+      return { ...base, transactionId, checkoutUrl: json.boleto_url || json.pdf_url || json.url, digitableLine: json.digitable_line };
     }
 
     default:

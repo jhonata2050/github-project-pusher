@@ -60,7 +60,7 @@ function InvoiceDetailsPage() {
   
   const [paymentMethod, setPaymentMethod] = useState<"pix" | "credit_card" | "boleto">("pix");
   const [gateway, setGateway] = useState<string>("abacatepay");
-  const [pixResult, setPixResult] = useState<any>(null);
+  const [paymentResult, setPaymentResult] = useState<any>(null);
   const receiptRef = useRef<HTMLDivElement>(null);
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
 
@@ -74,8 +74,8 @@ function InvoiceDetailsPage() {
       console.log(`[Invoice] Iniciando pagamento ${method} para fatura ${invoiceId}`);
       const data = await startPayment({ data: { invoiceId, method } });
       
-      if (data.method === "pix") {
-        setPixResult(data);
+      if (data.method === "pix" || data.method === "boleto") {
+        setPaymentResult(data);
       } else if (data.checkoutUrl) {
         console.log(`[Invoice] Redirecionando para ${data.checkoutUrl}`);
         window.location.href = data.checkoutUrl;
@@ -85,7 +85,7 @@ function InvoiceDetailsPage() {
       return data;
     },
     onSuccess: () => {
-      if (paymentMethod !== "pix") {
+      if (paymentMethod === "credit_card") {
         toast.success("Redirecionando para o pagamento...");
       }
     },
@@ -218,36 +218,83 @@ function InvoiceDetailsPage() {
               <div className="rounded-2xl border border-border bg-card p-6 shadow-sm">
                 <h2 className="text-lg font-semibold">Pagar Fatura</h2>
                 
-                {pixResult ? (
+                {paymentResult ? (
                   <div className="mt-6 space-y-4 animate-in fade-in slide-in-from-bottom-2">
-                    <div className="mx-auto flex aspect-square w-full max-w-[180px] items-center justify-center rounded-xl bg-white p-2 border border-border">
-                      <img src={pixResult.qrCodeUrl} alt="PIX QR Code" className="w-full" />
-                    </div>
-                    <div className="space-y-2">
-                      <p className="text-center text-xs text-muted-foreground">
-                        Escaneie o código acima ou copie a chave PIX abaixo:
-                      </p>
-                      <div className="rounded-lg bg-secondary/50 p-2 font-mono text-[10px] break-all border border-border">
-                        {pixResult.pixCode}
+                    {paymentResult.method === "pix" ? (
+                      <>
+                        <div className="mx-auto flex aspect-square w-full max-w-[180px] items-center justify-center rounded-xl bg-white p-2 border border-border">
+                          <img src={paymentResult.qrCodeUrl} alt="PIX QR Code" className="w-full" />
+                        </div>
+                        <div className="space-y-2">
+                          <p className="text-center text-xs text-muted-foreground">
+                            Escaneie o código acima ou copie a chave PIX abaixo:
+                          </p>
+                          <div className="rounded-lg bg-secondary/50 p-2 font-mono text-[10px] break-all border border-border">
+                            {paymentResult.pixCode}
+                          </div>
+                          <Button 
+                            variant="outline" 
+                            className="w-full rounded-xl"
+                            onClick={() => {
+                              navigator.clipboard.writeText(paymentResult.pixCode);
+                              toast.success("Código PIX copiado!");
+                            }}
+                          >
+                            Copiar Chave PIX
+                          </Button>
+                        </div>
+                      </>
+                    ) : (
+                      <div className="space-y-4">
+                        <div className="flex flex-col items-center gap-4 py-4">
+                          <div className="flex h-16 w-16 items-center justify-center rounded-full bg-brand/10 text-brand">
+                            <FileText className="h-8 w-8" />
+                          </div>
+                          <div className="text-center">
+                            <h3 className="font-bold">Boleto Gerado</h3>
+                            <p className="text-xs text-muted-foreground">Use a linha digitável ou baixe o PDF para pagar.</p>
+                          </div>
+                        </div>
+
+                        {paymentResult.digitableLine && (
+                          <div className="space-y-2">
+                            <p className="text-[10px] font-medium uppercase text-muted-foreground">Linha Digitável</p>
+                            <div className="rounded-lg bg-secondary/50 p-3 font-mono text-[11px] break-all border border-border">
+                              {paymentResult.digitableLine}
+                            </div>
+                            <Button 
+                              variant="outline" 
+                              size="sm"
+                              className="w-full rounded-xl gap-2"
+                              onClick={() => {
+                                navigator.clipboard.writeText(paymentResult.digitableLine);
+                                toast.success("Linha digitável copiada!");
+                              }}
+                            >
+                              Copiar Linha
+                            </Button>
+                          </div>
+                        )}
+
+                        {paymentResult.checkoutUrl && (
+                          <Button 
+                            className="w-full rounded-xl gap-2 h-12 text-lg"
+                            onClick={() => window.open(paymentResult.checkoutUrl, '_blank')}
+                          >
+                            <Download className="size-5" />
+                            Baixar Boleto (PDF)
+                          </Button>
+                        )}
                       </div>
-                      <Button 
-                        variant="outline" 
-                        className="w-full rounded-xl"
-                        onClick={() => {
-                          navigator.clipboard.writeText(pixResult.pixCode);
-                          toast.success("Código PIX copiado!");
-                        }}
-                      >
-                        Copiar Chave PIX
-                      </Button>
-                      <Button 
-                        variant="ghost" 
-                        className="w-full text-xs text-muted-foreground"
-                        onClick={() => setPixResult(null)}
-                      >
-                        Alterar forma de pagamento
-                      </Button>
-                    </div>
+                    )}
+                    
+                    <Button 
+                      variant="ghost" 
+                      className="w-full text-xs text-muted-foreground"
+                      onClick={() => setPaymentResult(null)}
+                    >
+                      Alterar forma de pagamento
+                    </Button>
                   </div>
                 ) : (
                   <div className="mt-6 space-y-4">
