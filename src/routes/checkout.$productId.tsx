@@ -161,10 +161,19 @@ function CheckoutPage() {
       return order;
 
     },
-    onSuccess: (data) => {
+    onSuccess: (order) => {
+      // Se for Cartão ou Boleto, o redirecionamento já foi feito via window.location.href no mutationFn.
+      // Se for Pix, mostramos o resultado na mesma tela.
       if (paymentMethod !== "pix") {
         toast.success("Pedido realizado com sucesso!");
-        navigate({ to: "/invoices" });
+        // O redirecionamento via window.location.href é mais confiável para gatways externos.
+        // Se por algum motivo o redirect falhou no mutationFn (ex: URL não gerada), 
+        // levamos o usuário para a lista de faturas.
+        setTimeout(() => {
+          if (window.location.pathname.includes("/checkout/")) {
+            navigate({ to: "/invoices" });
+          }
+        }, 1000);
       }
     },
     onError: (error: any) => {
