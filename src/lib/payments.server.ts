@@ -479,27 +479,47 @@ export async function createPaymentSessionWithFallback(
     try {
       if (!gatewayId) continue;
       const def = gatewayById(gatewayId);
-      if (!def || !def.methods.includes(data.method)) {
+      if (!def) {
+        console.warn(`[Payment] Gateway ${gatewayId} não encontrado na definição.`);
+        continue;
+      }
+
+      if (!def.methods.includes(data.method)) {
         console.log(`[Payment] Gateway ${gatewayId} ignorado (não suporta ${data.method})`);
         continue;
       }
 
       console.log(`[Payment] Tentando gateway: ${gatewayId} para o método ${data.method}`);
-      return await createPaymentSession(userId, { ...data, gateway: gatewayId } as any);
+      
+      // Timeout de 15 segundos para cada tentativa de gateway individual
+      const result = await Promise.race([
+        createPaymentSession(userId, { ...data, gateway: gatewayId } as any),
+        new Promise<never>((_, reject) => 
+          setTimeout(() => reject(new Error(`Timeout no gateway ${gatewayId}`)), 15000)
+        )
+      ]);
+
+      return result;
     } catch (err: any) {
       console.error(`[Payment] Erro no gateway ${gatewayId}:`, err.message);
       lastError = err;
       
-      // Erros fatais que não devem disparar fallback
+      // Erros de validação de fatura devem interromper o fallback
       if (
         err.message.includes("Fatura já está paga") || 
         err.message.includes("Fatura não encontrada") ||
-        err.message.includes("já está disponível neste fluxo") // Ex: CajuPay + Cartão
+        err.message.includes("já está disponível neste fluxo") ||
+        err.message.includes("Unauthorized")
       ) {
         throw err;
       }
       
-      if (!isFallbackEnabled) throw err;
+      if (!isFallbackEnabled) {
+        console.log(`[Payment] Fallback desativado. Interrompendo após erro no primeiro gateway.`);
+        throw err;
+      }
+      
+      console.log(`[Payment] Tentando próximo gateway da lista...`);
       continue;
     }
   }
