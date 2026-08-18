@@ -77,9 +77,26 @@ function VPSDetailsPage() {
     );
   }
 
-  const stats = vps.stats || { cpu: null, ram: null, disk: null, network: null, agentRequired: false };
   const details = vps.externalDetails || {};
+  const stats = vps.stats || { cpu: null, ram: null, disk: null, network: null, agentRequired: false };
+  
+  // Priorizar métricas do agente se disponíveis e recentes (últimos 5 minutos)
+  const agentMetrics = vps.last_metrics;
+  const isAgentDataFresh = agentMetrics?.last_update && 
+    (new Date().getTime() - new Date(agentMetrics.last_update).getTime() < 5 * 60 * 1000);
+
+  const displayStats = isAgentDataFresh ? {
+    cpu: { usage: agentMetrics.cpu },
+    ram: { usage: agentMetrics.ram },
+    disk: { usage: agentMetrics.disk },
+    network: stats.network, // Agente ainda não coleta rede, mantemos o da API se houver
+    lastUpdate: agentMetrics.last_update,
+    isAgent: true
+  } : stats;
+
   const ipAddress = vps.ip_address || details.ipConfig?.v4?.ip || (details.ipAddress !== 'N/A' ? details.ipAddress : null);
+  const installCommand = `curl -sSL ${window.location.origin}/scripts/install-agent.sh | bash -s -- ${vps.id}`;
+
 
   return (
     <AppShell breadcrumb={ipAddress || 'Detalhes da VPS'}>
