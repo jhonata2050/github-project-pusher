@@ -36,7 +36,7 @@ cat << EOF > /usr/local/bin/hostpanel-agent.sh
 VPS_ID="$VPS_ID"
 API_URL="$API_URL"
 
-CPU_USAGE=\$(top -bn1 | grep "Cpu(s)" | sed "s/.*, *\([0-9.]*\)%* id.*/\1/" | awk '{print 100 - \$1}')
+CPU_USAGE=\$(top -bn1 | grep "Cpu(s)" | sed "s/.*, *\\([0-9.]*\\)%* id.*/\\1/" | awk '{print 100 - \$1}')
 RAM_USAGE=\$(free | grep Mem | awk '{print \$3/\$2 * 100.0}')
 DISK_USAGE=\$(df / | grep / | tail -n 1 | awk '{print \$5}' | sed 's/%//')
 
@@ -45,9 +45,9 @@ CPU_USAGE=\${CPU_USAGE:-0}
 RAM_USAGE=\${RAM_USAGE:-0}
 DISK_USAGE=\${DISK_USAGE:-0}
 
-curl -s -X POST "\$API_URL" \
-     -H "Content-Type: application/json" \
-     -d "{\"vps_id\": \"$VPS_ID\", \"cpu\": \$CPU_USAGE, \"ram\": \$RAM_USAGE, \"disk\": \$DISK_USAGE}"
+curl -s -X POST "\$API_URL" \\
+     -H "Content-Type: application/json" \\
+     -d "{\\"vps_id\\": \\"$VPS_ID\\", \\"cpu\\": \$CPU_USAGE, \\"ram\\": \$RAM_USAGE, \\"disk\\": \$DISK_USAGE}"
 EOF
 
 chmod +x /usr/local/bin/hostpanel-agent.sh
