@@ -118,7 +118,7 @@ function CheckoutPage() {
             data: { 
               invoiceId: order.invoiceId, 
               method: "pix",
-              gateway: "cajupay" // Prioridade padrão ou fallback automático via serverFn
+              // Deixar o gateway vazio para usar a prioridade automática definida no admin
             } 
           });
           setPixResult(pixData);
