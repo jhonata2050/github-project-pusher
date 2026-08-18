@@ -15,12 +15,17 @@ export const Route = createFileRoute('/api/public/vps-metrics')({
       POST: async ({ request }) => {
         try {
           const body = await request.json();
-          const { vps_id, cpu, ram, disk } = metricsSchema.parse(body);
-
-          // Atualizar ou inserir métricas na tabela vps_instances
-          // Assumindo que temos campos para métricas em tempo real ou uma tabela separada.
-          // Por agora, vamos apenas logar ou atualizar um campo JSON se existir.
           
+          // Tratamento para valores que podem vir como string ou nulos do shell
+          const sanitizedData = {
+            vps_id: body.vps_id,
+            cpu: Number(body.cpu) || 0,
+            ram: Number(body.ram) || 0,
+            disk: Number(body.disk) || 0,
+          };
+
+          const { vps_id, cpu, ram, disk } = metricsSchema.parse(sanitizedData);
+
           const { error } = await supabaseAdmin
             .from('vps_instances')
             .update({ 
@@ -40,6 +45,7 @@ export const Route = createFileRoute('/api/public/vps-metrics')({
 
           return new Response(JSON.stringify({ success: true }), { status: 200 });
         } catch (err: any) {
+          console.error('Erro no processamento de métricas:', err);
           return new Response(JSON.stringify({ error: err.message }), { status: 400 });
         }
       }
