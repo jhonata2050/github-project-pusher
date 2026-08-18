@@ -11,6 +11,7 @@ type PaymentResult = {
   checkoutUrl?: string | undefined;
   pixCode?: string | undefined;
   qrCodeUrl?: string | undefined;
+  digitableLine?: string | undefined;
 };
 
 function publicUrl() {
