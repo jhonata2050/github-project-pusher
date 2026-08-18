@@ -29,6 +29,7 @@ import {
   LogOut as LogOutIcon,
   Menu,
   Palette,
+  ShieldAlert,
 } from "lucide-react";
 
 import { useState, type ReactNode } from "react";

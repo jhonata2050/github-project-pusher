@@ -35,7 +35,7 @@ function AdminLayout() {
           <ShieldAlert className="mx-auto size-8 text-muted-foreground" />
           <h1 className="mt-3 text-lg font-semibold">Área restrita</h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            Esta área é exclusiva da administração da plataforma.
+            Esta área é exclusiva da administração da plataforma. Seu acesso não autorizado foi registrado.
           </p>
 
           <Button onClick={() => navigate({ to: "/dashboard" })} className="mt-4 rounded-xl">
