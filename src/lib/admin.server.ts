@@ -199,6 +199,13 @@ export async function getAdminStatsImplementation(
     .select("*", { count: "exact", head: true })
     .eq("status", "active");
 
+  // Serviços com erro de provisionamento
+  const { data: errorServices } = await context.supabase
+    .from("services")
+    .select("id, username, domain, error_message, updated_at")
+    .eq("status", "error")
+    .limit(5);
+
   // Obter contagem de faturas pendentes
   const { count: pendingInvoicesCount } = await context.supabase
     .from("invoices")
@@ -226,13 +233,30 @@ export async function getAdminStatsImplementation(
 
   const monthRevenue = (monthInvoices || []).reduce((acc, inv) => acc + (Number(inv.total_amount) || 0), 0);
 
+  // Buscar tickets críticos (abertos ou aguardando resposta do admin)
+  const { data: criticalTickets } = await context.supabase
+    .from("tickets")
+    .select("id, subject, status, priority, created_at, profiles(full_name)")
+    .in("status", ["open", "customer-reply"])
+    .order("priority", { ascending: false })
+    .order("created_at", { ascending: false })
+    .limit(10);
+
+  const pendingTicketsCount = await context.supabase
+    .from("tickets")
+    .select("*", { count: "exact", head: true })
+    .in("status", ["open", "customer-reply"]);
+
 
   return {
     clients: clientsCount || 0,
     activeServices: servicesCount || 0,
     pendingInvoices: pendingInvoicesCount || 0,
     totalRevenue,
-    monthRevenue
+    monthRevenue,
+    errorServices: errorServices || [],
+    criticalTickets: criticalTickets || [],
+    pendingTicketsCount: pendingTicketsCount.count || 0
   };
 }
 
