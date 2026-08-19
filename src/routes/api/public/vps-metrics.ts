@@ -26,6 +26,20 @@ export const Route = createFileRoute('/api/public/vps-metrics')({
 
           const { vps_id, cpu, ram, disk } = metricsSchema.parse(sanitizedData);
 
+          // Monitoramento: Registrar recebimento de métricas
+          try {
+            const { logPublicAuthEvent } = await import("@/lib/audit.functions");
+            await logPublicAuthEvent({
+              data: {
+                action: "metrics_ingestion_attempt",
+                email: null,
+                description: `Ingestão de métricas para VPS: ${vps_id}`
+              }
+            });
+          } catch (e) {
+            console.warn("[VPS-Metrics] Falha ao registrar log de auditoria para métricas");
+          }
+
           // 1. Atualizar métricas atuais na instância
           const { error: updateError } = await supabaseAdmin
             .from('vps_instances')
