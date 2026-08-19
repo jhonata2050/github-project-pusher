@@ -27,19 +27,19 @@ function AdminWhatsAppPage() {
   useEffect(() => {
     if (settings) {
       setLocalSettings({
-        whatsapp_enabled: settings.whatsapp_enabled === true || settings.whatsapp_enabled === "true",
-        whatsapp_evolution_url: settings.whatsapp_evolution_url || "",
-        whatsapp_evolution_token: settings.whatsapp_evolution_token || "",
-        whatsapp_evolution_instance: settings.whatsapp_evolution_instance || "",
-        whatsapp_admin_phone: settings.whatsapp_admin_phone || "",
-        whatsapp_notify_admin_settings: settings.whatsapp_notify_admin_settings || {
+        whatsapp_enabled: settings["whatsapp_enabled"] === true || settings["whatsapp_enabled"] === "true",
+        whatsapp_evolution_url: settings["whatsapp_evolution_url"] || "",
+        whatsapp_evolution_token: settings["whatsapp_evolution_token"] || "",
+        whatsapp_evolution_instance: settings["whatsapp_evolution_instance"] || "",
+        whatsapp_admin_phone: settings["whatsapp_admin_phone"] || "",
+        whatsapp_notify_admin_settings: settings["whatsapp_notify_admin_settings"] || {
           system_issues: true,
           payment_failed: true,
           service_renewal: true,
           service_activation: true,
           ticket_events: true
         },
-        whatsapp_notify_client_settings: settings.whatsapp_notify_client_settings || {
+        whatsapp_notify_client_settings: settings["whatsapp_notify_client_settings"] || {
           service_activated: true,
           invoice_due: true,
           ticket_reply: true

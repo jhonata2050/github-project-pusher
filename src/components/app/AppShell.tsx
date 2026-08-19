@@ -91,6 +91,7 @@ const ADMIN_SECTIONS: NavSection[] = [
       { label: "Domínios", to: "/admin/domains", icon: Globe },
       { label: "Logs do Sistema", to: "/admin/logs", icon: History },
       { label: "Banco de Dados", to: "/admin/database", icon: Database },
+      { label: "WhatsApp e Notificações", to: "/admin/whatsapp", icon: MessageSquare },
       { label: "Branding e Visual", to: "/admin/branding", icon: Palette },
       { label: "Importador WHMCS", to: "/admin/import", icon: RefreshCw },
     ],

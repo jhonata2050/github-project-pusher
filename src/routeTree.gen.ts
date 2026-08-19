@@ -35,6 +35,7 @@ import { Route as AuthenticatedAdminProductGroupsRouteImport } from './routes/_a
 import { Route as AuthenticatedAdminProductsRouteImport } from './routes/_authenticated/admin/products'
 import { Route as AuthenticatedAdminServersRouteImport } from './routes/_authenticated/admin/servers'
 import { Route as AuthenticatedAdminTicketsRouteImport } from './routes/_authenticated/admin/tickets'
+import { Route as AuthenticatedAdminWhatsappRouteImport } from './routes/_authenticated/admin/whatsapp'
 import { Route as AuthenticatedInvoicesIndexRouteImport } from './routes/_authenticated/invoices.index'
 import { Route as AuthenticatedInvoicesInvoiceIdRouteImport } from './routes/_authenticated/invoices.$invoiceId'
 import { Route as AuthenticatedServicesIndexRouteImport } from './routes/_authenticated/services.index'
@@ -202,6 +203,12 @@ const AuthenticatedAdminTicketsRoute =
     path: '/tickets',
     getParentRoute: () => AuthenticatedAdminRouteRoute,
   } as any)
+const AuthenticatedAdminWhatsappRoute =
+  AuthenticatedAdminWhatsappRouteImport.update({
+    id: '/whatsapp',
+    path: '/whatsapp',
+    getParentRoute: () => AuthenticatedAdminRouteRoute,
+  } as any)
 const AuthenticatedInvoicesIndexRoute =
   AuthenticatedInvoicesIndexRouteImport.update({
     id: '/',
@@ -364,6 +371,7 @@ export interface FileRoutesByFullPath {
   '/admin/products': typeof AuthenticatedAdminProductsRoute
   '/admin/servers': typeof AuthenticatedAdminServersRoute
   '/admin/tickets': typeof AuthenticatedAdminTicketsRoute
+  '/admin/whatsapp': typeof AuthenticatedAdminWhatsappRoute
   '/invoices/$invoiceId': typeof AuthenticatedInvoicesInvoiceIdRoute
   '/services/$serviceId': typeof AuthenticatedServicesServiceIdRoute
   '/tickets/$ticketId': typeof AuthenticatedTicketsTicketIdRoute
@@ -410,6 +418,7 @@ export interface FileRoutesByTo {
   '/admin/products': typeof AuthenticatedAdminProductsRoute
   '/admin/servers': typeof AuthenticatedAdminServersRoute
   '/admin/tickets': typeof AuthenticatedAdminTicketsRoute
+  '/admin/whatsapp': typeof AuthenticatedAdminWhatsappRoute
   '/invoices/$invoiceId': typeof AuthenticatedInvoicesInvoiceIdRoute
   '/services/$serviceId': typeof AuthenticatedServicesServiceIdRoute
   '/tickets/$ticketId': typeof AuthenticatedTicketsTicketIdRoute
@@ -463,6 +472,7 @@ export interface FileRoutesById {
   '/_authenticated/admin/products': typeof AuthenticatedAdminProductsRoute
   '/_authenticated/admin/servers': typeof AuthenticatedAdminServersRoute
   '/_authenticated/admin/tickets': typeof AuthenticatedAdminTicketsRoute
+  '/_authenticated/admin/whatsapp': typeof AuthenticatedAdminWhatsappRoute
   '/_authenticated/invoices/$invoiceId': typeof AuthenticatedInvoicesInvoiceIdRoute
   '/_authenticated/services/$serviceId': typeof AuthenticatedServicesServiceIdRoute
   '/_authenticated/tickets/$ticketId': typeof AuthenticatedTicketsTicketIdRoute
@@ -516,6 +526,7 @@ export interface FileRouteTypes {
     | '/admin/products'
     | '/admin/servers'
     | '/admin/tickets'
+    | '/admin/whatsapp'
     | '/invoices/$invoiceId'
     | '/services/$serviceId'
     | '/tickets/$ticketId'
@@ -562,6 +573,7 @@ export interface FileRouteTypes {
     | '/admin/products'
     | '/admin/servers'
     | '/admin/tickets'
+    | '/admin/whatsapp'
     | '/invoices/$invoiceId'
     | '/services/$serviceId'
     | '/tickets/$ticketId'
@@ -614,6 +626,7 @@ export interface FileRouteTypes {
     | '/_authenticated/admin/products'
     | '/_authenticated/admin/servers'
     | '/_authenticated/admin/tickets'
+    | '/_authenticated/admin/whatsapp'
     | '/_authenticated/invoices/$invoiceId'
     | '/_authenticated/services/$serviceId'
     | '/_authenticated/tickets/$ticketId'
@@ -845,6 +858,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminTicketsRouteImport
       parentRoute: typeof AuthenticatedAdminRouteRoute
     }
+    '/_authenticated/admin/whatsapp': {
+      id: '/_authenticated/admin/whatsapp'
+      path: '/whatsapp'
+      fullPath: '/admin/whatsapp'
+      preLoaderRoute: typeof AuthenticatedAdminWhatsappRouteImport
+      parentRoute: typeof AuthenticatedAdminRouteRoute
+    }
     '/_authenticated/invoices/': {
       id: '/_authenticated/invoices/'
       path: '/'
@@ -1048,6 +1068,7 @@ interface AuthenticatedAdminRouteRouteChildren {
   AuthenticatedAdminProductsRoute: typeof AuthenticatedAdminProductsRoute
   AuthenticatedAdminServersRoute: typeof AuthenticatedAdminServersRoute
   AuthenticatedAdminTicketsRoute: typeof AuthenticatedAdminTicketsRoute
+  AuthenticatedAdminWhatsappRoute: typeof AuthenticatedAdminWhatsappRoute
   AuthenticatedAdminIndexRoute: typeof AuthenticatedAdminIndexRoute
   AuthenticatedAdminVpsIndexRoute: typeof AuthenticatedAdminVpsIndexRoute
 }
@@ -1068,6 +1089,7 @@ const AuthenticatedAdminRouteRouteChildren: AuthenticatedAdminRouteRouteChildren
     AuthenticatedAdminProductsRoute: AuthenticatedAdminProductsRoute,
     AuthenticatedAdminServersRoute: AuthenticatedAdminServersRoute,
     AuthenticatedAdminTicketsRoute: AuthenticatedAdminTicketsRoute,
+    AuthenticatedAdminWhatsappRoute: AuthenticatedAdminWhatsappRoute,
     AuthenticatedAdminIndexRoute: AuthenticatedAdminIndexRoute,
     AuthenticatedAdminVpsIndexRoute: AuthenticatedAdminVpsIndexRoute,
   }

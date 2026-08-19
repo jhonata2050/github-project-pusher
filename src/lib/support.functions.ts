@@ -148,6 +148,23 @@ export const createTicket = createServerFn({ method: "POST" })
 
     if (messageError) throw new Error(messageError.message);
 
+    // Notificar Admin via WhatsApp sobre novo ticket
+    try {
+      const { notifyAdminWhatsApp } = await import("./whatsapp.server");
+      const { data: profile } = await context.supabase
+        .from("profiles")
+        .select("full_name")
+        .eq("id", context.userId)
+        .single();
+      
+      await notifyAdminWhatsApp(
+        `🆕 *Novo Ticket Aberto*\n\n*Assunto:* ${input.subject}\n*Prioridade:* ${input.priority}\n*Cliente:* ${profile?.full_name || "Desconhecido"}\n*Mensagem:* ${input.message.slice(0, 100)}${input.message.length > 100 ? "..." : ""}`,
+        "ticket_events"
+      );
+    } catch (e) {
+      console.warn("[WhatsApp] Falha ao notificar admin sobre novo ticket:", e);
+    }
+
     return ticket;
   });
 
@@ -182,6 +199,24 @@ export const replyTicket = createServerFn({ method: "POST" })
         updated_at: new Date().toISOString()
       })
       .eq("id", input.ticketId);
+
+    // Notificar Admin via WhatsApp sobre nova resposta
+    try {
+      const { notifyAdminWhatsApp } = await import("./whatsapp.server");
+      const { data: ticket } = await context.supabase
+        .from("tickets")
+        .select("subject, profiles(full_name)")
+        .eq("id", input.ticketId)
+        .single();
+      
+      const clientName = (ticket as any)?.profiles?.full_name || "Cliente";
+      await notifyAdminWhatsApp(
+        `📬 *Resposta em Ticket*\n\n*Assunto:* ${ticket?.subject}\n*De:* ${isAdmin ? "Administrador" : clientName}\n*Mensagem:* ${input.message.slice(0, 100)}${input.message.length > 100 ? "..." : ""}`,
+        "ticket_events"
+      );
+    } catch (e) {
+      console.warn("[WhatsApp] Falha ao notificar admin sobre resposta em ticket:", e);
+    }
 
     return data;
   });

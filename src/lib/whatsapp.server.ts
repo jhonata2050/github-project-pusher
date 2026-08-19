@@ -35,18 +35,18 @@ export async function sendWhatsAppMessage({
       ]);
 
     const config: Record<string, any> = {};
-    settings?.forEach((s) => {
+    settings?.forEach((s: any) => {
       config[s.key] = s.value;
     });
 
-    if (config.whatsapp_enabled !== true && config.whatsapp_enabled !== "true") {
+    if (config["whatsapp_enabled"] !== true && config["whatsapp_enabled"] !== "true") {
       console.log("[WhatsApp] Notificações desativadas globalmente.");
       return { success: false, reason: "disabled" };
     }
 
-    const evolutionUrl = config.whatsapp_evolution_url?.toString().replace(/\/$/, "");
-    const token = config.whatsapp_evolution_token?.toString();
-    const instance = config.whatsapp_evolution_instance?.toString();
+    const evolutionUrl = config["whatsapp_evolution_url"]?.toString().replace(/\/$/, "");
+    const token = config["whatsapp_evolution_token"]?.toString();
+    const instance = config["whatsapp_evolution_instance"]?.toString();
 
     if (!evolutionUrl || !token || !instance) {
       console.warn("[WhatsApp] Configurações da Evolution Go incompletas.");
