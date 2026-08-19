@@ -172,23 +172,23 @@ function TicketDetailsPage() {
                       )}
                     >
                         <div className={cn(
-                          "flex gap-3 max-w-[85%]"
+                          "flex gap-3 max-w-[85%] items-end"
                         )}>
                         <div className={cn(
-                          "h-10 w-10 rounded-2xl flex items-center justify-center shrink-0 border",
-                          isStaff ? "bg-brand text-brand-foreground border-brand order-1" : "bg-white text-muted-foreground border-border order-2"
+                          "h-8 w-8 rounded-full flex items-center justify-center shrink-0 border shadow-sm",
+                          isStaff ? "bg-brand text-brand-foreground border-brand order-1" : "bg-slate-100 text-slate-600 border-slate-200 order-2"
                         )}>
-                          {isStaff ? <Shield className="h-5 w-5" /> : <User className="h-5 w-5" />}
+                          {isStaff ? <Shield className="h-4 w-4" /> : <User className="h-4 w-4" />}
                         </div>
                         <div className={cn(
-                          "flex flex-col",
-                          isStaff ? "order-2" : "order-1"
+                          "flex flex-col min-w-0",
+                          isStaff ? "order-2 items-start" : "order-1 items-end"
                         )}>
                           <div className={cn(
-                            "p-3 sm:p-4 rounded-3xl text-sm leading-relaxed shadow-sm",
+                            "px-4 py-2.5 rounded-2xl text-sm leading-snug shadow-sm",
                             isStaff 
-                              ? "bg-brand/10 text-foreground border border-brand/20 rounded-tl-none" 
-                              : "bg-white text-foreground border border-border rounded-tr-none"
+                              ? "bg-brand/10 text-foreground border border-brand/20 rounded-bl-none" 
+                              : "bg-white text-foreground border border-border rounded-br-none"
                           )}>
                             <p className="whitespace-pre-wrap">{msg.message}</p>
                             {msg.attachments && msg.attachments.length > 0 && (
@@ -208,7 +208,7 @@ function TicketDetailsPage() {
                             )}
                           </div>
                           <p className={cn(
-                            "text-[10px] text-muted-foreground mt-1",
+                            "text-[10px] text-muted-foreground mt-1 px-1",
                             isStaff ? "text-left font-bold text-brand" : "text-right"
                           )}>
                             {isStaff ? "Equipe de suporte Eqsam" : (msg.profile?.full_name || "Cliente")} • {new Date(msg.created_at).toLocaleString("pt-BR")}
