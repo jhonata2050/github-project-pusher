@@ -200,6 +200,28 @@ export async function processProvisioning(invoiceId: string) {
 
 
           console.log(`Provisioned service ${service.id} on server ${server.id}`);
+
+          // Notificar via WhatsApp
+          try {
+            const { sendWhatsAppMessage, notifyAdminWhatsApp } = await import("./whatsapp.server");
+            
+            // Notificar Cliente
+            if (profile?.phone) {
+              await sendWhatsAppMessage({
+                to: profile.phone,
+                message: `✅ *Serviço Ativo!*\n\nOlá ${profile.full_name},\nSeu serviço *${product.name}* foi ativado com sucesso!\n\n*Domínio:* ${domain}\n*Usuário:* ${username}\n\nObrigado por escolher nossa plataforma!`,
+                category: "service_activation"
+              });
+            }
+
+            // Notificar Admin
+            await notifyAdminWhatsApp(
+              `🚀 *Serviço Provisionado*\n\n*Produto:* ${product.name}\n*Cliente:* ${profile?.full_name}\n*Domínio:* ${domain}`,
+              "service_activation"
+            );
+          } catch (e) {
+            console.warn("[WhatsApp] Falha ao enviar notificações de provisionamento:", e);
+          }
         } catch (err: any) {
           console.error(`Provisioning error: ${err.message}`);
         }
