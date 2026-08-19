@@ -34,12 +34,12 @@ function VPSManagementPage() {
   });
 
   return (
-    <AppShell breadcrumb="VPS">
+    <AppShell breadcrumb="EQSAM CLOUD">
       <div className="space-y-6">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Servidores VPS</h1>
+          <h1 className="text-3xl font-bold tracking-tight">Servidores EQSAM CLOUD</h1>
           <p className="text-muted-foreground">
-            Gerencie suas instâncias VPS Contabo em tempo real.
+            Gerencie suas instâncias EQSAM CLOUD em tempo real.
           </p>
         </div>
 
@@ -57,9 +57,9 @@ function VPSManagementPage() {
           <Card className="rounded-3xl border-dashed">
             <CardContent className="flex flex-col items-center justify-center py-12 text-center">
               <Monitor className="h-12 w-12 text-muted-foreground mb-4" />
-              <CardTitle>Nenhuma VPS encontrada</CardTitle>
+              <CardTitle>Nenhuma instância encontrada</CardTitle>
               <CardDescription>
-                Você ainda não possui servidores VPS ativos em sua conta.
+                Você ainda não possui servidores EQSAM CLOUD ativos em sua conta.
               </CardDescription>
             </CardContent>
           </Card>
@@ -75,7 +75,7 @@ function VPSManagementPage() {
                         vps.status === 'active' ? "bg-lime-500" : "bg-orange-500"
                       )} />
                       <span className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                        {vps.provider_name || 'VPS'}
+                        {vps.provider_name ? 'CLOUD SERVER' : 'EQSAM CLOUD'}
                       </span>
                     </div>
                     {vps.status === 'active' ? (
