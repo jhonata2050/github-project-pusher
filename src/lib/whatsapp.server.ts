@@ -58,7 +58,7 @@ export async function sendWhatsAppMessage({
     
     // 3. Preparar requisição para Evolution Go
     // Evolution Go documentation: https://docs.evolutionfoundation.com.br/evolution-go/send-text
-    const endpoint = `${evolutionUrl}/message/sendText/${instance}`;
+    const endpoint = `${evolutionUrl}/instance/fetchInstances`;
 
     
     const response = await fetch(endpoint, {
