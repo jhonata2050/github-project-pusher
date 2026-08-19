@@ -74,10 +74,17 @@ export async function sendWhatsAppMessage({
       })
     });
 
-    const result = await response.json().catch(() => ({}));
+    const responseText = await response.text();
+    let result = {};
+    try {
+      result = JSON.parse(responseText);
+    } catch (e) {
+      result = { raw: responseText };
+    }
 
     if (!response.ok) {
-      console.error("[WhatsApp] Erro Evolution Go:", result);
+      console.error("[WhatsApp] Erro Evolution Go:", response.status, result);
+
       
       // Log de falha na auditoria
       await supabaseAdmin.from("audit_logs").insert({
