@@ -107,6 +107,7 @@ function TicketDetailsPage() {
     }
   };
 
+  if (!data) return <div>Ticket não encontrado</div>;
   const { ticket, messages } = data;
   const status = STATUS_MAP[ticket.status as keyof typeof STATUS_MAP] || STATUS_MAP.open;
 
