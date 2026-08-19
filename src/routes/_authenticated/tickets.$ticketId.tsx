@@ -162,10 +162,6 @@ function TicketDetailsPage() {
               <div ref={scrollRef} className="flex-1 overflow-y-auto p-3 sm:p-6 space-y-6 bg-muted/5">
                 {messages.map((msg: any) => {
                   const isStaff = msg.is_staff_reply;
-                  // Se for staff, alinha à esquerda (Eqsam). Se for cliente, alinha à direita.
-                  // Mas o requisito diz "mensagens do cliente e do administrador são exibidas com o mesmo nome e no mesmo lado"
-                  // Então vamos inverter se necessário para ficar intuitivo.
-                  const isCurrentUser = msg.user_id === data.ticket.user_id ? !isStaff : isStaff;
                   
                   return (
                     <div 
@@ -181,7 +177,7 @@ function TicketDetailsPage() {
                       )}>
                         {isStaff ? <Shield className="h-5 w-5" /> : <User className="h-5 w-5" />}
                       </div>
-                      <div className="space-y-1">
+                      <div className="flex flex-col">
                         <div className={cn(
                           "p-3 sm:p-4 rounded-3xl text-sm leading-relaxed shadow-sm",
                           isStaff 
