@@ -66,8 +66,14 @@ function AuthPage() {
 
   async function handleGoogle() {
     setBusy(true);
+    // Preservar o redirecionamento original se houver
+    const searchParams = new URLSearchParams();
+    if (redirect) searchParams.set("redirect", redirect);
+    
+    const callbackUrl = `${window.location.origin}/auth?${searchParams.toString()}`;
+
     const result = await lovable.auth.signInWithOAuth("google", {
-      redirect_uri: window.location.origin,
+      redirect_uri: callbackUrl,
     });
     if (result.error) {
       void logPublicAuthEvent({ data: {
@@ -79,7 +85,6 @@ function AuthPage() {
       return;
     }
     if (result.redirected) return;
-    // Pós-redirecionamento OAuth, o useEffect cuidará do destino correto baseado no papel
   }
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
