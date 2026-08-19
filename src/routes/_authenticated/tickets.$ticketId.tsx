@@ -209,7 +209,7 @@ function TicketDetailsPage() {
                             "text-[10px] text-muted-foreground mt-1",
                             isStaff ? "text-left font-bold text-brand" : "text-right"
                           )}>
-                            {isStaff ? "Equipe Eqsam" : (msg.profile?.full_name || "Cliente")} • {new Date(msg.created_at).toLocaleString("pt-BR")}
+                            {isStaff ? "Equipe de suporte Eqsam" : (msg.profile?.full_name || "Cliente")} • {new Date(msg.created_at).toLocaleString("pt-BR")}
                           </p>
                         </div>
                       </div>
