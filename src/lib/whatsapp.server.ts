@@ -128,17 +128,6 @@ export async function sendWhatsAppMessage({
 
 
 
-    // 4. Log de sucesso na auditoria
-    await supabaseAdmin.from("audit_logs").insert({
-      category: "whatsapp",
-      action: "whatsapp.sent",
-      status: "success",
-      description: `Mensagem enviada com sucesso para ${to}`,
-      metadata: { to, category } as any
-    });
-
-    return { success: true, data: result };
-
   } catch (error: any) {
     console.error("[WhatsApp] Exceção ao enviar mensagem:", error);
     return { success: false, error: error.message };
