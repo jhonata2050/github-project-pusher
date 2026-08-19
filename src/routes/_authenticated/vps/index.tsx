@@ -75,7 +75,7 @@ function VPSManagementPage() {
                         vps.status === 'active' ? "bg-lime-500" : "bg-orange-500"
                       )} />
                       <span className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                        {vps.provider_name ? 'CLOUD SERVER' : 'EQSAM CLOUD'}
+                        CLOUD SERVER
                       </span>
                     </div>
                     {vps.status === 'active' ? (
