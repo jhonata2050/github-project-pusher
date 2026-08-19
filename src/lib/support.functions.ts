@@ -254,7 +254,7 @@ export const replyTicket = createServerFn({ method: "POST" })
       
       const clientName = (ticket as any)?.profiles?.full_name || "Cliente";
       const clientEmail = (ticket as any)?.profiles?.email || "N/A";
-      const replierName = isAdmin ? "Eqsam Suporte" : (replierProfile?.full_name || "Cliente");
+      const replierName = isAdmin ? "Equipe de suporte Eqsam" : (replierProfile?.full_name || "Cliente");
       const now = new Date().toLocaleString("pt-BR");
 
       // Notificar Admin se for resposta de cliente
