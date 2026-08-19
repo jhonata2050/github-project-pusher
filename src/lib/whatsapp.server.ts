@@ -57,9 +57,12 @@ export async function sendWhatsAppMessage({
     const cleanNumber = to.replace(/\D/g, "");
     
     // Envio específico para Evolution Go
+    // Evolution Go exige que o número de telefone tenha @s.whatsapp.net se não for grupo
+    const whatsappNumber = cleanNumber.includes("@") ? cleanNumber : `${cleanNumber}@s.whatsapp.net`;
+
     const targetUrl = `${evolutionUrl}/message/sendText`;
     const payload = {
-      number: cleanNumber,
+      number: whatsappNumber,
       text: message,
       instance: instance,
       delay: 0,
