@@ -51,9 +51,11 @@ export const validateDomain = createServerFn({ method: "POST" })
       try {
         const { logPublicAuthEvent } = await import("./audit.functions");
         await logPublicAuthEvent({
-          action: "domain_validation_blocked",
-          email: null,
-          description: `Tentativa de validar domínio bloqueado: ${domain}`
+          data: {
+            action: "domain_validation_blocked",
+            email: null,
+            description: `Tentativa de validar domínio bloqueado: ${domain}`
+          }
         });
       } catch (e) {
         console.warn("[Checkout] Falha ao registrar log de auditoria para domínio bloqueado");
