@@ -867,13 +867,18 @@ export type Database = {
       }
       vps_instances: {
         Row: {
+          cpu_cores: number | null
           created_at: string
+          disk_gb: number | null
           external_id: string | null
           id: string
           ip_address: string | null
           last_metrics: Json | null
+          os_template: string | null
           provider_id: string | null
           provider_name: string | null
+          ram_gb: number | null
+          region: string | null
           service_id: string | null
           ssh_host: string | null
           ssh_password: string | null
@@ -882,13 +887,18 @@ export type Database = {
           status: string | null
         }
         Insert: {
+          cpu_cores?: number | null
           created_at?: string
+          disk_gb?: number | null
           external_id?: string | null
           id?: string
           ip_address?: string | null
           last_metrics?: Json | null
+          os_template?: string | null
           provider_id?: string | null
           provider_name?: string | null
+          ram_gb?: number | null
+          region?: string | null
           service_id?: string | null
           ssh_host?: string | null
           ssh_password?: string | null
@@ -897,13 +907,18 @@ export type Database = {
           status?: string | null
         }
         Update: {
+          cpu_cores?: number | null
           created_at?: string
+          disk_gb?: number | null
           external_id?: string | null
           id?: string
           ip_address?: string | null
           last_metrics?: Json | null
+          os_template?: string | null
           provider_id?: string | null
           provider_name?: string | null
+          ram_gb?: number | null
+          region?: string | null
           service_id?: string | null
           ssh_host?: string | null
           ssh_password?: string | null

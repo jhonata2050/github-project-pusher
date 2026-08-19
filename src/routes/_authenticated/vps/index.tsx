@@ -93,26 +93,26 @@ function VPSManagementPage() {
                   <div className="grid grid-cols-2 gap-4 text-sm mb-6">
                     <div>
                       <p className="text-muted-foreground text-xs uppercase tracking-wider mb-1">Região</p>
-                      <p className="font-bold text-base">{vps.region || 'N/A'}</p>
+                      <p className="font-bold text-base">{vps.region || 'European Union'}</p>
                     </div>
                     <div>
                       <p className="text-muted-foreground text-xs uppercase tracking-wider mb-1">Sistema</p>
-                      <p className="font-bold text-base truncate">{vps.os_template || 'N/A'}</p>
+                      <p className="font-bold text-base truncate">{vps.os_template || 'Ubuntu 22.04'}</p>
                     </div>
                   </div>
                   
                   <div className="grid grid-cols-3 gap-2 text-xs mb-6 border-t pt-4">
                     <div className="flex flex-col gap-1">
                       <span className="text-muted-foreground">CPU</span>
-                      <span className="font-semibold">{vps.last_metrics?.cpu || vps.cpu_cores || '2'} vCPU</span>
+                      <span className="font-semibold">{vps.cpu_cores || '2'} vCPU</span>
                     </div>
                     <div className="flex flex-col gap-1">
                       <span className="text-muted-foreground">RAM</span>
-                      <span className="font-semibold">{vps.last_metrics?.ram || vps.ram_gb || '4'} GB</span>
+                      <span className="font-semibold">{vps.ram_gb || '4'} GB</span>
                     </div>
                     <div className="flex flex-col gap-1">
                       <span className="text-muted-foreground">Disco</span>
-                      <span className="font-semibold">{vps.last_metrics?.disk || vps.disk_gb || '50'} GB</span>
+                      <span className="font-semibold">{vps.disk_gb || '50'} GB</span>
                     </div>
                   </div>
                   

@@ -117,12 +117,13 @@ function VPSDetailsPage() {
               </Link>
             </Button>
             <div>
-              <h1 className="text-3xl font-bold tracking-tight">{details.displayName || ipAddress}</h1>
+              <h1 className="text-3xl font-bold tracking-tight">{details.displayName || vps.os_template || ipAddress}</h1>
               <div className="flex items-center gap-2 mt-1">
                 <Badge variant={vps.status === 'active' ? 'default' : 'secondary'} className="rounded-full">
                   {vps.status === 'active' ? 'VPS em Operação' : 'Offline'}
                 </Badge>
                 <span className="text-sm text-muted-foreground italic">IP: {ipAddress}</span>
+                {vps.region && <span className="text-sm text-muted-foreground">• {vps.region}</span>}
               </div>
             </div>
           </div>
@@ -132,32 +133,47 @@ function VPSDetailsPage() {
           </Button>
         </div>
 
-        <div className="grid gap-6 md:grid-cols-3">
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-5">
           <Card className="rounded-3xl border-2">
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium flex items-center gap-2"><Cpu className="h-4 w-4 text-blue-500" /> CPU</CardTitle>
+              <CardTitle className="text-xs font-medium flex items-center gap-2 text-muted-foreground uppercase tracking-wider">CPU</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{displayStats.cpu?.usage ?? 'N/A'}%</div>
-              <Progress value={displayStats.cpu?.usage || 0} className="h-2 mt-2" />
+              <div className="text-xl font-bold">{vps.cpu_cores || 'N/A'} vCPU</div>
             </CardContent>
           </Card>
           <Card className="rounded-3xl border-2">
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium flex items-center gap-2"><Activity className="h-4 w-4 text-lime-500" /> RAM</CardTitle>
+              <CardTitle className="text-xs font-medium flex items-center gap-2 text-muted-foreground uppercase tracking-wider">RAM</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{displayStats.ram?.usage ?? 'N/A'}%</div>
-              <Progress value={displayStats.ram?.usage || 0} className="h-2 mt-2" />
+              <div className="text-xl font-bold">{vps.ram_gb || 'N/A'} GB</div>
             </CardContent>
           </Card>
           <Card className="rounded-3xl border-2">
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium flex items-center gap-2"><HardDrive className="h-4 w-4 text-orange-500" /> DISCO</CardTitle>
+              <CardTitle className="text-xs font-medium flex items-center gap-2 text-muted-foreground uppercase tracking-wider">Disco</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{displayStats.disk?.usage ?? 'N/A'}%</div>
-              <Progress value={displayStats.disk?.usage || 0} className="h-2 mt-2" />
+              <div className="text-xl font-bold">{vps.disk_gb || 'N/A'} GB</div>
+            </CardContent>
+          </Card>
+          <Card className="rounded-3xl border-2">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-xs font-medium flex items-center gap-2 text-muted-foreground uppercase tracking-wider">Uso CPU</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-xl font-bold">{displayStats.cpu?.usage ?? 'N/A'}%</div>
+              <Progress value={displayStats.cpu?.usage || 0} className="h-1.5 mt-2" />
+            </CardContent>
+          </Card>
+          <Card className="rounded-3xl border-2">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-xs font-medium flex items-center gap-2 text-muted-foreground uppercase tracking-wider">Uso RAM</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-xl font-bold">{displayStats.ram?.usage ?? 'N/A'}%</div>
+              <Progress value={displayStats.ram?.usage || 0} className="h-1.5 mt-2" />
             </CardContent>
           </Card>
         </div>
