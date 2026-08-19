@@ -21,7 +21,27 @@ if command -v apt-get &> /dev/null; then
     apt-get install -y sysstat curl bc > /dev/null 2>&1
 fi
 
+# Remover branding do provedor no terminal (MOTD)
+if [ -f /etc/motd ]; then
+    cat << 'BANNER' > /etc/motd
+ ____________________________________________________________________
+|                                                                    |
+|                      BEM-VINDO A EQSAM CLOUD                       |
+|____________________________________________________________________|
+
+Este servidor e gerenciado via painel EQSAM (eqsam.com).
+Para suporte, entre em contato via area do cliente.
+BANNER
+fi
+
+# Remover scripts de MOTD dinâmicos que podem conter branding
+rm -f /etc/update-motd.d/10-help-text 2>/dev/null
+rm -f /etc/update-motd.d/50-landscape-sysinfo 2>/dev/null
+rm -f /etc/update-motd.d/99-contabo-branding 2>/dev/null # Específico do provedor
+[ -f /etc/legal ] && truncate -s 0 /etc/legal
+
 # Criar o script de coleta
+
 # Usamos um heredoc simples para evitar problemas com o compilador TS
 cat << 'EOF' > /usr/local/bin/eqsam-agent.sh
 #!/bin/bash
