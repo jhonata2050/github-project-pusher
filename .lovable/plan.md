@@ -1,13 +1,13 @@
-# Plano de Implementação: Integração com Evolution API (WhatsApp)
+# Plano de Implementação: Integração com Evolution Go (WhatsApp)
 
-Este plano detalha a integração do sistema com a plataforma Evolution API para automatizar notificações via WhatsApp para clientes e administradores.
+Este plano detalha a integração do sistema com a plataforma Evolution Go para automatizar notificações via WhatsApp para clientes e administradores.
 
 ## Funcionalidades e Escopo
 
 ### 1. Configuração Administrativa
 - Nova área em **Sistema > WhatsApp e Notificações** (/admin/whatsapp).
 - Campo para o número de telefone do administrador (recebedor de alertas).
-- Configuração da Evolution API (URL da Instância, Token da Instância, Nome da Instância).
+- Configuração da Evolution Go (URL da Instância, Token da Instância, Nome da Instância).
 - Chave de API Global (opcional, para segurança).
 - Toggle de ativação para diferentes tipos de notificações:
   - **Administrador:** Problemas no sistema, falhas de pagamento, renovações, ativações, suporte.
@@ -15,7 +15,7 @@ Este plano detalha a integração do sistema com a plataforma Evolution API para
 
 ### 2. Motor de Notificação (Backend)
 - Implementação de um utilitário centralizado em `src/lib/whatsapp.server.ts`.
-- Função `sendWhatsAppMessage` para abstrair a chamada à Evolution API.
+- Função `sendWhatsAppMessage` para abstrair a chamada à Evolution Go.
 - Lógica de fallback e logs de auditoria para cada envio.
 
 ### 3. Gatilhos de Notificação (Hooks)
