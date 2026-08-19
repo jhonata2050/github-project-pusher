@@ -118,7 +118,7 @@ function AdminWhatsAppPage() {
                     <MessageSquare className="h-5 w-5 text-brand" />
                   </div>
                   <div>
-                    <CardTitle>Evolution Go API</CardTitle>
+                    <CardTitle>Evolution API v2</CardTitle>
                     <CardDescription>Dados da sua instância</CardDescription>
                   </div>
                 </div>
