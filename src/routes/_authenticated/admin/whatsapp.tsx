@@ -97,7 +97,7 @@ function AdminWhatsAppPage() {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold tracking-tight text-foreground">Configurações de WhatsApp</h1>
-            <p className="text-muted-foreground mt-2">Integração com a plataforma Evolution Go para notificações automáticas via WhatsApp.</p>
+            <p className="text-muted-foreground mt-2">Integração com a plataforma Evolution API v2 para notificações automáticas via WhatsApp.</p>
           </div>
           <div className="flex items-center gap-3 bg-muted/30 p-2 rounded-2xl px-4">
             <Label htmlFor="whatsapp-enabled" className="cursor-pointer font-bold">Ativar Integração</Label>
@@ -126,8 +126,8 @@ function AdminWhatsAppPage() {
               <CardContent className="space-y-4">
                 <div className="space-y-2">
                   <div className="flex justify-between items-center">
-                    <Label>URL da API Centralizada</Label>
-                    <span className="text-[10px] font-medium text-amber-500 bg-amber-500/10 px-2 py-0.5 rounded-full">Evolution Go</span>
+                    <Label>URL da API</Label>
+                    <span className="text-[10px] font-medium text-blue-500 bg-blue-500/10 px-2 py-0.5 rounded-full">Evolution API v2</span>
                   </div>
                   <Input 
                     placeholder="https://sua-api.com" 
@@ -135,7 +135,7 @@ function AdminWhatsAppPage() {
                     value={localSettings.whatsapp_evolution_url}
                     onChange={e => setLocalSettings({...localSettings, whatsapp_evolution_url: e.target.value})}
                   />
-                  <p className="text-[10px] text-muted-foreground">Ex: https://evogo.srvbr.top (sem /v1 ou /v2)</p>
+                  <p className="text-[10px] text-muted-foreground">Ex: https://evoapi.sua-empresa.com</p>
                 </div>
                 <div className="space-y-2">
                   <Label>Nome da Instância</Label>

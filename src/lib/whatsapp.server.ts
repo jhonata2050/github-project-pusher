@@ -1,9 +1,9 @@
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 
 /**
- * Interface para a Evolution Go API
+ * Interface para a Evolution API v2
  */
-interface EvolutionGoPayload {
+interface EvolutionApiPayload {
   number: string;
   text: string;
   delay?: number;
@@ -11,7 +11,7 @@ interface EvolutionGoPayload {
 }
 
 /**
- * Função centralizada para enviar mensagens via Evolution Go
+ * Função centralizada para enviar mensagens via Evolution API v2
  */
 export async function sendWhatsAppMessage({
   to,
@@ -49,22 +49,20 @@ export async function sendWhatsAppMessage({
     const instance = config["whatsapp_evolution_instance"]?.toString();
 
     if (!evolutionUrl || !token || !instance) {
-      console.warn("[WhatsApp] Configurações da Evolution Go incompletas.");
+      console.warn("[WhatsApp] Configurações da Evolution API v2 incompletas.");
       return { success: false, reason: "incomplete_config" };
     }
 
     // 2. Limpar número (deve ser apenas dígitos com DDI)
     const cleanNumber = to.replace(/\D/g, "");
     
-    // Envio específico para Evolution Go
-    // Evolution Go exige que o número de telefone tenha @s.whatsapp.net se não for grupo
+    // Envio específico para Evolution API v2 (instância no path)
     const whatsappNumber = cleanNumber.includes("@") ? cleanNumber : `${cleanNumber}@s.whatsapp.net`;
 
-    const targetUrl = `${evolutionUrl}/message/sendText`;
+    const targetUrl = `${evolutionUrl}/message/sendText/${instance}`;
     const payload = {
       number: whatsappNumber,
       text: message,
-      instance: instance,
       delay: 0,
       linkPreview: true
     };
@@ -88,7 +86,7 @@ export async function sendWhatsAppMessage({
       }
 
       if (!response.ok) {
-        console.error("[WhatsApp] Falha no envio Evolution Go:", {
+        console.error("[WhatsApp] Falha no envio Evolution API v2:", {
           status: response.status,
           data: responseData
         });
@@ -97,13 +95,13 @@ export async function sendWhatsAppMessage({
           category: "whatsapp",
           action: "whatsapp.send_failed",
           status: "failure",
-          description: `Erro na Evolution Go (${response.status}). URL: ${targetUrl}`,
+          description: `Erro na Evolution API v2 (${response.status}). URL: ${targetUrl}`,
           metadata: { to, category, response: responseData, payload: { ...payload, text: "REDACTED" } } as any
         });
         
         let errorMessage = "Erro desconhecido na API";
         if (response.status === 404) {
-          errorMessage = "Endpoint não encontrado (404). Verifique se a URL da API está correta e termina sem /v1 ou /v2.";
+          errorMessage = "Endpoint não encontrado (404). Verifique se a URL da API está correta e se a instância existe.";
         } else if (responseData.message) {
           errorMessage = Array.isArray(responseData.message) ? responseData.message.join(", ") : responseData.message;
         }
@@ -116,7 +114,7 @@ export async function sendWhatsAppMessage({
         category: "whatsapp",
         action: "whatsapp.sent",
         status: "success",
-        description: `Mensagem enviada com sucesso para ${to} via Evolution Go`,
+        description: `Mensagem enviada com sucesso para ${to} via Evolution API v2`,
         metadata: { to, category, instance } as any
       });
 
@@ -193,7 +191,7 @@ export async function testWhatsAppConnection() {
 
   const result = await sendWhatsAppMessage({
     to: adminPhone,
-    message: "🧪 *Teste de Conexão HostPanel*\n\nSua integração com WhatsApp via Evolution Go está funcionando corretamente!",
+    message: "🧪 *Teste de Conexão HostPanel*\n\nSua integração com WhatsApp via Evolution API v2 está funcionando corretamente!",
     category: "test_connection"
   });
 
@@ -221,7 +219,7 @@ export async function testWhatsAppConnection() {
 
     return {
       success: false,
-      message: message && message !== "{}" ? message : "Falha ao contatar a Evolution Go. Verifique URL, instância e token.",
+      message: message && message !== "{}" ? message : "Falha ao contatar a Evolution API v2. Verifique URL, instância e token.",
     };
   }
 
