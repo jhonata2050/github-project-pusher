@@ -464,7 +464,7 @@ export function AppShell({
                           </div>
                           <p className="text-xs text-muted-foreground mt-1">{n.message}</p>
                           <p className="text-[10px] text-muted-foreground mt-2">
-                            {new Date(n.created_at).toLocaleString("pt-BR")}
+                            {new Date(n.created_at || new Date()).toLocaleString("pt-BR")}
                           </p>
                         </div>
                       )}
@@ -658,7 +658,7 @@ export function AppShell({
                               </div>
                               <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{n.message}</p>
                               <p className="text-[10px] text-muted-foreground mt-2">
-                                {new Date(n.created_at).toLocaleString("pt-BR")}
+                                {new Date(n.created_at || new Date()).toLocaleString("pt-BR")}
                               </p>
                             </Link>
                           ) : (
@@ -671,7 +671,7 @@ export function AppShell({
                               </div>
                               <p className="text-xs text-muted-foreground mt-1">{n.message}</p>
                               <p className="text-[10px] text-muted-foreground mt-2">
-                                {new Date(n.created_at).toLocaleString("pt-BR")}
+                                {new Date(n.created_at || new Date()).toLocaleString("pt-BR")}
                               </p>
                             </div>
                           )}
