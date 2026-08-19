@@ -180,8 +180,8 @@ function VPSDetailsPage() {
                   </div>
                 </div>
                 <div className="space-y-1.5">
-                  <span className="text-[10px] text-slate-500 uppercase font-bold tracking-widest block">Porta</span>
-                  <div className="font-mono text-sm bg-slate-900/50 p-2.5 rounded-xl border border-slate-800/50 text-slate-200">
+                  <span className="text-[10px] text-slate-400 uppercase font-bold tracking-widest block opacity-70">Porta</span>
+                  <div className="font-mono text-sm bg-[#0f172a]/80 p-3 rounded-xl border border-slate-800/50 text-slate-200">
                     {vps.ssh_port || 22}
                   </div>
                 </div>
