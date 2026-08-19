@@ -91,7 +91,7 @@ const ADMIN_SECTIONS: NavSection[] = [
       { label: "Domínios", to: "/admin/domains", icon: Globe },
       { label: "Logs do Sistema", to: "/admin/logs", icon: History },
       { label: "Banco de Dados", to: "/admin/database", icon: Database },
-      { label: "Branding e Visual", to: "/admin", icon: Palette },
+      { label: "Branding e Visual", to: "/admin/branding", icon: Palette },
       { label: "Importador WHMCS", to: "/admin/import", icon: RefreshCw },
     ],
   },
@@ -184,7 +184,7 @@ export function AppShell({
   const isAdminArea = area ? area === "admin" : (user ? (isStaff && pathname.startsWith("/admin")) : false);
   
   // Use default branding for admin area, otherwise use dynamic branding
-  const branding = isAdminArea ? {
+  const branding = (isAdminArea && !pathname.startsWith('/admin/branding')) ? {
     logo_url: null,
     app_name: "HostPanel",
     primary_color: "oklch(0.88 0.19 128)",

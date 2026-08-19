@@ -30,8 +30,12 @@ export function useBranding() {
     if (typeof document === "undefined") return;
 
     // Se estiver na área administrativa, não aplica o branding dinâmico no :root
+    // O branding dinâmico (cores/favicon) é aplicado apenas para clientes
+    // O AppShell já cuida de usar branding padrão ou dinâmico nos componentes visuais
     if (window.location.pathname.startsWith('/admin')) {
-      // Opcional: Resetar para o padrão se necessário
+      // Limpa as cores dinâmicas para o painel administrativo voltar ao padrão (HostPanel)
+      document.documentElement.style.removeProperty("--primary");
+      document.documentElement.style.removeProperty("--brand");
       return;
     }
 
