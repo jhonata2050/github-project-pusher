@@ -177,11 +177,14 @@ function TicketDetailsPage() {
                       )}>
                         <div className={cn(
                           "h-10 w-10 rounded-2xl flex items-center justify-center shrink-0 border",
-                          isStaff ? "bg-brand text-brand-foreground border-brand" : "bg-white text-muted-foreground border-border"
+                          isStaff ? "bg-brand text-brand-foreground border-brand order-1" : "bg-white text-muted-foreground border-border order-2"
                         )}>
                           {isStaff ? <Shield className="h-5 w-5" /> : <User className="h-5 w-5" />}
                         </div>
-                        <div className="flex flex-col">
+                        <div className={cn(
+                          "flex flex-col",
+                          isStaff ? "order-2" : "order-1"
+                        )}>
                           <div className={cn(
                             "p-3 sm:p-4 rounded-3xl text-sm leading-relaxed shadow-sm",
                             isStaff 
