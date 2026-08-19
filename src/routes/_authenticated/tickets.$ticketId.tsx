@@ -107,6 +107,15 @@ function TicketDetailsPage() {
     }
   };
 
+  useEffect(() => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    }
+  }, [data?.messages]);
+
+  if (isLoading) return <div className="h-96 flex items-center justify-center">Carregando ticket...</div>;
+
+
   if (!data) return <div>Ticket não encontrado</div>;
   const { ticket, messages } = data;
   const status = STATUS_MAP[ticket.status as keyof typeof STATUS_MAP] || STATUS_MAP.open;
