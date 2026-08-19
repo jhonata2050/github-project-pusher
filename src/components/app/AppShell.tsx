@@ -625,10 +625,10 @@ export function AppShell({
             <div className="flex items-center gap-2">
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="icon" className="size-11 rounded-full text-muted-foreground relative hover:bg-brand/10 hover:text-brand transition-all">
-                    <Bell className="size-6" />
+                  <Button variant="ghost" size="icon" className="size-11 rounded-full text-muted-foreground relative hover:bg-brand/10 hover:text-brand transition-all flex items-center justify-center">
+                    <Bell className="size-6 text-brand drop-shadow-[0_0_8px_rgba(var(--brand),0.5)]" />
                     {(hasOverdue || unreadCount > 0) && (
-                      <span className="absolute top-2.5 right-2.5 size-2.5 bg-destructive rounded-full border-2 border-background animate-pulse" />
+                      <span className="absolute top-2 right-2 size-3 bg-destructive rounded-full border-2 border-background shadow-[0_0_10px_rgba(239,68,68,0.6)] animate-bounce" />
                     )}
                   </Button>
                 </DropdownMenuTrigger>
