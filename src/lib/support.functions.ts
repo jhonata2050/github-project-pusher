@@ -228,15 +228,36 @@ export const replyTicket = createServerFn({ method: "POST" })
       const { notifyAdminWhatsApp } = await import("./whatsapp.server");
       const { data: ticket } = await context.supabase
         .from("tickets")
-        .select("subject, profiles(full_name)")
+        .select("subject, profiles(full_name, email)")
         .eq("id", input.ticketId)
         .single();
       
+      const { data: replierProfile } = await context.supabase
+        .from("profiles")
+        .select("full_name")
+        .eq("id", context.userId)
+        .single();
+
       const clientName = (ticket as any)?.profiles?.full_name || "Cliente";
-      await notifyAdminWhatsApp(
-        `📬 *Resposta em Ticket*\n\n*Assunto:* ${ticket?.subject}\n*De:* ${isAdmin ? "Administrador" : clientName}\n*Mensagem:* ${input.message.slice(0, 100)}${input.message.length > 100 ? "..." : ""}`,
-        "ticket_events"
-      );
+      const clientEmail = (ticket as any)?.profiles?.email || "N/A";
+      const replierName = isAdmin ? "Administrador" : (replierProfile?.full_name || "Cliente");
+      const now = new Date().toLocaleString("pt-BR");
+
+      const whatsappMsg = [
+        "📬 *Resposta em Ticket*",
+        "",
+        `*ID:* #${input.ticketId.slice(0, 8)}`,
+        `*Assunto:* ${ticket?.subject}`,
+        `*De:* ${replierName}`,
+        `*Data/Hora:* ${now}`,
+        "",
+        `*Cliente:* ${clientName}`,
+        `*E-mail:* ${clientEmail}`,
+        "",
+        `*Mensagem:* ${input.message.slice(0, 150)}${input.message.length > 150 ? "..." : ""}`
+      ].join("\n");
+
+      await notifyAdminWhatsApp(whatsappMsg, "ticket_events");
     } catch (e) {
       console.warn("[WhatsApp] Falha ao notificar admin sobre resposta em ticket:", e);
     }
