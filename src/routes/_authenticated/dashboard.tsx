@@ -11,12 +11,12 @@ import { supabase } from "@/integrations/supabase/client";
 export const Route = createFileRoute("/_authenticated/dashboard")({
   head: () => ({
     meta: [
-      { title: "Meu painel — HostPanel" },
+      { title: "Meu painel — EQSAM CLOUD" },
       {
         name: "description",
-        content: "Acompanhe seus serviços de hospedagem, faturas em aberto e atendimentos.",
+        content: "Acompanhe seus serviços de hospedagem e instâncias EQSAM CLOUD.",
       },
-      { property: "og:title", content: "Meu painel — HostPanel" },
+      { property: "og:title", content: "Meu painel — EQSAM CLOUD" },
       { property: "og:description", content: "Seus serviços de hospedagem e faturas em um só lugar." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
@@ -102,7 +102,7 @@ function ClientDashboardPage() {
             <Button asChild variant="outline" className="rounded-xl">
               <Link to="/vps">
                 <Monitor className="mr-2 size-4" />
-                Gerenciar VPS
+                EQSAM CLOUD
               </Link>
             </Button>
           </div>

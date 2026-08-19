@@ -116,3 +116,28 @@ export const getVPSDetails = createServerFn({ method: "GET" })
       };
     }
   });
+
+export const getVPSMetricsHistory = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data) => z.object({ 
+    instanceId: z.string(),
+    period: z.enum(['24h', '7d', '30d'])
+  }).parse(data))
+  .handler(async ({ data, context }) => {
+    const { supabase, userId } = context as any;
+    if (!userId) throw new Error("Unauthorized");
+
+    let interval = '24 hours';
+    if (data.period === '7d') interval = '7 days';
+    if (data.period === '30d') interval = '30 days';
+
+    const { data: metrics, error } = await supabase
+      .from('vps_metrics_history')
+      .select('cpu, ram, disk, created_at')
+      .eq('vps_id', data.instanceId)
+      .gte('created_at', new Date(Date.now() - (interval === '24 hours' ? 24*60*60*1000 : interval === '7 days' ? 7*24*60*60*1000 : 30*24*60*60*1000)).toISOString())
+      .order('created_at', { ascending: true });
+
+    if (error) throw error;
+    return metrics;
+  });

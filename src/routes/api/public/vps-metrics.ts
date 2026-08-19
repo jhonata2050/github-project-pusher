@@ -26,7 +26,8 @@ export const Route = createFileRoute('/api/public/vps-metrics')({
 
           const { vps_id, cpu, ram, disk } = metricsSchema.parse(sanitizedData);
 
-          const { error } = await supabaseAdmin
+          // 1. Atualizar métricas atuais na instância
+          const { error: updateError } = await supabaseAdmin
             .from('vps_instances')
             .update({ 
               last_metrics: { 
@@ -38,9 +39,24 @@ export const Route = createFileRoute('/api/public/vps-metrics')({
             })
             .eq('id', vps_id);
 
-          if (error) {
-            console.error('Erro ao atualizar métricas:', error);
-            return new Response(JSON.stringify({ error: error.message }), { status: 500 });
+          if (updateError) {
+            console.error('Erro ao atualizar métricas atuais:', updateError);
+            return new Response(JSON.stringify({ error: updateError.message }), { status: 500 });
+          }
+
+          // 2. Inserir no histórico
+          const { error: historyError } = await supabaseAdmin
+            .from('vps_metrics_history')
+            .insert({
+              vps_id,
+              cpu: Math.round(cpu),
+              ram: Math.round(ram),
+              disk: Math.round(disk)
+            });
+
+          if (historyError) {
+            console.error('Erro ao salvar histórico de métricas:', historyError);
+            // Não falhamos a requisição se apenas o histórico falhar, para não quebrar o agente
           }
 
           return new Response(JSON.stringify({ success: true }), { status: 200 });

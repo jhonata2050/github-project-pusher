@@ -2,7 +2,7 @@ import { createFileRoute } from '@tanstack/react-router';
 
 const scriptContent = `#!/bin/bash
 
-# Agente de monitoramento robusto para HostPanel
+# Agente de monitoramento robusto para EQSAM CLOUD
 # Uso: curl -sSL https://easy-push1231231sa1d131dscxsc.lovable.app/api/public/scripts/install-agent | bash -s -- <VPS_ID>
 
 VPS_ID=$1
@@ -13,7 +13,7 @@ if [ -z "$VPS_ID" ]; then
     exit 1
 fi
 
-echo "Instalando agente de monitoramento para VPS: $VPS_ID"
+echo "Instalando agente de monitoramento para EQSAM CLOUD: $VPS_ID"
 
 # Garantir dependências
 if command -v apt-get &> /dev/null; then
@@ -23,7 +23,7 @@ fi
 
 # Criar o script de coleta
 # Usamos um heredoc simples para evitar problemas com o compilador TS
-cat << 'EOF' > /usr/local/bin/hostpanel-agent.sh
+cat << 'EOF' > /usr/local/bin/eqsam-agent.sh
 #!/bin/bash
 VPS_ID="REPLACE_VPS_ID"
 API_URL="REPLACE_API_URL"
@@ -80,19 +80,19 @@ curl -s -X POST "\$API_URL" \\
 EOF
 
 # Substituir placeholders
-sed -i "s|REPLACE_VPS_ID|$VPS_ID|g" /usr/local/bin/hostpanel-agent.sh
-sed -i "s|REPLACE_API_URL|$API_URL|g" /usr/local/bin/hostpanel-agent.sh
+sed -i "s|REPLACE_VPS_ID|$VPS_ID|g" /usr/local/bin/eqsam-agent.sh
+sed -i "s|REPLACE_API_URL|$API_URL|g" /usr/local/bin/eqsam-agent.sh
 
-chmod +x /usr/local/bin/hostpanel-agent.sh
+chmod +x /usr/local/bin/eqsam-agent.sh
 
 # Configurar Cron
-(crontab -l 2>/dev/null | grep -v "hostpanel-agent.sh") > /tmp/cron_tmp
-echo "* * * * * /usr/local/bin/hostpanel-agent.sh > /dev/null 2>&1" >> /tmp/cron_tmp
+(crontab -l 2>/dev/null | grep -v "eqsam-agent.sh") > /tmp/cron_tmp
+echo "* * * * * /usr/local/bin/eqsam-agent.sh > /dev/null 2>&1" >> /tmp/cron_tmp
 crontab /tmp/cron_tmp
 rm /tmp/cron_tmp
 
 echo "Enviando primeira coleta de teste..."
-/usr/local/bin/hostpanel-agent.sh
+/usr/local/bin/eqsam-agent.sh
 
 echo "Agente instalado com sucesso!"
 `;

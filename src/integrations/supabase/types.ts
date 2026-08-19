@@ -842,6 +842,10 @@ export type Database = {
           provider_id: string | null
           provider_name: string | null
           service_id: string | null
+          ssh_host: string | null
+          ssh_password: string | null
+          ssh_port: number | null
+          ssh_user: string | null
           status: string | null
         }
         Insert: {
@@ -853,6 +857,10 @@ export type Database = {
           provider_id?: string | null
           provider_name?: string | null
           service_id?: string | null
+          ssh_host?: string | null
+          ssh_password?: string | null
+          ssh_port?: number | null
+          ssh_user?: string | null
           status?: string | null
         }
         Update: {
@@ -864,6 +872,10 @@ export type Database = {
           provider_id?: string | null
           provider_name?: string | null
           service_id?: string | null
+          ssh_host?: string | null
+          ssh_password?: string | null
+          ssh_port?: number | null
+          ssh_user?: string | null
           status?: string | null
         }
         Relationships: [
@@ -872,6 +884,41 @@ export type Database = {
             columns: ["service_id"]
             isOneToOne: true
             referencedRelation: "services"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      vps_metrics_history: {
+        Row: {
+          cpu: number
+          created_at: string
+          disk: number
+          id: string
+          ram: number
+          vps_id: string
+        }
+        Insert: {
+          cpu: number
+          created_at?: string
+          disk: number
+          id?: string
+          ram: number
+          vps_id: string
+        }
+        Update: {
+          cpu?: number
+          created_at?: string
+          disk?: number
+          id?: string
+          ram?: number
+          vps_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vps_metrics_history_vps_id_fkey"
+            columns: ["vps_id"]
+            isOneToOne: false
+            referencedRelation: "vps_instances"
             referencedColumns: ["id"]
           },
         ]
@@ -905,6 +952,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      cleanup_old_vps_metrics: { Args: never; Returns: undefined }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]

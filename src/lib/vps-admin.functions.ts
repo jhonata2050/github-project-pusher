@@ -72,6 +72,33 @@ export const updateVPSInstance = createServerFn({ method: "POST" })
     return { success: true };
   });
 
+export const updateVPSSSHDetails = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data) => z.object({
+    id: z.string(),
+    ssh_host: z.string().optional().nullable(),
+    ssh_port: z.number().optional().nullable(),
+    ssh_user: z.string().optional().nullable(),
+    ssh_password: z.string().optional().nullable()
+  }).parse(data))
+  .handler(async ({ data, context }) => {
+    const { data: isAdmin } = await context.supabase.rpc("has_role", { _user_id: context.userId, _role: "admin" });
+    if (!isAdmin) throw new Error("Unauthorized");
+
+    const { error } = await supabaseAdmin
+      .from('vps_instances')
+      .update({
+        ssh_host: data.ssh_host,
+        ssh_port: data.ssh_port || 22,
+        ssh_user: data.ssh_user || 'root',
+        ssh_password: data.ssh_password
+      })
+      .eq('id', data.id);
+
+    if (error) throw error;
+    return { success: true };
+  });
+
 export const syncContaboInstancesFn = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
