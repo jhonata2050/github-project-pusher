@@ -433,13 +433,13 @@ export function AppShell({
                 {notifications && notifications.length > 0 ? (
                   notifications.map((n) => (
                     <DropdownMenuItem 
-                      key={n.id} 
+                      key={n.id as string} 
                       asChild
                       className={cn(
                         "p-4 border-b border-border last:border-0 cursor-pointer focus:bg-accent",
                         !n.read && "bg-brand/5"
                       )}
-                      onClick={() => markAsRead(n.id)}
+                      onClick={() => markAsRead(n.id as string)}
                     >
                       {n.link ? (
                         <Link to={n.link} className="block w-full">
@@ -451,7 +451,7 @@ export function AppShell({
                           </div>
                           <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{n.message}</p>
                           <p className="text-[10px] text-muted-foreground mt-2">
-                            {new Date(n.created_at || new Date()).toLocaleString("pt-BR")}
+                            {new Date(n.created_at || "").toLocaleString("pt-BR")}
                           </p>
                         </Link>
                       ) : (
@@ -464,7 +464,7 @@ export function AppShell({
                           </div>
                           <p className="text-xs text-muted-foreground mt-1">{n.message}</p>
                           <p className="text-[10px] text-muted-foreground mt-2">
-                            {new Date(n.created_at || new Date()).toLocaleString("pt-BR")}
+                            {new Date(n.created_at || "").toLocaleString("pt-BR")}
                           </p>
                         </div>
                       )}
@@ -640,13 +640,13 @@ export function AppShell({
                     {notifications && notifications.length > 0 ? (
                       notifications.map((n) => (
                         <DropdownMenuItem 
-                          key={n.id} 
+                          key={n.id as string} 
                           asChild
                           className={cn(
                             "p-4 border-b border-border last:border-0 cursor-pointer focus:bg-accent",
                             !n.read && "bg-brand/5"
                           )}
-                          onClick={() => markAsRead(n.id)}
+                          onClick={() => markAsRead(n.id as string)}
                         >
                           {n.link ? (
                             <Link to={n.link} className="block w-full">
@@ -658,7 +658,7 @@ export function AppShell({
                               </div>
                               <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{n.message}</p>
                               <p className="text-[10px] text-muted-foreground mt-2">
-                                {new Date(n.created_at || new Date()).toLocaleString("pt-BR")}
+                                {new Date(n.created_at || "").toLocaleString("pt-BR")}
                               </p>
                             </Link>
                           ) : (
@@ -671,7 +671,7 @@ export function AppShell({
                               </div>
                               <p className="text-xs text-muted-foreground mt-1">{n.message}</p>
                               <p className="text-[10px] text-muted-foreground mt-2">
-                                {new Date(n.created_at || new Date()).toLocaleString("pt-BR")}
+                                {new Date(n.created_at || "").toLocaleString("pt-BR")}
                               </p>
                             </div>
                           )}
