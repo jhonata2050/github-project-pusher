@@ -6,8 +6,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { getSystemSettings, updateSystemSettings } from "@/lib/support.functions";
-import { Save, MessageSquare, Shield, User, Info } from "lucide-react";
+import { getSystemSettings, updateSystemSettings, testWhatsApp } from "@/lib/support.functions";
+import { Save, MessageSquare, Shield, User, Info, Send, CheckCircle2, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
 import { useState, useEffect } from "react";
 
@@ -73,6 +73,17 @@ function AdminWhatsAppPage() {
     clientSettings[key] = !clientSettings[key];
     setLocalSettings({ ...localSettings, whatsapp_notify_client_settings: clientSettings });
   };
+
+  const testWhatsAppMutation = useMutation({
+    mutationFn: () => testWhatsApp(),
+    onSuccess: () => {
+      toast.success("Mensagem de teste enviada com sucesso!");
+    },
+    onError: (e: any) => {
+      console.error(e);
+      toast.error("Falha no teste: " + (e.message || "Erro desconhecido"));
+    },
+  });
 
   if (isLoading) return <div className="h-96 flex items-center justify-center">Carregando...</div>;
 
@@ -236,6 +247,22 @@ function AdminWhatsAppPage() {
           </div>
 
           <div className="flex justify-end gap-4">
+            <Button 
+              type="button"
+              variant="outline"
+              onClick={() => testWhatsAppMutation.mutate()}
+              disabled={testWhatsAppMutation.isPending || !localSettings.whatsapp_enabled}
+              className="rounded-2xl px-8 font-bold border-brand/20 text-brand hover:bg-brand/5 h-12"
+            >
+              {testWhatsAppMutation.isPending ? (
+                "Testando..."
+              ) : (
+                <>
+                  <Send className="mr-2 h-4 w-4" />
+                  Testar Conexão
+                </>
+              )}
+            </Button>
             <Button 
               type="submit" 
               disabled={updateSettingsMutation.isPending} 

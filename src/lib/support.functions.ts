@@ -1,6 +1,12 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
+
+export const testWhatsApp = createServerFn({ method: "POST" })
+  .handler(async () => {
+    const { testWhatsAppConnection } = await import("./whatsapp.server");
+    return testWhatsAppConnection();
+  });
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
 export const getSystemSettings = createServerFn({ method: "GET" })
