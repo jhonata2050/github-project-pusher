@@ -107,6 +107,9 @@ function TicketDetailsPage() {
     }
   };
 
+  const { ticket, messages } = data;
+  const status = STATUS_MAP[ticket.status as keyof typeof STATUS_MAP] || STATUS_MAP.open;
+
   return (
     <AppShell 
       area={isStaff ? "admin" : "client"} 
