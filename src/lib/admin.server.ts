@@ -174,3 +174,64 @@ export async function bulkDeleteClientsImplementation(
     failuresCount,
   };
 }
+
+export async function getAdminStatsImplementation(
+  context: { supabase: SupabaseClient<Database>; userId: string }
+) {
+  // Verificar permissões
+  const { data: isAdmin } = await context.supabase.rpc("has_role", {
+    _user_id: context.userId,
+    _role: "admin",
+  });
+
+  if (!isAdmin) {
+    throw new Error("Não autorizado");
+  }
+
+  // Obter contagem de clientes
+  const { count: clientsCount } = await context.supabase
+    .from("profiles")
+    .select("*", { count: "exact", head: true });
+
+  // Obter contagem de serviços ativos
+  const { count: servicesCount } = await context.supabase
+    .from("services")
+    .select("*", { count: "exact", head: true })
+    .eq("status", "active");
+
+  // Obter contagem de faturas pendentes
+  const { count: pendingInvoicesCount } = await context.supabase
+    .from("invoices")
+    .select("*", { count: "exact", head: true })
+    .eq("status", "pending");
+
+  // Calcular receita total (simplificado)
+  const { data: paidInvoices } = await context.supabase
+    .from("invoices")
+    .select("total")
+    .eq("status", "paid");
+  
+  const totalRevenue = (paidInvoices || []).reduce((acc, inv) => acc + (Number(inv.total) || 0), 0);
+
+  // Obter receita deste mês
+  const firstDayOfMonth = new Date();
+  firstDayOfMonth.setDate(1);
+  firstDayOfMonth.setHours(0, 0, 0, 0);
+
+  const { data: monthInvoices } = await context.supabase
+    .from("invoices")
+    .select("total")
+    .eq("status", "paid")
+    .gte("paid_at", firstDayOfMonth.toISOString());
+
+  const monthRevenue = (monthInvoices || []).reduce((acc, inv) => acc + (Number(inv.total) || 0), 0);
+
+  return {
+    clients: clientsCount || 0,
+    activeServices: servicesCount || 0,
+    pendingInvoices: pendingInvoicesCount || 0,
+    totalRevenue,
+    monthRevenue
+  };
+}
+
