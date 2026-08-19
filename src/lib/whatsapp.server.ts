@@ -62,19 +62,13 @@ export async function sendWhatsAppMessage({
 
     
     const response = await fetch(endpoint, {
-      method: "POST",
+      method: "GET",
       headers: {
         "Content-Type": "application/json",
         "apikey": token
-      },
-      body: JSON.stringify({
-        number: cleanNumber,
-        text: message,
-
-        linkPreview: true
-      })
-
+      }
     });
+
 
     const responseText = await response.text();
     let result = {};
