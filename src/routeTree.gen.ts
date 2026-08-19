@@ -50,6 +50,7 @@ import { Route as AuthenticatedAdminClientsClientIdRouteImport } from './routes/
 import { Route as AuthenticatedAdminVpsIndexRouteImport } from './routes/_authenticated/admin/vps/index'
 import { Route as ApiPublicCronMaintenanceRouteImport } from './routes/api/public/cron/maintenance'
 import { Route as ApiPublicScriptsInstallAgentRouteImport } from './routes/api/public/scripts/install-agent'
+import { Route as ApiPublicScriptsUninstallAgentRouteImport } from './routes/api/public/scripts/uninstall-agent'
 import { Route as ApiPublicVpsWebhookRouteImport } from './routes/api/public/vps/webhook'
 import { Route as ApiPublicWebhooksAbacatepayRouteImport } from './routes/api/public/webhooks/abacatepay'
 import { Route as ApiPublicWebhooksCajupayRouteImport } from './routes/api/public/webhooks/cajupay'
@@ -285,6 +286,12 @@ const ApiPublicScriptsInstallAgentRoute =
     path: '/api/public/scripts/install-agent',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicScriptsUninstallAgentRoute =
+  ApiPublicScriptsUninstallAgentRouteImport.update({
+    id: '/api/public/scripts/uninstall-agent',
+    path: '/api/public/scripts/uninstall-agent',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicVpsWebhookRoute = ApiPublicVpsWebhookRouteImport.update({
   id: '/api/public/vps/webhook',
   path: '/api/public/vps/webhook',
@@ -364,6 +371,7 @@ export interface FileRoutesByFullPath {
   '/admin/clients/$clientId': typeof AuthenticatedAdminClientsClientIdRoute
   '/api/public/cron/maintenance': typeof ApiPublicCronMaintenanceRoute
   '/api/public/scripts/install-agent': typeof ApiPublicScriptsInstallAgentRoute
+  '/api/public/scripts/uninstall-agent': typeof ApiPublicScriptsUninstallAgentRoute
   '/api/public/vps/webhook': typeof ApiPublicVpsWebhookRoute
   '/api/public/webhooks/abacatepay': typeof ApiPublicWebhooksAbacatepayRoute
   '/api/public/webhooks/cajupay': typeof ApiPublicWebhooksCajupayRoute
@@ -408,6 +416,7 @@ export interface FileRoutesByTo {
   '/admin/clients/$clientId': typeof AuthenticatedAdminClientsClientIdRoute
   '/api/public/cron/maintenance': typeof ApiPublicCronMaintenanceRoute
   '/api/public/scripts/install-agent': typeof ApiPublicScriptsInstallAgentRoute
+  '/api/public/scripts/uninstall-agent': typeof ApiPublicScriptsUninstallAgentRoute
   '/api/public/vps/webhook': typeof ApiPublicVpsWebhookRoute
   '/api/public/webhooks/abacatepay': typeof ApiPublicWebhooksAbacatepayRoute
   '/api/public/webhooks/cajupay': typeof ApiPublicWebhooksCajupayRoute
@@ -459,6 +468,7 @@ export interface FileRoutesById {
   '/_authenticated/admin/clients/$clientId': typeof AuthenticatedAdminClientsClientIdRoute
   '/api/public/cron/maintenance': typeof ApiPublicCronMaintenanceRoute
   '/api/public/scripts/install-agent': typeof ApiPublicScriptsInstallAgentRoute
+  '/api/public/scripts/uninstall-agent': typeof ApiPublicScriptsUninstallAgentRoute
   '/api/public/vps/webhook': typeof ApiPublicVpsWebhookRoute
   '/api/public/webhooks/abacatepay': typeof ApiPublicWebhooksAbacatepayRoute
   '/api/public/webhooks/cajupay': typeof ApiPublicWebhooksCajupayRoute
@@ -510,6 +520,7 @@ export interface FileRouteTypes {
     | '/admin/clients/$clientId'
     | '/api/public/cron/maintenance'
     | '/api/public/scripts/install-agent'
+    | '/api/public/scripts/uninstall-agent'
     | '/api/public/vps/webhook'
     | '/api/public/webhooks/abacatepay'
     | '/api/public/webhooks/cajupay'
@@ -554,6 +565,7 @@ export interface FileRouteTypes {
     | '/admin/clients/$clientId'
     | '/api/public/cron/maintenance'
     | '/api/public/scripts/install-agent'
+    | '/api/public/scripts/uninstall-agent'
     | '/api/public/vps/webhook'
     | '/api/public/webhooks/abacatepay'
     | '/api/public/webhooks/cajupay'
@@ -604,6 +616,7 @@ export interface FileRouteTypes {
     | '/_authenticated/admin/clients/$clientId'
     | '/api/public/cron/maintenance'
     | '/api/public/scripts/install-agent'
+    | '/api/public/scripts/uninstall-agent'
     | '/api/public/vps/webhook'
     | '/api/public/webhooks/abacatepay'
     | '/api/public/webhooks/cajupay'
@@ -625,6 +638,7 @@ export interface RootRouteChildren {
   ApiPublicVpsMetricsRoute: typeof ApiPublicVpsMetricsRoute
   ApiPublicCronMaintenanceRoute: typeof ApiPublicCronMaintenanceRoute
   ApiPublicScriptsInstallAgentRoute: typeof ApiPublicScriptsInstallAgentRoute
+  ApiPublicScriptsUninstallAgentRoute: typeof ApiPublicScriptsUninstallAgentRoute
   ApiPublicVpsWebhookRoute: typeof ApiPublicVpsWebhookRoute
   ApiPublicWebhooksAbacatepayRoute: typeof ApiPublicWebhooksAbacatepayRoute
   ApiPublicWebhooksCajupayRoute: typeof ApiPublicWebhooksCajupayRoute
@@ -923,6 +937,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicScriptsInstallAgentRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/scripts/uninstall-agent': {
+      id: '/api/public/scripts/uninstall-agent'
+      path: '/api/public/scripts/uninstall-agent'
+      fullPath: '/api/public/scripts/uninstall-agent'
+      preLoaderRoute: typeof ApiPublicScriptsUninstallAgentRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/vps/webhook': {
       id: '/api/public/vps/webhook'
       path: '/api/public/vps/webhook'
@@ -1122,6 +1143,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicVpsMetricsRoute: ApiPublicVpsMetricsRoute,
   ApiPublicCronMaintenanceRoute: ApiPublicCronMaintenanceRoute,
   ApiPublicScriptsInstallAgentRoute: ApiPublicScriptsInstallAgentRoute,
+  ApiPublicScriptsUninstallAgentRoute: ApiPublicScriptsUninstallAgentRoute,
   ApiPublicVpsWebhookRoute: ApiPublicVpsWebhookRoute,
   ApiPublicWebhooksAbacatepayRoute: ApiPublicWebhooksAbacatepayRoute,
   ApiPublicWebhooksCajupayRoute: ApiPublicWebhooksCajupayRoute,
