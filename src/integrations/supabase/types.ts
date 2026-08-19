@@ -680,6 +680,7 @@ export type Database = {
       }
       ticket_messages: {
         Row: {
+          attachments: string[] | null
           created_at: string
           id: string
           is_staff: boolean | null
@@ -688,6 +689,7 @@ export type Database = {
           user_id: string | null
         }
         Insert: {
+          attachments?: string[] | null
           created_at?: string
           id?: string
           is_staff?: boolean | null
@@ -696,6 +698,7 @@ export type Database = {
           user_id?: string | null
         }
         Update: {
+          attachments?: string[] | null
           created_at?: string
           id?: string
           is_staff?: boolean | null

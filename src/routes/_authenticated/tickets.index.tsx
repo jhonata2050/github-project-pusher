@@ -162,7 +162,10 @@ function ClientTicketsPage() {
                     <StatusIcon className="size-5 sm:size-6" />
                   </div>
                   <div>
-                    <h3 className="font-bold text-lg text-foreground group-hover:text-brand transition-colors">{ticket.subject}</h3>
+                    <h3 className="font-bold text-lg text-foreground group-hover:text-brand transition-colors flex items-center gap-2">
+                      {ticket.subject}
+                      <span className="text-xs font-mono text-muted-foreground bg-muted px-1.5 py-0.5 rounded">#{ticket.id.slice(0, 8)}</span>
+                    </h3>
                     <div className="flex items-center gap-4 mt-1 text-sm text-muted-foreground">
                        <span className="flex items-center gap-1">
                           <Clock className="h-3.5 w-3.5" />

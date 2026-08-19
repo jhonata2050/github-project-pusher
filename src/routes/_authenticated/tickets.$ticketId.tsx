@@ -5,13 +5,14 @@ import { Button } from "@/components/ui/button";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { getTicketDetails, replyTicket } from "@/lib/support.functions";
 import { useIsStaff } from "@/hooks/use-auth";
-import { MessageSquare, Send, User, Shield, ArrowLeft, Clock, AlertCircle } from "lucide-react";
+import { MessageSquare, Send, User, Shield, ArrowLeft, Clock, AlertCircle, Paperclip, X, Image as ImageIcon } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { Link } from "@tanstack/react-router";
+import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/_authenticated/tickets/$ticketId")({
   component: TicketDetailsPage,
@@ -28,6 +29,9 @@ function TicketDetailsPage() {
   const { isStaff } = useIsStaff();
   const { ticketId } = Route.useParams();
   const [message, setMessage] = useState("");
+  const [attachments, setAttachments] = useState<File[]>([]);
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const queryClient = useQueryClient();
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -37,16 +41,71 @@ function TicketDetailsPage() {
   });
 
   const replyMutation = useMutation({
-    mutationFn: (text: string) => replyTicket({ data: { ticketId, message: text } }),
+    mutationFn: async ({ text, attachmentUrls }: { text: string; attachmentUrls: string[] }) => {
+      return replyTicket({ data: { ticketId, message: text, attachments: attachmentUrls } });
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["ticket", ticketId] });
       setMessage("");
+      setAttachments([]);
       toast.success("Resposta enviada!");
     },
     onError: (err: any) => {
       toast.error("Erro ao responder: " + err.message);
     },
   });
+
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files) {
+      const newFiles = Array.from(e.target.files);
+      setAttachments(prev => [...prev, ...newFiles]);
+    }
+  };
+
+  const removeAttachment = (index: number) => {
+    setAttachments(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const uploadFiles = async () => {
+    const urls: string[] = [];
+    for (const file of attachments) {
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${Math.random().toString(36).substring(2)}_${Date.now()}.${fileExt}`;
+      const filePath = `${ticketId}/${fileName}`;
+
+      const { data, error } = await supabase.storage
+        .from('ticket-attachments')
+        .upload(filePath, file);
+
+      if (error) {
+        console.error('Error uploading file:', error);
+        throw new Error(`Erro ao fazer upload de ${file.name}`);
+      }
+
+      if (data) {
+        const { data: { publicUrl } } = supabase.storage
+          .from('ticket-attachments')
+          .getPublicUrl(filePath);
+        urls.push(publicUrl);
+      }
+    }
+    return urls;
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!message.trim() && attachments.length === 0) return;
+
+    setUploading(true);
+    try {
+      const attachmentUrls = await uploadFiles();
+      replyMutation.mutate({ text: message, attachmentUrls });
+    } catch (err: any) {
+      toast.error(err.message);
+    } finally {
+      setUploading(false);
+    }
+  };
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -55,16 +114,11 @@ function TicketDetailsPage() {
   }, [data?.messages]);
 
   if (isLoading) return <div className="h-96 flex items-center justify-center">Carregando ticket...</div>;
-  if (!data) return <div>Ticket não encontrado</div>;
 
+
+  if (!data) return <div>Ticket não encontrado</div>;
   const { ticket, messages } = data;
   const status = STATUS_MAP[ticket.status as keyof typeof STATUS_MAP] || STATUS_MAP.open;
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!message.trim()) return;
-    replyMutation.mutate(message);
-  };
 
   return (
     <AppShell 
@@ -126,6 +180,21 @@ function TicketDetailsPage() {
                         msg.is_staff_reply ? "bg-brand/10 text-foreground border border-brand/20 rounded-tl-none" : "bg-white text-foreground border border-border rounded-tr-none"
                       )}>
                         <p className="whitespace-pre-wrap">{msg.message}</p>
+                        {msg.attachments && msg.attachments.length > 0 && (
+                          <div className="mt-3 flex flex-wrap gap-2">
+                            {msg.attachments.map((url: string, idx: number) => (
+                              <a 
+                                key={idx} 
+                                href={url} 
+                                target="_blank" 
+                                rel="noopener noreferrer"
+                                className="block rounded-lg overflow-hidden border border-border hover:opacity-80 transition-opacity"
+                              >
+                                <img src={url} alt="Attachment" className="h-20 w-20 object-cover" />
+                              </a>
+                            ))}
+                          </div>
+                        )}
                       </div>
                       <p className={cn(
                         "text-[10px] text-muted-foreground mt-1",
@@ -139,23 +208,69 @@ function TicketDetailsPage() {
               </div>
 
               <div className="p-4 border-t border-border bg-white">
-                <form onSubmit={handleSubmit} className="relative">
-                  <Textarea
-                    placeholder="Digite sua resposta aqui..."
-                    className="min-h-[100px] rounded-2xl border-none bg-muted/30 focus-visible:ring-brand resize-none pr-12"
-                    value={message}
-                    onChange={(e) => setMessage(e.target.value)}
-                    disabled={ticket.status === 'closed'}
-                  />
-                  <Button 
-                    type="submit" 
-                    size="icon" 
-                    className="absolute bottom-3 right-3 rounded-xl bg-brand text-brand-foreground hover:bg-brand/90"
-                    disabled={!message.trim() || replyMutation.isPending || ticket.status === 'closed'}
-                  >
-                    <Send className="h-4 w-4" />
-                  </Button>
+                {attachments.length > 0 && (
+                  <div className="flex flex-wrap gap-2 mb-3">
+                    {attachments.map((file, idx) => (
+                      <div key={idx} className="relative group">
+                        <div className="h-16 w-16 rounded-xl bg-muted flex items-center justify-center overflow-hidden border border-border">
+                          {file.type.startsWith('image/') ? (
+                            <img src={URL.createObjectURL(file)} alt="Preview" className="h-full w-full object-cover" />
+                          ) : (
+                            <Paperclip className="h-6 w-6 text-muted-foreground" />
+                          )}
+                        </div>
+                        <button 
+                          onClick={() => removeAttachment(idx)}
+                          className="absolute -top-1 -right-1 bg-destructive text-destructive-foreground rounded-full p-0.5 shadow-sm opacity-0 group-hover:opacity-100 transition-opacity"
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                <form onSubmit={handleSubmit} className="relative flex flex-col gap-2">
+                  <div className="relative">
+                    <Textarea
+                      placeholder="Digite sua resposta aqui..."
+                      className="min-h-[100px] rounded-2xl border-none bg-muted/30 focus-visible:ring-brand resize-none pr-12"
+                      value={message}
+                      onChange={(e) => setMessage(e.target.value)}
+                      disabled={ticket.status === 'closed' || uploading}
+                    />
+                    <div className="absolute bottom-3 right-3 flex items-center gap-2">
+                      <input 
+                        type="file" 
+                        multiple 
+                        accept="image/*,.pdf" 
+                        className="hidden" 
+                        ref={fileInputRef}
+                        onChange={handleFileUpload}
+                      />
+                      <Button 
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="rounded-xl text-muted-foreground hover:text-brand"
+                        onClick={() => fileInputRef.current?.click()}
+                        disabled={ticket.status === 'closed' || uploading}
+                      >
+                        <Paperclip className="h-4 w-4" />
+                      </Button>
+                      <Button 
+                        type="submit" 
+                        size="icon" 
+                        className="rounded-xl bg-brand text-brand-foreground hover:bg-brand/90"
+                        disabled={(!message.trim() && attachments.length === 0) || replyMutation.isPending || ticket.status === 'closed' || uploading}
+                      >
+                        <Send className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
                 </form>
+                {uploading && (
+                  <p className="text-[10px] text-brand animate-pulse mt-1">Enviando anexos...</p>
+                )}
                 {ticket.status === 'closed' && (
                   <p className="text-center text-xs text-muted-foreground mt-2 italic">Este ticket está fechado para novas respostas.</p>
                 )}

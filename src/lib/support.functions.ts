@@ -179,7 +179,8 @@ export const replyTicket = createServerFn({ method: "POST" })
   .inputValidator((data: unknown) => 
     z.object({
       ticketId: z.string(),
-      message: z.string().min(1)
+      message: z.string().min(1),
+      attachments: z.array(z.string()).optional()
     }).parse(data)
   )
   .handler(async ({ data: input, context }) => {
@@ -191,6 +192,7 @@ export const replyTicket = createServerFn({ method: "POST" })
         ticket_id: input.ticketId,
         user_id: context.userId,
         message: input.message,
+        attachments: input.attachments || [],
         is_staff: isAdmin || false
       })
       .select()
