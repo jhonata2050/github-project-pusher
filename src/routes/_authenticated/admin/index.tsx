@@ -131,9 +131,10 @@ function AdminDashboardPage() {
                 <CardContent className="px-0">
                   <div className="divide-y divide-orange-500/10">
                     {stats?.criticalTickets?.map((ticket: any) => (
-                      <a 
+                      <Link 
                         key={ticket.id} 
-                        href={`/admin/tickets/${ticket.id}`}
+                        to="/tickets/$ticketId"
+                        params={{ ticketId: ticket.id }}
                         className="flex items-center justify-between p-3 px-6 hover:bg-orange-500/5 transition-colors group"
                       >
                         <div className="flex flex-col gap-0.5">
