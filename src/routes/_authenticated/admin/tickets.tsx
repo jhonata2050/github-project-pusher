@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { AppShell } from "@/components/app/AppShell";
 import { Card, CardContent } from "@/components/ui/card";
@@ -32,6 +32,7 @@ const STATUS_MAP = {
 };
 
 function AdminTicketsPage() {
+  const navigate = useNavigate();
   const [page, setPage] = useState(1);
   const pageSize = 20;
 
@@ -85,12 +86,13 @@ function AdminTicketsPage() {
               const StatusIcon = status.icon;
 
               return (
-                <Link 
+                <div 
                   key={ticket.id}
-                  to="/tickets/$ticketId" 
-                  params={{ ticketId: ticket.id }}
-                  search={{ fromAdmin: true }}
-                  className="block group"
+                  onClick={() => navigate({ 
+                    to: "/tickets/$ticketId", 
+                    params: { ticketId: ticket.id }
+                  })}
+                  className="block group cursor-pointer"
                 >
                   <Card className="rounded-3xl border-none shadow-sm hover:shadow-md transition-all overflow-hidden group-hover:bg-brand/[0.02]">
                     <CardContent className="p-0">
@@ -131,7 +133,7 @@ function AdminTicketsPage() {
                       </div>
                     </CardContent>
                   </Card>
-                </Link>
+                </div>
               );
             })}
             <div className="flex items-center justify-between gap-4 mt-6">
