@@ -419,9 +419,12 @@ export function AppShell({
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="icon" className="size-11 rounded-full text-muted-foreground relative hover:bg-brand/10 hover:text-brand transition-all flex items-center justify-center">
-                <Bell className="size-6 text-brand drop-shadow-[0_0_8px_rgba(var(--brand),0.5)]" />
+                <Bell className="size-6 text-brand" style={{ filter: 'drop-shadow(0 0 8px oklch(0.72 0.19 148 / 0.5))' }} />
                 {(hasOverdue || unreadCount > 0) && (
-                  <span className="absolute top-2 right-2 size-3 bg-destructive rounded-full border-2 border-background shadow-[0_0_10px_rgba(239,68,68,0.6)] animate-bounce" />
+                  <span 
+                    className="absolute top-2 right-2 size-3 bg-destructive rounded-full border-2 border-background animate-bounce"
+                    style={{ boxShadow: '0 0 10px oklch(0.6 0.2 25 / 0.6)' }}
+                  />
                 )}
               </Button>
             </DropdownMenuTrigger>
