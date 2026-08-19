@@ -164,8 +164,8 @@ function VPSDetailsPage() {
 
         <div className="grid gap-6 md:grid-cols-2">
           {/* SSH Card */}
-          <Card className="rounded-3xl border-2 bg-slate-950 text-slate-100 overflow-hidden">
-            <CardHeader className="bg-slate-900/40 border-b border-slate-800/50 pb-4">
+          <Card className="rounded-3xl border-2 bg-[#020617] text-slate-100 overflow-hidden">
+            <CardHeader className="bg-[#0f172a]/40 border-b border-slate-800/50 pb-4">
               <CardTitle className="flex items-center gap-2 text-base font-semibold">
                 <Terminal className="h-5 w-5 text-lime-400" /> Acesso SSH
               </CardTitle>
