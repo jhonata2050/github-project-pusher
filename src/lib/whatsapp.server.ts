@@ -57,9 +57,9 @@ export async function sendWhatsAppMessage({
     const cleanNumber = to.replace(/\D/g, "");
     
     // 3. Preparar requisição para Evolution Go
-    // Endpoint: /message/sendText/{instance}
     // Evolution Go documentation: https://docs.evolutionfoundation.com.br/evolution-go/send-text
-    const endpoint = `${evolutionUrl}/message/sendText/${instance}`;
+    const endpoint = `${evolutionUrl}/message/sendText`;
+
     
     const response = await fetch(endpoint, {
       method: "POST",
@@ -70,8 +70,10 @@ export async function sendWhatsAppMessage({
       body: JSON.stringify({
         number: cleanNumber,
         text: message,
+        instance: instance,
         linkPreview: true
       })
+
     });
 
     const responseText = await response.text();
