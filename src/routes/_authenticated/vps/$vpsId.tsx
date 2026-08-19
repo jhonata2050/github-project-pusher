@@ -96,6 +96,8 @@ function VPSDetailsPage() {
 
   const ipAddress = vps.ip_address || details.ipConfig?.v4?.ip || (details.ipAddress !== 'N/A' ? details.ipAddress : null);
   const installCommand = `curl -sSL ${window.location.origin}/api/public/scripts/install-agent | bash -s -- ${vps.id}`;
+  const uninstallCommand = `curl -sSL ${window.location.origin}/api/public/scripts/uninstall-agent | bash`;
+
 
 
   return (
@@ -211,7 +213,10 @@ function VPSDetailsPage() {
               <div className="bg-slate-950 p-4 rounded-xl font-mono text-xs text-slate-200 overflow-x-auto border border-slate-800">
                 <p className="text-slate-500 mb-2"># Execute como root no terminal do seu servidor:</p>
                 <code>{installCommand}</code>
+                <p className="text-slate-500 mt-4 mb-2"># Para desinstalar o agente:</p>
+                <code>{uninstallCommand}</code>
               </div>
+
               <p className="text-sm text-muted-foreground italic">
                 Nota: O agente é leve e consome menos de 10MB de RAM.
               </p>
