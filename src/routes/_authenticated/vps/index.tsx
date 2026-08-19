@@ -84,35 +84,35 @@ function VPSManagementPage() {
                       <Clock className="h-4 w-4 text-orange-500" />
                     )}
                   </div>
-                  <CardTitle className="text-xl font-bold">{vps.ip_address || 'VPS em Operação'}</CardTitle>
+                  <CardTitle className="text-xl font-bold">{vps.ip_address || (vps.status === 'active' ? 'VPS em Operação' : 'Instância VPS')}</CardTitle>
                   <CardDescription className="font-mono text-xs">
-                    ID: {vps.external_id}
+                    ID Externo: {vps.external_id}
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="pt-6">
                   <div className="grid grid-cols-2 gap-4 text-sm mb-6">
                     <div>
                       <p className="text-muted-foreground text-xs uppercase tracking-wider mb-1">Região</p>
-                      <p className="font-bold text-base truncate">{vps.region || 'European Union'}</p>
+                      <p className="font-bold text-base truncate">{vps.region || 'Desconhecida'}</p>
                     </div>
                     <div>
                       <p className="text-muted-foreground text-xs uppercase tracking-wider mb-1">Sistema</p>
-                      <p className="font-bold text-base truncate">{vps.os_template || 'Ubuntu 22.04'}</p>
+                      <p className="font-bold text-base truncate">{vps.os_template || 'Sistema não identificado'}</p>
                     </div>
                   </div>
                   
                   <div className="grid grid-cols-3 gap-2 text-xs mb-6 border-t pt-4">
                     <div className="flex flex-col gap-1">
                       <span className="text-muted-foreground">CPU</span>
-                      <span className="font-semibold">{vps.cpu_cores || '2'} vCPU</span>
+                      <span className="font-semibold">{vps.cpu_cores || 'N/A'} vCPU</span>
                     </div>
                     <div className="flex flex-col gap-1">
                       <span className="text-muted-foreground">RAM</span>
-                      <span className="font-semibold">{vps.ram_gb || '4'} GB</span>
+                      <span className="font-semibold">{vps.ram_gb || 'N/A'} GB</span>
                     </div>
                     <div className="flex flex-col gap-1">
                       <span className="text-muted-foreground">Disco</span>
-                      <span className="font-semibold">{vps.disk_gb || '50'} GB</span>
+                      <span className="font-semibold">{vps.disk_gb || 'N/A'} GB</span>
                     </div>
                   </div>
                   

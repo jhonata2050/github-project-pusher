@@ -94,18 +94,64 @@ export const getVPSDetails = createServerFn({ method: "GET" })
     const { data: isStaff } = await supabase.rpc('is_staff', { _user_id: userId });
     if (!isStaff && service?.user_id !== userId) throw new Error("Acesso negado");
 
-    const { getContaboInstanceDetails, getContaboInstanceStats } = await import("./contabo.server");
+    const { getContaboInstanceDetails, getContaboInstanceStats, getContaboProductTypes } = await import("./contabo.server");
 
     try {
       const externalDetails = await getContaboInstanceDetails(vps.external_id);
       
-      // Mapear dados reais da API para as colunas do banco se estiverem vazias ou forem diferentes
-      // Isso ajuda a manter o banco sincronizado com a verdade da API
+      // Mapear dados reais da API para as colunas do banco
       if (externalDetails) {
         const updates: any = {};
-        if (externalDetails.region && vps.region !== externalDetails.region) updates.region = externalDetails.region;
-        // Se a API retornar CPU/RAM/Disco físicos, podemos atualizar aqui também
-        // Mas por enquanto vamos priorizar o que está no banco que o usuário corrigiu
+        
+        // Sincronizar Região e OS se estiverem disponíveis
+        if (externalDetails.region && vps.region !== externalDetails.region) {
+          updates.region = externalDetails.region;
+        }
+        if (externalDetails.osTemplate && vps.os_template !== externalDetails.osTemplate) {
+          updates.os_template = externalDetails.osTemplate;
+        }
+
+        // Tentar obter specs do produto se não estiverem no banco
+        if (!vps.cpu_cores || !vps.ram_gb || !vps.disk_gb) {
+          try {
+            const products = await getContaboProductTypes();
+            const productName = (externalDetails.productName || "").toLowerCase();
+            
+            // Procura o produto no catálogo para pegar os specs reais
+            let foundProduct = null;
+            for (const cat of products) {
+              foundProduct = cat.items.find((item: any) => 
+                productName.includes(item.name.toLowerCase()) || 
+                item.productId === externalDetails.productId
+              );
+              if (foundProduct) break;
+            }
+
+            if (foundProduct) {
+              // Extrair números dos títulos (ex: "4 vCPU" -> 4)
+              const cpuMatch = foundProduct.vCpu.match(/\d+/);
+              const diskMatch = foundProduct.diskGb.match(/\d+/);
+              
+              if (cpuMatch && !vps.cpu_cores) updates.cpu_cores = parseInt(cpuMatch[0]);
+              if (foundProduct.ramMb && !vps.ram_gb) updates.ram_gb = Math.round(foundProduct.ramMb / 1024);
+              if (diskMatch && !vps.disk_gb) updates.disk_gb = parseInt(diskMatch[0]);
+            }
+          } catch (e) {
+            console.warn("Erro ao buscar specs do produto Contabo:", e);
+          }
+        }
+
+        // Se houver atualizações, salvar no banco (usando admin para garantir sucesso)
+        if (Object.keys(updates).length > 0) {
+          const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+          await supabaseAdmin
+            .from('vps_instances')
+            .update(updates)
+            .eq('id', vps.id);
+          
+          // Mesclar atualizações no objeto de retorno para visualização imediata
+          Object.assign(vps, updates);
+        }
       }
 
       const stats = await getContaboInstanceStats(vps.external_id);
