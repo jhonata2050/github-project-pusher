@@ -41,10 +41,13 @@ function TicketDetailsPage() {
   });
 
   const replyMutation = useMutation({
-    mutationFn: (text: string) => replyTicket({ data: { ticketId, message: text } }),
+    mutationFn: async ({ text, attachmentUrls }: { text: string; attachmentUrls: string[] }) => {
+      return replyTicket({ data: { ticketId, message: text, attachments: attachmentUrls } });
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["ticket", ticketId] });
       setMessage("");
+      setAttachments([]);
       toast.success("Resposta enviada!");
     },
     onError: (err: any) => {
@@ -52,22 +55,56 @@ function TicketDetailsPage() {
     },
   });
 
-  useEffect(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files) {
+      const newFiles = Array.from(e.target.files);
+      setAttachments(prev => [...prev, ...newFiles]);
     }
-  }, [data?.messages]);
+  };
 
-  if (isLoading) return <div className="h-96 flex items-center justify-center">Carregando ticket...</div>;
-  if (!data) return <div>Ticket não encontrado</div>;
+  const removeAttachment = (index: number) => {
+    setAttachments(prev => prev.filter((_, i) => i !== index));
+  };
 
-  const { ticket, messages } = data;
-  const status = STATUS_MAP[ticket.status as keyof typeof STATUS_MAP] || STATUS_MAP.open;
+  const uploadFiles = async () => {
+    const urls: string[] = [];
+    for (const file of attachments) {
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${Math.random().toString(36).substring(2)}_${Date.now()}.${fileExt}`;
+      const filePath = `${ticketId}/${fileName}`;
 
-  const handleSubmit = (e: React.FormEvent) => {
+      const { data, error } = await supabase.storage
+        .from('ticket-attachments')
+        .upload(filePath, file);
+
+      if (error) {
+        console.error('Error uploading file:', error);
+        throw new Error(`Erro ao fazer upload de ${file.name}`);
+      }
+
+      if (data) {
+        const { data: { publicUrl } } = supabase.storage
+          .from('ticket-attachments')
+          .getPublicUrl(filePath);
+        urls.push(publicUrl);
+      }
+    }
+    return urls;
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!message.trim()) return;
-    replyMutation.mutate(message);
+    if (!message.trim() && attachments.length === 0) return;
+
+    setUploading(true);
+    try {
+      const attachmentUrls = await uploadFiles();
+      replyMutation.mutate({ text: message, attachmentUrls });
+    } catch (err: any) {
+      toast.error(err.message);
+    } finally {
+      setUploading(false);
+    }
   };
 
   return (
