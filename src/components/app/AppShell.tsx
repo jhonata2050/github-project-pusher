@@ -377,7 +377,7 @@ export function AppShell({
           <aside className="sticky top-0 hidden h-screen w-64 shrink-0 flex-col border-r border-sidebar-border bg-sidebar px-3 py-4 lg:flex">
           <div className="flex items-center justify-between px-2 pb-4">
             <Link
-              to="/"
+              to={homeTo}
               className={cn(
                 "flex min-w-0 items-center h-12 w-full",
                 branding.logo_url
