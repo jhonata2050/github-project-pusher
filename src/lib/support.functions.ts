@@ -159,14 +159,29 @@ export const createTicket = createServerFn({ method: "POST" })
       const { notifyAdminWhatsApp } = await import("./whatsapp.server");
       const { data: profile } = await context.supabase
         .from("profiles")
-        .select("full_name")
+        .select("full_name, email")
         .eq("id", context.userId)
         .single();
       
-      await notifyAdminWhatsApp(
-        `🆕 *Novo Ticket Aberto*\n\n*Assunto:* ${input.subject}\n*Prioridade:* ${input.priority}\n*Cliente:* ${profile?.full_name || "Desconhecido"}\n*Mensagem:* ${input.message.slice(0, 100)}${input.message.length > 100 ? "..." : ""}`,
-        "ticket_events"
-      );
+      const priorityMap = { low: "Baixa", medium: "Média", high: "Alta" };
+      const now = new Date().toLocaleString("pt-BR");
+      
+      const whatsappMsg = [
+        "🆕 *Novo Ticket Aberto*",
+        "",
+        `*ID:* #${ticket.id.slice(0, 8)}`,
+        `*Assunto:* ${input.subject}`,
+        `*Urgência:* ${priorityMap[input.priority as keyof typeof priorityMap]}`,
+        `*Status:* Aberto`,
+        `*Data/Hora:* ${now}`,
+        "",
+        `*Cliente:* ${profile?.full_name || "Desconhecido"}`,
+        `*E-mail:* ${profile?.email || "N/A"}`,
+        "",
+        `*Mensagem:* ${input.message.slice(0, 150)}${input.message.length > 150 ? "..." : ""}`
+      ].join("\n");
+
+      await notifyAdminWhatsApp(whatsappMsg, "ticket_events");
     } catch (e) {
       console.warn("[WhatsApp] Falha ao notificar admin sobre novo ticket:", e);
     }
