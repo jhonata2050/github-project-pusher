@@ -56,87 +56,77 @@ export async function sendWhatsAppMessage({
     // 2. Limpar número (deve ser apenas dígitos com DDI)
     const cleanNumber = to.replace(/\D/g, "");
     
-    // TENTATIVA: Evolução Go (API Centralizada ou Host próprio)
-    // Diagnóstico da API Evolution
-    const endpoints = [
-      { name: "v1/Go (path)", url: `${evolutionUrl}/message/sendText/${instance}`, method: "POST", body: { number: cleanNumber, text: message, linkPreview: true } },
-      { name: "v2 (central)", url: `${evolutionUrl}/message/sendText`, method: "POST", body: { number: cleanNumber, text: message, instance: instance, linkPreview: true } },
-      { name: "v2 (options)", url: `${evolutionUrl}/message/sendText`, method: "POST", body: { number: cleanNumber, text: message, options: { instance: instance }, linkPreview: true } },
-      { name: "Simple GET", url: `${evolutionUrl}/instance/fetchInstances`, method: "GET" }
-    ];
-    
-    let allAttempts: any[] = [];
-    let finalResponse = null;
+    // Envio específico para Evolution Go
+    const targetUrl = `${evolutionUrl}/message/sendText`;
+    const payload = {
+      number: cleanNumber,
+      text: message,
+      instance: instance,
+      delay: 0,
+      linkPreview: true
+    };
 
-    for (const item of endpoints) {
-      try {
-        const response = await fetch(item.url, {
-          method: item.method,
-          headers: {
-            "Content-Type": "application/json",
-            "apikey": token
-          },
-          ...(item.body ? { body: JSON.stringify(item.body) } : {})
-        });
-        
-        const text = await response.text();
-        const attempt = { 
-          name: item.name, 
-          url: item.url.replace(token, "HIDDEN"), 
-          status: response.status, 
-          text: text.slice(0, 500) 
-        };
-        allAttempts.push(attempt);
-
-        if (response.ok) {
-          finalResponse = { ok: true, status: response.status, text };
-          break;
-        }
-      } catch (e: any) {
-        allAttempts.push({ name: item.name, url: item.url.replace(token, "HIDDEN"), error: e.message });
-      }
-    }
-
-    if (!finalResponse) {
-      console.error("[WhatsApp] Falha em todos os endpoints:", allAttempts);
-      
-      await supabaseAdmin.from("audit_logs").insert({
-        category: "whatsapp",
-        action: "whatsapp.send_failed",
-        status: "failure",
-        description: `Falha na API (${evolutionUrl}). Status: ${allAttempts.map(a => `${a.name}: ${a.status || 'ERR'}`).join(', ')}`,
-        metadata: { to, category, attempts: allAttempts } as any
+    try {
+      const response = await fetch(targetUrl, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "apikey": token
+        },
+        body: JSON.stringify(payload)
       });
       
-      const isAll404 = allAttempts.every(a => a.status === 404);
-      const detailedError = isAll404 
-        ? "Todos os endpoints retornaram 404. A URL informada (evogo.srvbr.top) pode estar incompleta. Tente adicionar o caminho da API (ex: /v1 ou /v2) no final da URL."
-        : `Erro na API: ${allAttempts.map(a => `${a.name}: ${a.status || 'ERR'}`).join(' | ')}`;
+      const responseText = await response.text();
+      let responseData: any = {};
+      try {
+        responseData = JSON.parse(responseText);
+      } catch (e) {
+        responseData = { raw: responseText };
+      }
 
-      return { success: false, error: detailedError };
+      if (!response.ok) {
+        console.error("[WhatsApp] Falha no envio Evolution Go:", {
+          status: response.status,
+          data: responseData
+        });
+        
+        await supabaseAdmin.from("audit_logs").insert({
+          category: "whatsapp",
+          action: "whatsapp.send_failed",
+          status: "failure",
+          description: `Erro na Evolution Go (${response.status}). URL: ${targetUrl}`,
+          metadata: { to, category, response: responseData, payload: { ...payload, text: "REDACTED" } } as any
+        });
+        
+        let errorMessage = "Erro desconhecido na API";
+        if (response.status === 404) {
+          errorMessage = "Endpoint não encontrado (404). Verifique se a URL da API está correta e termina sem /v1 ou /v2.";
+        } else if (responseData.message) {
+          errorMessage = Array.isArray(responseData.message) ? responseData.message.join(", ") : responseData.message;
+        }
+
+        return { success: false, error: errorMessage };
+      }
+
+      // 4. Log de sucesso na auditoria
+      await supabaseAdmin.from("audit_logs").insert({
+        category: "whatsapp",
+        action: "whatsapp.sent",
+        status: "success",
+        description: `Mensagem enviada com sucesso para ${to} via Evolution Go`,
+        metadata: { to, category, instance } as any
+      });
+
+      return { success: true, data: responseData };
+
+    } catch (e: any) {
+      console.error("[WhatsApp] Exceção ao conectar na Evolution Go:", e);
+      return { success: false, error: `Falha de conexão: ${e.message}` };
     }
 
-    let result = {};
-    try {
-      result = JSON.parse(finalResponse.text);
-    } catch (e) {
-      result = { raw: finalResponse.text };
-    }
 
 
 
-
-
-    // 4. Log de sucesso na auditoria
-    await supabaseAdmin.from("audit_logs").insert({
-      category: "whatsapp",
-      action: "whatsapp.sent",
-      status: "success",
-      description: `Mensagem enviada com sucesso para ${to}`,
-      metadata: { to, category } as any
-    });
-
-    return { success: true, data: result };
 
   } catch (error: any) {
     console.error("[WhatsApp] Exceção ao enviar mensagem:", error);

@@ -132,7 +132,7 @@ function AdminWhatsAppPage() {
                     value={localSettings.whatsapp_evolution_url}
                     onChange={e => setLocalSettings({...localSettings, whatsapp_evolution_url: e.target.value})}
                   />
-                  <p className="text-[10px] text-muted-foreground">Ex: https://evolution.seusite.com.br</p>
+                  <p className="text-[10px] text-muted-foreground">Ex: https://evogo.srvbr.top</p>
                 </div>
                 <div className="space-y-2">
                   <Label>Nome da Instância</Label>
