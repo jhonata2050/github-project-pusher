@@ -57,15 +57,15 @@ export async function sendWhatsAppMessage({
     const cleanNumber = to.replace(/\D/g, "");
     
     // TENTATIVA: Evolução Go (API Centralizada ou Host próprio)
-    // Tentativa multi-formato para Evolution API v1, v2 e Go
+    // Diagnóstico da API Evolution
     const endpoints = [
-      { name: "Go/v2 (central)", url: `${evolutionUrl}/message/sendText`, method: "POST", body: { number: cleanNumber, text: message, instance: instance } },
-      { name: "v1/v2 (instance path)", url: `${evolutionUrl}/message/sendText/${instance}`, method: "POST", body: { number: cleanNumber, text: message } },
-      { name: "v2 (options)", url: `${evolutionUrl}/message/sendText`, method: "POST", body: { number: cleanNumber, text: message, options: { instance: instance } } },
-      { name: "Status check", url: `${evolutionUrl}/instance/fetchInstances`, method: "GET" }
+      { name: "v1/Go (path)", url: `${evolutionUrl}/message/sendText/${instance}`, method: "POST", body: { number: cleanNumber, text: message, linkPreview: true } },
+      { name: "v2 (central)", url: `${evolutionUrl}/message/sendText`, method: "POST", body: { number: cleanNumber, text: message, instance: instance, linkPreview: true } },
+      { name: "v2 (options)", url: `${evolutionUrl}/message/sendText`, method: "POST", body: { number: cleanNumber, text: message, options: { instance: instance }, linkPreview: true } },
+      { name: "Simple GET", url: `${evolutionUrl}/instance/fetchInstances`, method: "GET" }
     ];
     
-    let allAttempts = [];
+    let allAttempts: any[] = [];
     let finalResponse = null;
 
     for (const item of endpoints) {
@@ -80,7 +80,12 @@ export async function sendWhatsAppMessage({
         });
         
         const text = await response.text();
-        const attempt = { name: item.name, url: item.url, status: response.status, text: text.slice(0, 500) };
+        const attempt = { 
+          name: item.name, 
+          url: item.url.replace(token, "HIDDEN"), 
+          status: response.status, 
+          text: text.slice(0, 500) 
+        };
         allAttempts.push(attempt);
 
         if (response.ok) {
@@ -88,7 +93,7 @@ export async function sendWhatsAppMessage({
           break;
         }
       } catch (e: any) {
-        allAttempts.push({ name: item.name, url: item.url, error: e.message });
+        allAttempts.push({ name: item.name, url: item.url.replace(token, "HIDDEN"), error: e.message });
       }
     }
 
@@ -99,11 +104,15 @@ export async function sendWhatsAppMessage({
         category: "whatsapp",
         action: "whatsapp.send_failed",
         status: "failure",
-        description: `Falha ao conectar na API (${evolutionUrl}). Todos os endpoints retornaram erro ou 404.`,
+        description: `Falha na API (${evolutionUrl}). Status: ${allAttempts.map(a => `${a.name}: ${a.status || 'ERR'}`).join(', ')}`,
         metadata: { to, category, attempts: allAttempts } as any
       });
       
-      return { success: false, error: { attempts: allAttempts } };
+      const detailedError = allAttempts.find(a => a.status === 404) 
+        ? "Endpoint não encontrado (404). Verifique se a URL da API está correta (incluindo /v1 ou /v2 se necessário)."
+        : JSON.stringify(allAttempts);
+
+      return { success: false, error: detailedError };
     }
 
     let result = {};
@@ -112,6 +121,7 @@ export async function sendWhatsAppMessage({
     } catch (e) {
       result = { raw: finalResponse.text };
     }
+
 
 
 
