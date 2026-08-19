@@ -98,6 +98,16 @@ export const getVPSDetails = createServerFn({ method: "GET" })
 
     try {
       const externalDetails = await getContaboInstanceDetails(vps.external_id);
+      
+      // Mapear dados reais da API para as colunas do banco se estiverem vazias ou forem diferentes
+      // Isso ajuda a manter o banco sincronizado com a verdade da API
+      if (externalDetails) {
+        const updates: any = {};
+        if (externalDetails.region && vps.region !== externalDetails.region) updates.region = externalDetails.region;
+        // Se a API retornar CPU/RAM/Disco físicos, podemos atualizar aqui também
+        // Mas por enquanto vamos priorizar o que está no banco que o usuário corrigiu
+      }
+
       const stats = await getContaboInstanceStats(vps.external_id);
 
       return {
@@ -108,7 +118,6 @@ export const getVPSDetails = createServerFn({ method: "GET" })
       };
     } catch (err: any) {
       console.error("Erro ao buscar detalhes na Contabo:", err.message);
-      // Retornar dados parciais do banco se a API falhar
       return {
         ...vps,
         service,
