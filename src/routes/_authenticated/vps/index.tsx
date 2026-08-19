@@ -93,7 +93,7 @@ function VPSManagementPage() {
                   <div className="grid grid-cols-2 gap-4 text-sm mb-6">
                     <div>
                       <p className="text-muted-foreground text-xs uppercase tracking-wider mb-1">Região</p>
-                      <p className="font-bold text-base">{vps.region || 'European Union'}</p>
+                      <p className="font-bold text-base truncate">{vps.region || 'European Union'}</p>
                     </div>
                     <div>
                       <p className="text-muted-foreground text-xs uppercase tracking-wider mb-1">Sistema</p>
