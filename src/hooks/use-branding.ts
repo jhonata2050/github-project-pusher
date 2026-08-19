@@ -29,6 +29,13 @@ export function useBranding() {
   useEffect(() => {
     if (typeof document === "undefined") return;
 
+    // Se estiver na área administrativa, não aplica o branding dinâmico no :root
+    if (window.location.pathname.startsWith('/admin')) {
+      // Opcional: Resetar para o padrão se necessário
+      return;
+    }
+
+
     // Atualiza o título da página se necessário (opcional, o route head cuida disso)
     // document.title = settings.app_name;
 

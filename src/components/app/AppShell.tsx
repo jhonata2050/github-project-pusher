@@ -180,7 +180,18 @@ export function AppShell({
   const { isStaff } = useIsStaff();
   const { user, impersonatedClientId, setImpersonatedClientId } = useAuth();
   const { data: profile } = useProfile();
-  const branding = useBranding();
+  const brandingData = useBranding();
+  const isAdminArea = area ? area === "admin" : (user ? (isStaff && pathname.startsWith("/admin")) : false);
+  
+  // Use default branding for admin area, otherwise use dynamic branding
+  const branding = isAdminArea ? {
+    logo_url: null,
+    app_name: "HostPanel",
+    primary_color: "oklch(0.88 0.19 128)",
+    brand_color: "oklch(0.72 0.19 148)",
+    favicon_url: null,
+  } : brandingData;
+
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [hideBanner, setHideBanner] = useState(false);
@@ -190,9 +201,9 @@ export function AppShell({
   const isGuest = !user;
   const hideSidebar = isCheckout && isGuest;
 
-  // Corrigida detecção de área administrativa: apenas se o usuário for staff E a rota começar com /admin
-  const isAdminArea = area ? area === "admin" : (user ? (isStaff && pathname.startsWith("/admin")) : false);
+  // Área administrativa já foi definida acima para controlar o branding
   const sections = isAdminArea ? ADMIN_SECTIONS : CLIENT_SECTIONS;
+
   const homeTo = isAdminArea ? "/admin" : "/dashboard";
 
   const { data: overdueInvoices } = useQuery({
@@ -366,7 +377,7 @@ export function AppShell({
           <aside className="sticky top-0 hidden h-screen w-64 shrink-0 flex-col border-r border-sidebar-border bg-sidebar px-3 py-4 lg:flex">
           <div className="flex items-center justify-between px-2 pb-4">
             <Link
-              to="/"
+              to={homeTo}
               className={cn(
                 "flex min-w-0 items-center h-12 w-full",
                 branding.logo_url
