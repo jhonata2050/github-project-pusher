@@ -66,7 +66,20 @@ export const Route = createFileRoute('/api/public/webhooks/mercadopago')({
               .eq('id', transaction.invoice_id!)
               .select().single();
             
-            if (invoice) await processProvisioning(invoice.id);
+            if (invoice) {
+              await processProvisioning(invoice.id);
+              
+              // Notificar Admin sobre pagamento recebido
+              try {
+                const { notifyAdminWhatsApp } = await import("@/lib/whatsapp.server");
+                await notifyAdminWhatsApp(
+                  `💰 *Pagamento Confirmado (Mercado Pago)*\n\n*Fatura:* #${invoice.id}\n*Valor:* R$ ${invoice.total}\n*Status:* Pago`,
+                  "payment_success"
+                );
+              } catch (e) {
+                console.warn("[WhatsApp] Falha ao notificar admin sobre pagamento MP:", e);
+              }
+            }
           }
         }
         
