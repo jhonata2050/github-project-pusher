@@ -57,41 +57,66 @@ export async function sendWhatsAppMessage({
     const cleanNumber = to.replace(/\D/g, "");
     
     // 3. Preparar requisição para Evolution Go
+    // Tentativa de descobrir o endpoint correto da Evolution API v2 ou Go
     // Evolution Go documentation: https://docs.evolutionfoundation.com.br/evolution-go/send-text
-    const endpoint = `${evolutionUrl}/instance/fetchInstances`;
-
+    const endpoints = [
+      `${evolutionUrl}/message/sendText/${instance}`,
+      `${evolutionUrl}/instance/fetchInstances`,
+      `${evolutionUrl}/instance/connect/${instance}`
+    ];
     
-    const response = await fetch(endpoint, {
-      method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-        "apikey": token
+    let lastError = null;
+    let finalResponse = null;
+
+    for (const url of endpoints) {
+      try {
+        const isPost = url.includes("sendText");
+        const response = await fetch(url, {
+          method: isPost ? "POST" : "GET",
+          headers: {
+            "Content-Type": "application/json",
+            "apikey": token
+          },
+          ...(isPost ? {
+            body: JSON.stringify({
+              number: cleanNumber,
+              text: message,
+              linkPreview: true
+            })
+          } : {})
+        });
+        
+        const text = await response.text();
+        if (response.ok) {
+          finalResponse = { ok: true, status: response.status, text };
+          break;
+        } else {
+          lastError = { url, status: response.status, text };
+        }
+      } catch (e: any) {
+        lastError = { url, error: e.message };
       }
-    });
-
-
-    const responseText = await response.text();
-    let result = {};
-    try {
-      result = JSON.parse(responseText);
-    } catch (e) {
-      result = { raw: responseText };
     }
 
-    if (!response.ok) {
-      console.error("[WhatsApp] Erro Evolution Go:", response.status, result);
-
+    if (!finalResponse) {
+      console.error("[WhatsApp] Falha em todos os endpoints:", lastError);
       
-      // Log de falha na auditoria
       await supabaseAdmin.from("audit_logs").insert({
         category: "whatsapp",
         action: "whatsapp.send_failed",
         status: "failure",
-        description: `Falha ao enviar para ${to}: ${JSON.stringify(result)}`,
-        metadata: { to, category, error: result } as any
+        description: `Falha ao conectar na Evolution Go. Último erro: ${JSON.stringify(lastError)}`,
+        metadata: { to, category, lastError } as any
       });
       
-      return { success: false, error: result };
+      return { success: false, error: lastError };
+    }
+
+    let result = {};
+    try {
+      result = JSON.parse(finalResponse.text);
+    } catch (e) {
+      result = { raw: finalResponse.text };
     }
 
     // 4. Log de sucesso na auditoria
@@ -187,6 +212,7 @@ export async function testWhatsAppConnection() {
         message =
           err.message ||
           err.error ||
+          err.text ||
           (Array.isArray(err.response?.message) ? err.response.message.join(", ") : err.response?.message) ||
           JSON.stringify(err);
       }
