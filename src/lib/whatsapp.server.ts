@@ -56,40 +56,76 @@ export async function sendWhatsAppMessage({
     // 2. Limpar número (deve ser apenas dígitos com DDI)
     const cleanNumber = to.replace(/\D/g, "");
     
-    // 3. Preparar requisição para Evolution Go
-    // Endpoint: /message/sendText/{instance}
-    // Evolution Go documentation: https://docs.evolutionfoundation.com.br/evolution-go/send-text
-    const endpoint = `${evolutionUrl}/message/sendText/${instance}`;
+    // TENTATIVA: Evolução Go (API Centralizada ou Host próprio)
+    // Diagnóstico da API Evolution
+    const endpoints = [
+      { name: "v1/Go (path)", url: `${evolutionUrl}/message/sendText/${instance}`, method: "POST", body: { number: cleanNumber, text: message, linkPreview: true } },
+      { name: "v2 (central)", url: `${evolutionUrl}/message/sendText`, method: "POST", body: { number: cleanNumber, text: message, instance: instance, linkPreview: true } },
+      { name: "v2 (options)", url: `${evolutionUrl}/message/sendText`, method: "POST", body: { number: cleanNumber, text: message, options: { instance: instance }, linkPreview: true } },
+      { name: "Simple GET", url: `${evolutionUrl}/instance/fetchInstances`, method: "GET" }
+    ];
     
-    const response = await fetch(endpoint, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "apikey": token
-      },
-      body: JSON.stringify({
-        number: cleanNumber,
-        text: message,
-        linkPreview: true
-      })
-    });
+    let allAttempts: any[] = [];
+    let finalResponse = null;
 
-    const result = await response.json().catch(() => ({}));
+    for (const item of endpoints) {
+      try {
+        const response = await fetch(item.url, {
+          method: item.method,
+          headers: {
+            "Content-Type": "application/json",
+            "apikey": token
+          },
+          ...(item.body ? { body: JSON.stringify(item.body) } : {})
+        });
+        
+        const text = await response.text();
+        const attempt = { 
+          name: item.name, 
+          url: item.url.replace(token, "HIDDEN"), 
+          status: response.status, 
+          text: text.slice(0, 500) 
+        };
+        allAttempts.push(attempt);
 
-    if (!response.ok) {
-      console.error("[WhatsApp] Erro Evolution Go:", result);
+        if (response.ok) {
+          finalResponse = { ok: true, status: response.status, text };
+          break;
+        }
+      } catch (e: any) {
+        allAttempts.push({ name: item.name, url: item.url.replace(token, "HIDDEN"), error: e.message });
+      }
+    }
+
+    if (!finalResponse) {
+      console.error("[WhatsApp] Falha em todos os endpoints:", allAttempts);
       
-      // Log de falha na auditoria
       await supabaseAdmin.from("audit_logs").insert({
         category: "whatsapp",
         action: "whatsapp.send_failed",
         status: "failure",
-        description: `Falha ao enviar para ${to}: ${JSON.stringify(result)}`,
-        metadata: { to, category, error: result } as any
+        description: `Falha na API (${evolutionUrl}). Status: ${allAttempts.map(a => `${a.name}: ${a.status || 'ERR'}`).join(', ')}`,
+        metadata: { to, category, attempts: allAttempts } as any
       });
       
-      return { success: false, error: result };
+      const isAll404 = allAttempts.every(a => a.status === 404);
+      const detailedError = isAll404 
+        ? "Todos os endpoints retornaram 404. A URL informada (evogo.srvbr.top) pode estar incompleta. Tente adicionar o caminho da API (ex: /v1 ou /v2) no final da URL."
+        : `Erro na API: ${allAttempts.map(a => `${a.name}: ${a.status || 'ERR'}`).join(' | ')}`;
+
+      return { success: false, error: detailedError };
     }
+
+    let result = {};
+    try {
+      result = JSON.parse(finalResponse.text);
+    } catch (e) {
+      result = { raw: finalResponse.text };
+    }
+
+
+
+
 
     // 4. Log de sucesso na auditoria
     await supabaseAdmin.from("audit_logs").insert({
@@ -184,6 +220,7 @@ export async function testWhatsAppConnection() {
         message =
           err.message ||
           err.error ||
+          err.text ||
           (Array.isArray(err.response?.message) ? err.response.message.join(", ") : err.response?.message) ||
           JSON.stringify(err);
       }
