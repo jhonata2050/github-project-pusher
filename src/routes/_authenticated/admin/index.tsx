@@ -146,7 +146,7 @@ function AdminDashboardPage() {
                           </div>
                         </div>
                         <ArrowRight className="size-4 text-orange-500/30 group-hover:text-orange-500 group-hover:translate-x-1 transition-all" />
-                      </a>
+                      </Link>
                     ))}
                   </div>
                 </CardContent>
