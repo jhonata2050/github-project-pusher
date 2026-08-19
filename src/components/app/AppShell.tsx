@@ -13,6 +13,7 @@ import {
   History,
   LogOut,
   Mail,
+  MessageSquare,
   Monitor,
   MoreVertical,
   Package,
