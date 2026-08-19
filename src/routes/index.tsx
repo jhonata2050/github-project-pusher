@@ -97,7 +97,7 @@ function Index() {
           )}
         </span>
         <Button asChild variant="outline" className="rounded-xl">
-          <Link to="/auth" search={{ }}>Área do cliente</Link>
+          <Link to="/auth" search={{ redirect: "/dashboard" }}>Área do cliente</Link>
         </Button>
       </header>
 
@@ -112,7 +112,7 @@ function Index() {
           </p>
           <div className="mt-8 flex flex-wrap justify-center gap-3">
             <Button asChild size="lg" className="rounded-xl bg-foreground text-background hover:bg-foreground/90">
-              <Link to="/auth" search={{ }}>Criar minha conta</Link>
+              <Link to="/auth" search={{ redirect: "/dashboard" }}>Criar minha conta</Link>
             </Button>
             <Button asChild size="lg" variant="outline" className="rounded-xl">
               <a href="#planos">Ver planos</a>
