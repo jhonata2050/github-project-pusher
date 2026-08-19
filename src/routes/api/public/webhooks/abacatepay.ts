@@ -52,6 +52,17 @@ export const Route = createFileRoute('/api/public/webhooks/abacatepay')({
                 
               if (invoice) {
                 await processProvisioning(invoice.id);
+                
+                // Notificar Admin
+                try {
+                  const { notifyAdminWhatsApp } = await import("@/lib/whatsapp.server");
+                  await notifyAdminWhatsApp(
+                    `💰 *Pagamento Confirmado (AbacatePay)*\n\n*Fatura:* #${invoice.id}\n*Valor:* R$ ${invoice.total}\n*Status:* Pago`,
+                    "payment_success"
+                  );
+                } catch (e) {
+                  console.warn("[WhatsApp] Falha ao notificar admin sobre pagamento AbacatePay:", e);
+                }
               }
             }
           }
