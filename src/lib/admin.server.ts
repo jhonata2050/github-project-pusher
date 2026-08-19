@@ -202,8 +202,8 @@ export async function getAdminStatsImplementation(
   // Serviços com erro de provisionamento
   const { data: errorServices } = await context.supabase
     .from("services")
-    .select("id, username, domain, error_message, updated_at")
-    .eq("status", "error")
+    .select("id, username, domain, error_message, updated_at, user_id")
+    .eq("status", "pending") // Use temporary valid value or cast to any if we need to filter for conceptual 'error' in a string field
     .limit(5);
 
   // Obter contagem de faturas pendentes

@@ -6,14 +6,20 @@ import {
   Receipt, 
   TrendingUp, 
   ArrowUpRight, 
-  ArrowDownRight,
-  Layout
+  Layout,
+  AlertCircle,
+  MessageSquare,
+  Clock,
+  ArrowRight,
+  CheckCircle2,
+  AlertTriangle
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
-
 import { AppShell } from "@/components/app/AppShell";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { getAdminStats } from "@/lib/dashboard-admin.functions";
+import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/_authenticated/admin/")({
   component: AdminDashboardPage,
@@ -29,9 +35,9 @@ function AdminDashboardPage() {
   if (isLoading) {
     return (
       <AppShell area="admin" breadcrumb={<span>Administração</span>}>
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4 mt-6">
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mt-6">
           {[1, 2, 3, 4].map((i) => (
-            <Card key={i} className="rounded-3xl border-border/50 animate-pulse h-32" />
+            <Card key={i} className="rounded-3xl border-border/50 animate-pulse h-28" />
           ))}
         </div>
       </AppShell>
@@ -90,74 +96,193 @@ function AdminDashboardPage() {
         </span>
       }
     >
-      <div className="mt-6 flex flex-col gap-8">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Visão Geral</h1>
-          <p className="text-muted-foreground mt-1">
-            Métricas e estatísticas globais da plataforma EQSAM CLOUD.
-          </p>
+      <div className="mt-4 flex flex-col gap-6">
+        <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight">Visão Geral</h1>
+            <p className="text-muted-foreground text-sm">
+              Métricas e estatísticas globais da plataforma EQSAM CLOUD.
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            <Badge variant="outline" className="bg-background/50 border-border/50 py-1 px-3 flex items-center gap-2 rounded-full text-[10px] text-muted-foreground font-medium">
+              <Clock className="size-3" />
+              ATUALIZADO AGORA
+            </Badge>
+          </div>
         </div>
 
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+        {/* Alertas Críticos */}
+        {((stats?.criticalTickets?.length ?? 0) > 0 || (stats?.errorServices?.length ?? 0) > 0) && (
+          <div className="grid gap-4 md:grid-cols-2">
+            {(stats?.criticalTickets?.length ?? 0) > 0 && (
+              <Card className="rounded-3xl border-orange-500/20 bg-orange-500/[0.02] shadow-sm overflow-hidden border">
+                <CardHeader className="pb-2">
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="text-sm font-semibold flex items-center gap-2 text-orange-600">
+                      <MessageSquare className="size-4" />
+                      Tickets Aguardando Resposta
+                    </CardTitle>
+                    <Badge className="bg-orange-500 text-white border-none text-[10px] font-bold">
+                      {stats.pendingTicketsCount} PENDENTES
+                    </Badge>
+                  </div>
+                </CardHeader>
+                <CardContent className="px-0">
+                  <div className="divide-y divide-orange-500/10">
+                    {stats.criticalTickets.map((ticket: any) => (
+                      <a 
+                        key={ticket.id} 
+                        href={`/admin/tickets/${ticket.id}`}
+                        className="flex items-center justify-between p-3 px-6 hover:bg-orange-500/5 transition-colors group"
+                      >
+                        <div className="flex flex-col gap-0.5">
+                          <span className="text-sm font-medium line-clamp-1">{ticket.subject}</span>
+                          <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
+                            <span className="font-semibold text-orange-500/70">{ticket.profiles?.full_name}</span>
+                            <span>•</span>
+                            <span>{new Date(ticket.created_at).toLocaleDateString('pt-BR')}</span>
+                          </div>
+                        </div>
+                        <ArrowRight className="size-4 text-orange-500/30 group-hover:text-orange-500 group-hover:translate-x-1 transition-all" />
+                      </a>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {(stats?.errorServices?.length ?? 0) > 0 && (
+              <Card className="rounded-3xl border-red-500/20 bg-red-500/[0.02] shadow-sm overflow-hidden border">
+                <CardHeader className="pb-2">
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="text-sm font-semibold flex items-center gap-2 text-red-600">
+                      <AlertCircle className="size-4" />
+                      Falhas de Provisionamento
+                    </CardTitle>
+                    <Badge className="bg-red-500 text-white border-none text-[10px] font-bold uppercase">
+                      Ação Necessária
+                    </Badge>
+                  </div>
+                </CardHeader>
+                <CardContent className="px-0">
+                  <div className="divide-y divide-red-500/10">
+                    {stats.errorServices.map((service: any) => (
+                      <div 
+                        key={service.id} 
+                        className="flex items-center justify-between p-3 px-6 hover:bg-red-500/5 transition-colors"
+                      >
+                        <div className="flex flex-col gap-0.5">
+                          <span className="text-sm font-medium">{service.domain || service.username}</span>
+                          <span className="text-[10px] text-red-500/70 font-medium line-clamp-1">
+                            {service.error_message || "Erro desconhecido no servidor"}
+                          </span>
+                        </div>
+                        <a href={`/admin/clients/${service.user_id}`} className="p-1.5 rounded-full hover:bg-red-500/10 text-red-500 transition-colors">
+                          <ArrowRight className="size-4" />
+                        </a>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+          </div>
+        )}
+
+        {/* Estatísticas Rápidas */}
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
           {statCards.map((card, i) => (
-            <Card key={i} className="rounded-3xl border-border/50 shadow-sm overflow-hidden">
+            <Card key={i} className="rounded-3xl border-border/50 shadow-sm overflow-hidden group hover:border-primary/20 transition-colors border">
               <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-                <CardTitle className="text-sm font-medium">{card.title}</CardTitle>
-                <div className={`${card.bg} p-2 rounded-xl`}>
-                  <card.icon className={`size-4 ${card.color}`} />
+                <CardTitle className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">{card.title}</CardTitle>
+                <div className={cn(card.bg, "p-2 rounded-xl group-hover:scale-110 transition-transform")}>
+                  <card.icon className={cn("size-3.5", card.color)} />
                 </div>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{card.value}</div>
-                <p className="text-xs text-muted-foreground mt-1">{card.description}</p>
+                <div className="text-2xl font-bold tracking-tight">{card.value}</div>
+                <p className="text-[10px] text-muted-foreground mt-0.5">{card.description}</p>
               </CardContent>
             </Card>
           ))}
         </div>
 
         <div className="grid gap-6 md:grid-cols-7">
-          <Card className="col-span-4 rounded-3xl border-border/50 shadow-sm">
-            <CardHeader>
-              <CardTitle className="text-lg flex items-center gap-2">
-                <TrendingUp className="size-5 text-primary" /> Desempenho Financeiro
-              </CardTitle>
-              <CardDescription>Comparativo de receita acumulada e mensal.</CardDescription>
+          <Card className="col-span-4 rounded-3xl border-border/50 shadow-sm overflow-hidden border">
+            <CardHeader className="pb-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <TrendingUp className="size-4 text-primary" /> Desempenho Financeiro
+                  </CardTitle>
+                  <CardDescription className="text-xs">Receita acumulada e mensal.</CardDescription>
+                </div>
+                <div className="text-right">
+                  <div className="text-xl font-bold">{formatCurrency(stats?.totalRevenue || 0)}</div>
+                  <div className="text-[10px] text-muted-foreground uppercase font-bold tracking-tighter">Total Acumulado</div>
+                </div>
+              </div>
             </CardHeader>
-            <CardContent className="h-[300px] flex items-center justify-center border-t border-dashed border-border/50 mt-2">
-               <div className="flex flex-col items-center gap-2 text-muted-foreground">
-                  <div className="text-4xl font-bold text-foreground">{formatCurrency(stats?.totalRevenue || 0)}</div>
-                  <div className="text-sm uppercase tracking-wider font-semibold">Receita Total Acumulada</div>
-                  <div className="flex items-center gap-2 mt-4 text-emerald-500 bg-emerald-500/10 px-3 py-1 rounded-full text-xs font-bold">
+            <CardContent className="h-[240px] flex items-center justify-center border-t border-dashed border-border/50 relative bg-muted/[0.02]">
+               <div className="flex flex-col items-center gap-1">
+                  <div className="flex items-center gap-2 text-emerald-500 bg-emerald-500/10 px-3 py-1 rounded-full text-[10px] font-bold">
                     <ArrowUpRight className="size-3" />
-                    Crescimento constante
+                    Crescimento Constante
                   </div>
+                  <p className="text-xs text-muted-foreground mt-2 max-w-[200px] text-center">
+                    Módulo de análise de crescimento mensal em desenvolvimento.
+                  </p>
                </div>
             </CardContent>
           </Card>
 
-          <Card className="col-span-3 rounded-3xl border-border/50 shadow-sm">
-            <CardHeader>
-              <CardTitle className="text-lg">Atalhos Rápidos</CardTitle>
-              <CardDescription>Ações frequentes de administração.</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              {[
-                { label: "Gerenciar Produtos", to: "/admin/products" },
-                { label: "Ver Faturas", to: "/admin/invoices" },
-                { label: "Suporte (Tickets)", to: "/admin/tickets" },
-                { label: "Configurações Globais", to: "/admin/finance" },
-              ].map((link, i) => (
-                <a
-                  key={i}
-                  href={link.to}
-                  className="flex items-center justify-between p-3 rounded-2xl bg-muted/30 hover:bg-muted/50 border border-border/50 transition-colors group"
-                >
-                  <span className="text-sm font-medium">{link.label}</span>
-                  <ArrowUpRight className="size-4 text-muted-foreground group-hover:text-primary transition-colors" />
-                </a>
-              ))}
-            </CardContent>
-          </Card>
+          <div className="col-span-3 flex flex-col gap-4">
+            <Card className="rounded-3xl border-border/50 shadow-sm border">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base">Atalhos Operacionais</CardTitle>
+              </CardHeader>
+              <CardContent className="grid grid-cols-2 gap-2">
+                {[
+                  { label: "Clientes", to: "/admin/clients", icon: Users },
+                  { label: "Serviços", to: "/admin/products", icon: Server },
+                  { label: "Financeiro", to: "/admin/invoices", icon: Receipt },
+                  { label: "Tickets", to: "/admin/tickets", icon: MessageSquare },
+                ].map((link, i) => (
+                  <a
+                    key={i}
+                    href={link.to}
+                    className="flex flex-col items-start gap-2 p-3 rounded-2xl bg-muted/30 hover:bg-primary/5 border border-border/50 transition-all group"
+                  >
+                    <link.icon className="size-4 text-muted-foreground group-hover:text-primary transition-colors" />
+                    <span className="text-xs font-semibold">{link.label}</span>
+                  </a>
+                ))}
+              </CardContent>
+            </Card>
+
+            <Card className="rounded-3xl border-border/50 shadow-sm bg-primary/5 border">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-sm font-semibold flex items-center gap-2">
+                  <CheckCircle2 className="size-4 text-primary" /> Saúde do Sistema
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div className="flex items-center justify-between text-[11px]">
+                  <span className="text-muted-foreground">Gateway de Pagamento</span>
+                  <Badge variant="outline" className="text-emerald-500 border-emerald-500/20 bg-emerald-500/10 h-5 px-2">ONLINE</Badge>
+                </div>
+                <div className="flex items-center justify-between text-[11px]">
+                  <span className="text-muted-foreground">WhatsApp API</span>
+                  <Badge variant="outline" className="text-emerald-500 border-emerald-500/20 bg-emerald-500/10 h-5 px-2">CONECTADO</Badge>
+                </div>
+                <div className="flex items-center justify-between text-[11px]">
+                  <span className="text-muted-foreground">Base de Dados</span>
+                  <Badge variant="outline" className="text-emerald-500 border-emerald-500/20 bg-emerald-500/10 h-5 px-2">ESTÁVEL</Badge>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
         </div>
       </div>
     </AppShell>
