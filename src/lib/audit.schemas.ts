@@ -1,8 +1,15 @@
 import { z } from "zod";
 
 export const publicAuthEventSchema = z.object({
-  action: z.enum(["login.failed", "signup.failed", "password_reset.requested", "password_reset.failed"]),
-  email: z.string().trim().email().max(255).optional(),
+  action: z.enum([
+    "login.failed", 
+    "signup.failed", 
+    "password_reset.requested", 
+    "password_reset.failed",
+    "domain_validation_blocked",
+    "metrics_ingestion_attempt"
+  ]),
+  email: z.string().trim().email().max(255).optional().nullable(),
   description: z.string().trim().min(1).max(300),
 });
 

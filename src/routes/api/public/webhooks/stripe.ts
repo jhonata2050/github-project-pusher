@@ -1,6 +1,7 @@
 import { createFileRoute } from '@tanstack/react-router';
 import { supabaseAdmin } from '@/integrations/supabase/client.server';
 import { processProvisioning } from '@/lib/finance.server';
+import { verifyStripeSignature } from '@/lib/webhook-utils.server';
 
 export const Route = createFileRoute('/api/public/webhooks/stripe')({
   server: {
@@ -8,6 +9,21 @@ export const Route = createFileRoute('/api/public/webhooks/stripe')({
       POST: async ({ request }) => {
         const body = await request.text();
         const sig = request.headers.get('stripe-signature');
+        
+        // 1. Obter segredo do webhook das configurações
+        const { data: setting } = await supabaseAdmin
+          .from('system_settings')
+          .select('value')
+          .eq('key', 'stripe_webhook_secret')
+          .maybeSingle();
+
+        const webhookSecret = setting?.value as string;
+
+        // 2. Validar assinatura se o segredo estiver configurado
+        if (webhookSecret && !verifyStripeSignature(body, sig, webhookSecret)) {
+          console.error('[Stripe Webhook] Assinatura inválida');
+          return new Response('Invalid signature', { status: 401 });
+        }
         
         try {
           const payload = JSON.parse(body);
@@ -27,6 +43,7 @@ export const Route = createFileRoute('/api/public/webhooks/stripe')({
           
           return new Response(JSON.stringify({ received: true }), { headers: { 'Content-Type': 'application/json' } });
         } catch (err: any) {
+          console.error('[Stripe Webhook] Erro:', err.message);
           return new Response(`Webhook Error: ${err.message}`, { status: 400 });
         }
       }

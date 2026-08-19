@@ -47,6 +47,20 @@ export const validateDomain = createServerFn({ method: "POST" })
     );
     
     if (isBlocked) {
+      // Monitoramento: Registrar tentativa de uso de domínio bloqueado
+      try {
+        const { logPublicAuthEvent } = await import("./audit.functions");
+        await logPublicAuthEvent({
+          data: {
+            action: "domain_validation_blocked",
+            email: null,
+            description: `Tentativa de validar domínio bloqueado: ${domain}`
+          }
+        });
+      } catch (e) {
+        console.warn("[Checkout] Falha ao registrar log de auditoria para domínio bloqueado");
+      }
+      
       return { valid: false, message: "Este domínio é reservado e não pode ser utilizado." };
     }
 
