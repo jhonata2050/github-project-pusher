@@ -56,7 +56,7 @@ import { getServers, updateServiceDetails, getAllProducts } from "@/lib/support.
 export const Route = createFileRoute("/_authenticated/admin/clients/$clientId")({
   head: ({ params }) => ({
     meta: [
-      { title: `Detalhes do Cliente — HostPanel` },
+      { title: `Detalhes do Cliente — Eqsam` },
     ],
   }),
   loader: ({ context, params }) =>

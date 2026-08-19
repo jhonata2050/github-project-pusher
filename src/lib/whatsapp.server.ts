@@ -191,7 +191,7 @@ export async function testWhatsAppConnection() {
 
   const result = await sendWhatsAppMessage({
     to: adminPhone,
-    message: "🧪 *Teste de Conexão HostPanel*\n\nSua integração com WhatsApp via Evolution API v2 está funcionando corretamente!",
+    message: "🧪 *Teste de Conexão Eqsam*\n\nSua integração com WhatsApp via Evolution API v2 está funcionando corretamente!",
     category: "test_connection"
   });
 

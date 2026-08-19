@@ -188,7 +188,7 @@ export function AppShell({
   // Use default branding for admin area, otherwise use dynamic branding
   const branding = (isAdminArea && !pathname.startsWith('/admin/branding')) ? {
     logo_url: null,
-    app_name: "HostPanel",
+    app_name: "Eqsam",
     primary_color: "oklch(0.88 0.19 128)",
     brand_color: "oklch(0.72 0.19 148)",
     favicon_url: null,

@@ -25,7 +25,7 @@ function BrandingSettingsPage() {
 
   const [form, setForm] = useState<BrandingSettings>({
     logo_url: "",
-    app_name: "HostPanel",
+    app_name: "Eqsam",
     primary_color: "#3B82F6",
     brand_color: "#3B82F6",
     favicon_url: "",

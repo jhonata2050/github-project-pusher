@@ -105,7 +105,7 @@ export async function createPaymentSession(
   const ref = invoice.id;
   const description = `Fatura #${String(invoice.id).slice(0, 8)}`;
   const customer = {
-    name: profile?.full_name || "Cliente HostPanel",
+    name: profile?.full_name || "Cliente Eqsam",
     email: profile?.email || "cliente@exemplo.com",
     taxId: onlyDigits(profile?.tax_id) || "00000000191",
     phone: onlyDigits(profile?.phone) || "11999999999",

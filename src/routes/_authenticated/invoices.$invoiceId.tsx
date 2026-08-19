@@ -30,7 +30,7 @@ import { useServerFn } from "@tanstack/react-start";
 export const Route = createFileRoute("/_authenticated/invoices/$invoiceId")({
   head: ({ params }) => ({
     meta: [
-      { title: `Fatura #${params.invoiceId.slice(0, 8)} — HostPanel` },
+      { title: `Fatura #${params.invoiceId.slice(0, 8)} — Eqsam` },
     ],
   }),
   component: InvoiceDetailsPage,
@@ -417,7 +417,7 @@ function InvoiceDetailsPage() {
                         <span className="text-brand">{brl.format(Number(inv.total_amount))}</span>
                       </div>
                       <p className="mt-12 text-center w-full text-xs text-slate-400 italic">
-                        Este é um recibo gerado automaticamente pelo sistema HostPanel.
+                        Este é um recibo gerado automaticamente pelo sistema Eqsam.
                       </p>
                     </div>
                   </div>

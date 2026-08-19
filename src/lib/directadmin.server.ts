@@ -73,7 +73,7 @@ async function callDA({ hostname, apiUser, apiToken, command, method = 'GET', pa
         'Authorization': authHeader,
         'Content-Type': 'application/x-www-form-urlencoded',
         'Accept': 'application/json, text/plain',
-        'User-Agent': 'Mozilla/5.0 (compatible; HostPanel/1.0; +https://hostpanel.app)',
+        'User-Agent': 'Mozilla/5.0 (compatible; Eqsam/1.0; +https://eqsam.com)',
       },
       body: method === 'POST' ? searchParams.toString() : null,
       signal: AbortSignal.timeout(60_000), // Aumentado para 60s para maior resiliência
@@ -90,7 +90,7 @@ async function callDA({ hostname, apiUser, apiToken, command, method = 'GET', pa
       if (response.status === 403 && (errorText.includes('Imunify360') || errorText.includes('bot-protection') || errorText.includes('shield-root'))) {
         throw new Error(
           `O Imunify360 do servidor ${hostname} bloqueou a requisição (proteção anti-bot). ` +
-            `É necessário liberar o IP do HostPanel na whitelist do Imunify360 (Firewall > White List) ou desativar a proteção anti-bot para a porta 2222.`,
+            `É necessário liberar o IP do Eqsam na whitelist do Imunify360 (Firewall > White List) ou desativar a proteção anti-bot para a porta 2222.`,
         );
       }
       throw new Error(`DirectAdmin API Error (${response.status}): ${errorText}`);
@@ -108,7 +108,7 @@ async function callDA({ hostname, apiUser, apiToken, command, method = 'GET', pa
     }
   } catch (error: unknown) {
     if (error instanceof Error && (error.name === 'AbortError' || error.name === 'TimeoutError')) {
-      throw new Error(`O servidor DirectAdmin (${hostname}) demorou muito para responder (timeout). Verifique se o IP do HostPanel está liberado no firewall do servidor.`);
+      throw new Error(`O servidor DirectAdmin (${hostname}) demorou muito para responder (timeout). Verifique se o IP do Eqsam está liberado no firewall do servidor.`);
     }
     if (error instanceof Error && /Imunify360/i.test(error.message)) throw error;
 

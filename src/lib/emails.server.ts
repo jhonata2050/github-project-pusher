@@ -28,8 +28,8 @@ export async function sendEmail({
     }
   });
 
-  const fromEmail = config["support_email"] || "no-reply@hostpanel.app";
-  const companyName = config["company_name"] || "HostPanel";
+  const fromEmail = config["support_email"] || "no-reply@eqsam.com";
+  const companyName = config["company_name"] || "Eqsam";
   const apiKey = config["resend_api_key"];
 
   // Log the email attempt
@@ -105,7 +105,7 @@ export const EMAIL_TEMPLATES = {
         <h2 style="color: #333;">Olá! Uma nova fatura foi gerada.</h2>
         <p>A fatura <strong>#${invoiceId.slice(0, 8)}</strong> no valor de <strong>${amount}</strong> já está disponível para pagamento.</p>
         <p>Evite a suspensão dos seus serviços realizando o pagamento até a data de vencimento.</p>
-        <a href="https://hostpanel.app/invoices/${invoiceId}" style="display: inline-block; padding: 12px 25px; background: #A3E635; color: #000; text-decoration: none; border-radius: 12px; font-weight: bold; margin-top: 20px;">Ver Fatura</a>
+        <a href="https://eqsam.com/invoices/${invoiceId}" style="display: inline-block; padding: 12px 25px; background: #A3E635; color: #000; text-decoration: none; border-radius: 12px; font-weight: bold; margin-top: 20px;">Ver Fatura</a>
       </div>
     `,
   }),

@@ -21,7 +21,7 @@ import { toast } from "sonner";
 export const Route = createFileRoute("/_authenticated/admin/products")({
   head: () => ({
     meta: [
-      { title: "Produtos e planos — HostPanel" },
+      { title: "Produtos e planos — Eqsam" },
       {
         name: "description",
         content: "Gerencie os planos de hospedagem, pacotes do DirectAdmin e preços por ciclo de cobrança.",

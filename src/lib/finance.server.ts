@@ -178,7 +178,7 @@ export async function processProvisioning(invoiceId: string) {
       if (server) {
         try {
           const username = `u${Math.random().toString(36).slice(-7)}`;
-          const domain = service.domain || `${username}.temp.hostpanel.app`;
+          const domain = service.domain || `${username}.temp.eqsam.com`;
           
           await createDAAccount(server.id, {
             username,
