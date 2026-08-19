@@ -418,10 +418,10 @@ export function AppShell({
           </div>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="rounded-full text-muted-foreground relative">
-                <Bell className="size-5" />
+              <Button variant="ghost" size="icon" className="size-11 rounded-full text-muted-foreground relative hover:bg-brand/10 hover:text-brand transition-all">
+                <Bell className="size-6" />
                 {(hasOverdue || unreadCount > 0) && (
-                  <span className="absolute top-2 right-2 size-2 bg-destructive rounded-full border-2 border-background" />
+                  <span className="absolute top-2.5 right-2.5 size-2.5 bg-destructive rounded-full border-2 border-background animate-pulse" />
                 )}
               </Button>
             </DropdownMenuTrigger>
@@ -625,10 +625,10 @@ export function AppShell({
             <div className="flex items-center gap-2">
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="icon" className="rounded-full text-muted-foreground relative">
-                    <Bell className="size-5" />
+                  <Button variant="ghost" size="icon" className="size-11 rounded-full text-muted-foreground relative hover:bg-brand/10 hover:text-brand transition-all">
+                    <Bell className="size-6" />
                     {(hasOverdue || unreadCount > 0) && (
-                      <span className="absolute top-2 right-2 size-2 bg-destructive rounded-full border-2 border-background" />
+                      <span className="absolute top-2.5 right-2.5 size-2.5 bg-destructive rounded-full border-2 border-background animate-pulse" />
                     )}
                   </Button>
                 </DropdownMenuTrigger>
