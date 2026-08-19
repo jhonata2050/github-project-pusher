@@ -125,14 +125,17 @@ function AdminWhatsAppPage() {
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="space-y-2">
-                  <Label>URL da Instância</Label>
+                  <div className="flex justify-between items-center">
+                    <Label>URL da API Centralizada</Label>
+                    <span className="text-[10px] font-medium text-amber-500 bg-amber-500/10 px-2 py-0.5 rounded-full">Evolution Go</span>
+                  </div>
                   <Input 
                     placeholder="https://sua-api.com" 
                     className="rounded-xl"
                     value={localSettings.whatsapp_evolution_url}
                     onChange={e => setLocalSettings({...localSettings, whatsapp_evolution_url: e.target.value})}
                   />
-                  <p className="text-[10px] text-muted-foreground">Ex: https://evogo.srvbr.top</p>
+                  <p className="text-[10px] text-muted-foreground">Ex: https://evogo.srvbr.top (sem /v1 ou /v2)</p>
                 </div>
                 <div className="space-y-2">
                   <Label>Nome da Instância</Label>
