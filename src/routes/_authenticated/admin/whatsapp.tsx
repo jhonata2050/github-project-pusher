@@ -76,12 +76,16 @@ function AdminWhatsAppPage() {
 
   const testWhatsAppMutation = useMutation({
     mutationFn: () => testWhatsApp(),
-    onSuccess: () => {
-      toast.success("Mensagem de teste enviada com sucesso!");
+    onSuccess: (res: any) => {
+      if (res?.success) {
+        toast.success(res.message || "Mensagem de teste enviada com sucesso!");
+      } else {
+        toast.error(res?.message || "Falha no teste de conexão.");
+      }
     },
     onError: (e: any) => {
       console.error(e);
-      toast.error("Falha no teste: " + (e.message || "Erro desconhecido"));
+      toast.error("Falha no teste: " + (e?.message || "Erro desconhecido"));
     },
   });
 
