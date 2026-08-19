@@ -168,7 +168,7 @@ export async function notifyAdminWhatsApp(message: string, eventType: string) {
 
   return sendWhatsAppMessage({
     to: adminPhone,
-    message: `📢 *ALERTA ADMIN*\n\n${message}`,
+    message: `📢 *EQSAM - ALERTA ADMIN*\n\n${message}`,
     category: `admin_alert:${eventType}`
   });
 }
