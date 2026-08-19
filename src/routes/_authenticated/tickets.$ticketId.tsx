@@ -171,10 +171,9 @@ function TicketDetailsPage() {
                         isStaff ? "justify-start" : "justify-end"
                       )}
                     >
-                      <div className={cn(
-                        "flex gap-3 max-w-[85%]",
-                        isStaff ? "flex-row" : "flex-row-reverse"
-                      )}>
+                        <div className={cn(
+                          "flex gap-3 max-w-[85%]"
+                        )}>
                         <div className={cn(
                           "h-10 w-10 rounded-2xl flex items-center justify-center shrink-0 border",
                           isStaff ? "bg-brand text-brand-foreground border-brand order-1" : "bg-white text-muted-foreground border-border order-2"
