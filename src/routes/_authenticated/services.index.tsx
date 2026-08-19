@@ -18,7 +18,7 @@ import { toast } from "sonner";
 export const Route = createFileRoute("/_authenticated/services/")({
   head: () => ({
     meta: [
-      { title: "Meus Serviços — HostPanel" },
+      { title: "Meus Serviços — Eqsam" },
       {
         name: "description",
         content: "Gerencie seus serviços de hospedagem ativos.",

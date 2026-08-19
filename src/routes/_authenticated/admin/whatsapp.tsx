@@ -140,7 +140,7 @@ function AdminWhatsAppPage() {
                 <div className="space-y-2">
                   <Label>Nome da Instância</Label>
                   <Input 
-                    placeholder="HostPanel" 
+                    placeholder="Eqsam" 
                     className="rounded-xl"
                     value={localSettings.whatsapp_evolution_instance}
                     onChange={e => setLocalSettings({...localSettings, whatsapp_evolution_instance: e.target.value})}

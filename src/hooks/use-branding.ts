@@ -20,7 +20,7 @@ export function useBranding() {
 
   const settings: BrandingSettings = branding || {
     logo_url: null,
-    app_name: "HostPanel",
+    app_name: "Eqsam",
     primary_color: "oklch(0.88 0.19 128)",
     brand_color: "oklch(0.72 0.19 148)",
     favicon_url: null,
@@ -33,7 +33,7 @@ export function useBranding() {
     // O branding dinâmico (cores/favicon) é aplicado apenas para clientes
     // O AppShell já cuida de usar branding padrão ou dinâmico nos componentes visuais
     if (window.location.pathname.startsWith('/admin')) {
-      // Limpa as cores dinâmicas para o painel administrativo voltar ao padrão (HostPanel)
+      // Limpa as cores dinâmicas para o painel administrativo voltar ao padrão (Eqsam)
       document.documentElement.style.removeProperty("--primary");
       document.documentElement.style.removeProperty("--brand");
       return;

@@ -13,7 +13,7 @@ import { cn } from "@/lib/utils";
 export const Route = createFileRoute("/_authenticated/admin/invoices")({
   head: () => ({
     meta: [
-      { title: "Faturas — HostPanel" },
+      { title: "Faturas — Eqsam" },
       {
         name: "description",
         content: "Gerencie todas as faturas e cobranças dos seus clientes.",

@@ -2,7 +2,7 @@ import { supabase } from "@/integrations/supabase/client";
 
 export async function testUpdateBranding() {
   const brandingData = {
-    app_name: "HostPanel",
+    app_name: "Eqsam",
     logo_url: "https://www.eqsam.com/cdn/imagens/logo.png",
     favicon_url: "https://www.eqsam.com/cdn/imagens/logo.png",
     primary_color: "oklch(0.88 0.19 128)",

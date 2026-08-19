@@ -37,12 +37,12 @@ import { supabase } from "@/integrations/supabase/client";
 export const Route = createFileRoute("/_authenticated/admin/clients")({
   head: () => ({
     meta: [
-      { title: "Clientes — HostPanel" },
+      { title: "Clientes — Eqsam" },
       {
         name: "description",
         content: "Lista de clientes da hospedagem com contato, documento e situação da conta.",
       },
-      { property: "og:title", content: "Clientes — HostPanel" },
+      { property: "og:title", content: "Clientes — Eqsam" },
       { property: "og:description", content: "Lista de clientes com contato, documento e situação." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },

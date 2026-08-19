@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Agente de monitoramento simples para HostPanel
+# Agente de monitoramento simples para Eqsam
 # Uso: curl -sSL https://easy-push1231231sa1d131dscxsc.lovable.app/scripts/install-agent.sh | bash -s -- <VPS_ID>
 
 VPS_ID=$1
@@ -32,7 +32,7 @@ if command -v apt-get &> /dev/null; then
 fi
 
 # Criar script de coleta
-cat << EOF > /usr/local/bin/hostpanel-agent.sh
+cat << EOF > /usr/local/bin/eqsam-agent.sh
 #!/bin/bash
 VPS_ID="$VPS_ID"
 API_URL="$API_URL"
@@ -53,17 +53,17 @@ curl -s -X POST "\$API_URL" \\
      -d "{\"vps_id\": \"\$VPS_ID\", \"cpu\": \$CPU_USAGE, \"ram\": \$RAM_USAGE, \"disk\": \$DISK_USAGE}"
 EOF
 
-chmod +x /usr/local/bin/hostpanel-agent.sh
+chmod +x /usr/local/bin/eqsam-agent.sh
 
 # Adicionar ao crontab (a cada 1 minuto)
 # Remove entrada anterior se existir para evitar duplicatas
-(crontab -l 2>/dev/null | grep -v "hostpanel-agent.sh") > /tmp/cron_tmp
-echo "* * * * * /usr/local/bin/hostpanel-agent.sh > /dev/null 2>&1" >> /tmp/cron_tmp
+(crontab -l 2>/dev/null | grep -v "eqsam-agent.sh") > /tmp/cron_tmp
+echo "* * * * * /usr/local/bin/eqsam-agent.sh > /dev/null 2>&1" >> /tmp/cron_tmp
 crontab /tmp/cron_tmp
 rm /tmp/cron_tmp
 
 # Executar uma vez agora para testar
 echo "Enviando primeira coleta de teste..."
-/usr/local/bin/hostpanel-agent.sh
+/usr/local/bin/eqsam-agent.sh
 
 echo "Agente instalado e configurado com sucesso!"

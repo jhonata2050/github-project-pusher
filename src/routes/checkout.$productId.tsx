@@ -24,9 +24,9 @@ import { StepSummary } from "@/components/checkout/StepSummary";
 export const Route = createFileRoute("/checkout/$productId")({
   head: () => ({
     meta: [
-      { title: "Checkout - Contratar plano - HostPanel" },
+      { title: "Checkout - Contratar plano - Eqsam" },
       { name: "description", content: "Finalize a contratação do seu plano de hospedagem com pagamento via Pix, cartão ou boleto." },
-      { property: "og:title", content: "Checkout - Contratar plano - HostPanel" },
+      { property: "og:title", content: "Checkout - Contratar plano - Eqsam" },
       { property: "og:description", content: "Finalize a contratação do seu plano de hospedagem com pagamento via Pix, cartão ou boleto." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },

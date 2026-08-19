@@ -18,7 +18,7 @@ import { useAuth } from "@/hooks/use-auth";
 
 export const Route = createFileRoute("/_authenticated/tickets/")({
   head: () => ({
-    meta: [{ title: "Meus Tickets — HostPanel" }],
+    meta: [{ title: "Meus Tickets — Eqsam" }],
   }),
   component: ClientTicketsPage,
 });

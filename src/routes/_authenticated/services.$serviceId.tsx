@@ -26,7 +26,7 @@ import { cn } from "@/lib/utils";
 export const Route = createFileRoute("/_authenticated/services/$serviceId")({
   head: () => ({
     meta: [
-      { title: "Gerenciar Serviço — HostPanel" },
+      { title: "Gerenciar Serviço — Eqsam" },
     ],
   }),
   component: ServiceManagementPage,

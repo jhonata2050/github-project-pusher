@@ -19,13 +19,13 @@ export const Route = createFileRoute("/auth")({
   },
   head: () => ({
     meta: [
-      { title: "Entrar na HostPanel — Painel de hospedagem" },
+      { title: "Entrar na Eqsam — Painel de hospedagem" },
       {
         name: "description",
         content:
-          "Acesse o painel HostPanel para gerenciar sua hospedagem, faturas, serviços e tickets de suporte.",
+          "Acesse o painel Eqsam para gerenciar sua hospedagem, faturas, serviços e tickets de suporte.",
       },
-      { property: "og:title", content: "Entrar na HostPanel" },
+      { property: "og:title", content: "Entrar na Eqsam" },
       {
         property: "og:description",
         content: "Acesse o painel para gerenciar hospedagem, faturas e suporte.",
@@ -159,7 +159,7 @@ function AuthPage() {
         ) : (
           <>
             <h1 className="text-center text-3xl font-semibold leading-tight">
-              Boas vindas a <span className="text-brand">HostPanel.</span>
+              Boas vindas a <span className="text-brand">Eqsam.</span>
             </h1>
             <p className="mt-3 text-center text-sm text-muted-foreground">
               Gerencie sua hospedagem, faturas e suporte em um só lugar. Sem burocracia.

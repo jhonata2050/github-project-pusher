@@ -17,9 +17,9 @@ import { testGatewayConnection } from "@/lib/gateway-validation.functions";
 export const Route = createFileRoute("/_authenticated/admin/finance")({
   head: () => ({
     meta: [
-      { title: "Financeiro e Gateways — HostPanel" },
+      { title: "Financeiro e Gateways — Eqsam" },
       { name: "description", content: "Configure gateways de pagamento, credenciais de API e automação de faturamento." },
-      { property: "og:title", content: "Financeiro e Gateways — HostPanel" },
+      { property: "og:title", content: "Financeiro e Gateways — Eqsam" },
       { property: "og:description", content: "Configure gateways de pagamento e automação de faturamento." },
     ],
   }),

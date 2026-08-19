@@ -14,7 +14,7 @@ import { cn } from "@/lib/utils";
 export const Route = createFileRoute("/_authenticated/admin/coupons")({
   head: () => ({
     meta: [
-      { title: "Cupons de Desconto — HostPanel" },
+      { title: "Cupons de Desconto — Eqsam" },
       {
         name: "description",
         content: "Gerencie cupons e promoções para seus clientes.",

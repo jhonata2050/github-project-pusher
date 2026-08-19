@@ -16,7 +16,7 @@ import { useAuth } from "@/hooks/use-auth";
 export const Route = createFileRoute("/_authenticated/invoices/")({
   head: () => ({
     meta: [
-      { title: "Minhas Faturas — HostPanel" },
+      { title: "Minhas Faturas — Eqsam" },
       {
         name: "description",
         content: "Visualize e pague suas faturas de hospedagem.",

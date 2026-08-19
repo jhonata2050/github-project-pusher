@@ -16,7 +16,7 @@ import { getProductGroups, createProductGroup, updateProductGroup, deleteProduct
 export const Route = createFileRoute("/_authenticated/admin/product-groups")({
   head: () => ({
     meta: [
-      { title: "Grupos de Produtos — HostPanel" },
+      { title: "Grupos de Produtos — Eqsam" },
       {
         name: "description",
         content: "Gerencie as categorias e grupos de produtos da sua loja.",

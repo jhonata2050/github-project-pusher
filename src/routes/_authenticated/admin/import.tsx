@@ -29,15 +29,15 @@ export const Route = createFileRoute("/_authenticated/admin/import")({
   component: AdminWHMCSImportPage,
   head: () => ({
     meta: [
-      { title: "Importador WHMCS | HostPanel" },
+      { title: "Importador WHMCS | Eqsam" },
       {
         name: "description",
-        content: "Migre clientes, serviços e faturas do WHMCS para o HostPanel via arquivos CSV.",
+        content: "Migre clientes, serviços e faturas do WHMCS para o Eqsam via arquivos CSV.",
       },
-      { property: "og:title", content: "Importador WHMCS | HostPanel" },
+      { property: "og:title", content: "Importador WHMCS | Eqsam" },
       {
         property: "og:description",
-        content: "Migração de clientes, serviços e faturas do WHMCS para o HostPanel.",
+        content: "Migração de clientes, serviços e faturas do WHMCS para o Eqsam.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },

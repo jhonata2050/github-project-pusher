@@ -15,12 +15,12 @@ import { supabase } from "@/integrations/supabase/client";
 export const Route = createFileRoute("/_authenticated/profile")({
   head: () => ({
     meta: [
-      { title: "Meus dados — HostPanel" },
+      { title: "Meus dados — Eqsam" },
       {
         name: "description",
         content: "Atualize seus dados cadastrais, documento, telefone e endereço de faturamento.",
       },
-      { property: "og:title", content: "Meus dados — HostPanel" },
+      { property: "og:title", content: "Meus dados — Eqsam" },
       { property: "og:description", content: "Atualize seus dados cadastrais e de faturamento." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },

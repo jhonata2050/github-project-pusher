@@ -2,16 +2,16 @@ import { createFileRoute } from '@tanstack/react-router';
 
 const scriptContent = `#!/bin/bash
 
-echo "Desinstalando agente de monitoramento HostPanel..."
+echo "Desinstalando agente de monitoramento Eqsam..."
 
 # Remover cronjob
-(crontab -l 2>/dev/null | grep -v "hostpanel-agent.sh") > /tmp/cron_tmp
+(crontab -l 2>/dev/null | grep -v "eqsam-agent.sh") > /tmp/cron_tmp
 crontab /tmp/cron_tmp
 rm /tmp/cron_tmp
 
 # Remover arquivos
-if [ -f /usr/local/bin/hostpanel-agent.sh ]; then
-    rm /usr/local/bin/hostpanel-agent.sh
+if [ -f /usr/local/bin/eqsam-agent.sh ]; then
+    rm /usr/local/bin/eqsam-agent.sh
     echo "Script do agente removido."
 fi
 
