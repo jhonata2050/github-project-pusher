@@ -161,7 +161,7 @@ function TicketDetailsPage() {
             <Card className="rounded-3xl border-none shadow-sm overflow-hidden flex flex-col h-[600px]">
               <div ref={scrollRef} className="flex-1 overflow-y-auto p-3 sm:p-6 space-y-6 bg-muted/5">
                 {messages.map((msg: any) => {
-                  const isStaff = msg.is_staff_reply;
+                  const isStaff = msg.is_staff;
                   
                   return (
                     <div 
