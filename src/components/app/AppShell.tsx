@@ -418,10 +418,13 @@ export function AppShell({
           </div>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="size-11 rounded-full text-muted-foreground relative hover:bg-brand/10 hover:text-brand transition-all">
-                <Bell className="size-6" />
+              <Button variant="ghost" size="icon" className="size-11 rounded-full text-muted-foreground relative hover:bg-brand/10 hover:text-brand transition-all flex items-center justify-center">
+                <Bell className="size-6 text-brand" style={{ filter: 'drop-shadow(0 0 8px oklch(0.72 0.19 148 / 0.5))' }} />
                 {(hasOverdue || unreadCount > 0) && (
-                  <span className="absolute top-2.5 right-2.5 size-2.5 bg-destructive rounded-full border-2 border-background animate-pulse" />
+                  <span 
+                    className="absolute top-2 right-2 size-3 bg-destructive rounded-full border-2 border-background animate-bounce"
+                    style={{ boxShadow: '0 0 10px oklch(0.6 0.2 25 / 0.6)' }}
+                  />
                 )}
               </Button>
             </DropdownMenuTrigger>
@@ -625,10 +628,13 @@ export function AppShell({
             <div className="flex items-center gap-2">
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="icon" className="size-11 rounded-full text-muted-foreground relative hover:bg-brand/10 hover:text-brand transition-all">
-                    <Bell className="size-6" />
+                  <Button variant="ghost" size="icon" className="size-11 rounded-full text-muted-foreground relative hover:bg-brand/10 hover:text-brand transition-all flex items-center justify-center">
+                    <Bell className="size-6 text-brand" style={{ filter: 'drop-shadow(0 0 8px oklch(0.72 0.19 148 / 0.5))' }} />
                     {(hasOverdue || unreadCount > 0) && (
-                      <span className="absolute top-2.5 right-2.5 size-2.5 bg-destructive rounded-full border-2 border-background animate-pulse" />
+                      <span 
+                        className="absolute top-2 right-2 size-3 bg-destructive rounded-full border-2 border-background animate-bounce"
+                        style={{ boxShadow: '0 0 10px oklch(0.6 0.2 25 / 0.6)' }}
+                      />
                     )}
                   </Button>
                 </DropdownMenuTrigger>
