@@ -165,36 +165,44 @@ function VPSDetailsPage() {
         <div className="grid gap-6 md:grid-cols-2">
           {/* SSH Card */}
           <Card className="rounded-3xl border-2 bg-slate-950 text-slate-100 overflow-hidden">
-            <CardHeader className="bg-slate-900/50 border-b border-slate-800">
-              <CardTitle className="flex items-center gap-2"><Terminal className="h-5 w-5 text-lime-400" /> Acesso SSH</CardTitle>
+            <CardHeader className="bg-slate-900/40 border-b border-slate-800/50 pb-4">
+              <CardTitle className="flex items-center gap-2 text-base font-semibold">
+                <Terminal className="h-5 w-5 text-lime-400" /> Acesso SSH
+              </CardTitle>
               <CardDescription className="text-slate-400 text-xs">Dados para conexão via terminal (SSH)</CardDescription>
             </CardHeader>
-            <CardContent className="p-6 space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1">
-                  <span className="text-[10px] text-slate-500 uppercase font-bold tracking-widest">Host / IP</span>
-                  <div className="font-mono text-sm bg-slate-900 p-2 rounded-lg border border-slate-800">{vps.ssh_host || ipAddress || 'N/A'}</div>
+            <CardContent className="p-6 space-y-6">
+              <div className="grid grid-cols-2 gap-x-6 gap-y-4">
+                <div className="space-y-1.5">
+                  <span className="text-[10px] text-slate-500 uppercase font-bold tracking-widest block">Host / IP</span>
+                  <div className="font-mono text-sm bg-slate-900/50 p-2.5 rounded-xl border border-slate-800/50 text-slate-200">
+                    {vps.ssh_host || ipAddress || 'N/A'}
+                  </div>
                 </div>
-                <div className="space-y-1">
-                  <span className="text-[10px] text-slate-500 uppercase font-bold tracking-widest">Porta</span>
-                  <div className="font-mono text-sm bg-slate-900 p-2 rounded-lg border border-slate-800">{vps.ssh_port || 22}</div>
+                <div className="space-y-1.5">
+                  <span className="text-[10px] text-slate-500 uppercase font-bold tracking-widest block">Porta</span>
+                  <div className="font-mono text-sm bg-slate-900/50 p-2.5 rounded-xl border border-slate-800/50 text-slate-200">
+                    {vps.ssh_port || 22}
+                  </div>
                 </div>
-                <div className="space-y-1">
-                  <span className="text-[10px] text-slate-500 uppercase font-bold tracking-widest">Usuário</span>
-                  <div className="font-mono text-sm bg-slate-900 p-2 rounded-lg border border-slate-800">{vps.ssh_user || 'root'}</div>
+                <div className="space-y-1.5">
+                  <span className="text-[10px] text-slate-500 uppercase font-bold tracking-widest block">Usuário</span>
+                  <div className="font-mono text-sm bg-slate-900/50 p-2.5 rounded-xl border border-slate-800/50 text-slate-200">
+                    {vps.ssh_user || 'root'}
+                  </div>
                 </div>
-                <div className="space-y-1">
-                  <span className="text-[10px] text-slate-500 uppercase font-bold tracking-widest">Senha</span>
-                  <div className="font-mono text-sm bg-slate-900 p-2 rounded-lg border border-slate-800 flex items-center justify-between">
-                    <span>{showPassword ? (vps.ssh_password || '********') : '••••••••'}</span>
-                    <Button variant="ghost" size="icon" className="h-6 w-6 hover:bg-slate-800" onClick={() => setShowPassword(!showPassword)}>
-                      {showPassword ? <EyeOff className="h-3 w-3" /> : <Eye className="h-3 w-3" />}
+                <div className="space-y-1.5">
+                  <span className="text-[10px] text-slate-500 uppercase font-bold tracking-widest block">Senha</span>
+                  <div className="font-mono text-sm bg-slate-900/50 p-2.5 rounded-xl border border-slate-800/50 text-slate-200 flex items-center justify-between">
+                    <span className="truncate">{showPassword ? (vps.ssh_password || '********') : '••••••••'}</span>
+                    <Button variant="ghost" size="icon" className="h-5 w-5 hover:bg-slate-800 text-slate-400 hover:text-slate-100" onClick={() => setShowPassword(!showPassword)}>
+                      {showPassword ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
                     </Button>
                   </div>
                 </div>
               </div>
-              <div className="pt-2">
-                <code className="text-[10px] text-slate-500">ssh {vps.ssh_user || 'root'}@{vps.ssh_host || ipAddress} -p {vps.ssh_port || 22}</code>
+              <div className="pt-2 border-t border-slate-800/50 mt-2">
+                <code className="text-[10px] text-slate-500 font-mono">ssh {vps.ssh_user || 'root'}@{vps.ssh_host || ipAddress} -p {vps.ssh_port || 22}</code>
               </div>
             </CardContent>
           </Card>
