@@ -14,16 +14,16 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "HostPanel — Gestão de serviços de hospedagem" },
+      { title: "EQSAM CLOUD — Servidores VPS e Hospedagem de Alta Performance" },
       {
         name: "description",
         content:
-          "Gestão de serviços de hospedagem com provisionamento automático no DirectAdmin, faturas em Pix, cartão e boleto, e suporte por tickets.",
+          "Hospedagem e Servidores VPS de alta performance com painel próprio, faturas em Pix, cartão e boleto, e suporte especializado.",
       },
-      { property: "og:title", content: "HostPanel — Gestão de serviços de hospedagem" },
+      { property: "og:title", content: "EQSAM CLOUD — Servidores VPS e Hospedagem" },
       {
         property: "og:description",
-        content: "Hospedagem com DirectAdmin, faturas em Pix, cartão e boleto e suporte por tickets.",
+        content: "Hospedagem de alto desempenho com provisionamento automático e suporte por tickets.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
@@ -104,7 +104,7 @@ function Index() {
       <section className="lime-backdrop px-4 py-20">
         <div className="mx-auto max-w-3xl text-center">
           <h1 className="text-4xl font-semibold leading-tight tracking-tight sm:text-5xl">
-            Serviços de hospedagem com <span className="text-brand">painel próprio</span> e sem burocracia
+            Servidores <span className="text-brand">EQSAM CLOUD</span> e hospedagem de alta performance sem burocracia
           </h1>
           <p className="mt-5 text-lg text-muted-foreground">
             Contas criadas automaticamente no DirectAdmin, faturas em Pix, cartão e boleto, tickets de
@@ -124,7 +124,7 @@ function Index() {
       <section id="planos" className="mx-auto max-w-6xl px-4 py-20">
         <h2 className="text-center text-3xl font-semibold tracking-tight">Escolha seu plano</h2>
         <p className="mt-2 text-center text-muted-foreground">
-          Todos os planos incluem SSL grátis, backups diários e painel DirectAdmin.
+          Todos os planos incluem suporte prioritário, backups diários e infraestrutura escalável.
         </p>
 
         {groups.isLoading ? (
@@ -198,7 +198,7 @@ function Index() {
                           </li>
                           <li className="flex items-center gap-2">
                             <Check className="size-4 text-brand" />
-                            Painel DirectAdmin incluído
+                            Infraestrutura EQSAM CLOUD incluída
                           </li>
                         </ul>
                         <Button 
