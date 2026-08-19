@@ -4,7 +4,8 @@ import {
   getVPSAdminData, 
   updateVPSInstance, 
   syncContaboInstancesFn, 
-  assignInstanceToClient 
+  assignInstanceToClient,
+  updateVPSSSHDetails 
 } from '@/lib/vps-admin.functions';
 import { AppShell } from '@/components/app/AppShell';
 import { Button } from '@/components/ui/button';
@@ -15,7 +16,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
 import { useState } from 'react';
-import { Monitor, Save, RefreshCw, Link as LinkIcon, Power, PowerOff, RotateCcw, Search, UserPlus } from 'lucide-react';
+import { Monitor, Save, RefreshCw, Link as LinkIcon, Power, PowerOff, RotateCcw, Search, UserPlus, ShieldCheck } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
@@ -34,7 +35,9 @@ function AdminVPSPage() {
 
   const queryClient = useQueryClient();
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [showSSHModal, setShowSSHModal] = useState<string | null>(null);
   const [editValues, setEditValues] = useState<any>({});
+  const [sshValues, setSSHValues] = useState<any>({});
   
   const [isSyncModalOpen, setIsSyncModalOpen] = useState(false);
   const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);
@@ -108,6 +111,16 @@ function AdminVPSPage() {
     onError: (err: any) => toast.error(err.message)
   });
 
+  const sshMutation = useMutation({
+    mutationFn: (vars: any) => updateVPSSSHDetails({ data: vars }),
+    onSuccess: () => {
+      toast.success('Dados SSH atualizados!');
+      setShowSSHModal(null);
+      queryClient.invalidateQueries({ queryKey: ['admin-vps-instances'] });
+    },
+    onError: (err: any) => toast.error(err.message)
+  });
+
   const actionMutation = useMutation({
     mutationFn: (vars: { instanceId: string; action: 'start' | 'stop' | 'restart' | 'reinstall' }) => 
       contaboAction({ data: vars }),
@@ -136,6 +149,17 @@ function AdminVPSPage() {
   const handleAssignClick = (instance: any) => {
     setSelectedExternalInstance(instance);
     setIsAssignModalOpen(true);
+  };
+
+  const handleSSHClick = (vps: any) => {
+    setShowSSHModal(vps.id);
+    setSSHValues({
+      id: vps.id,
+      ssh_host: vps.ssh_host || vps.ip_address || '',
+      ssh_port: vps.ssh_port || 22,
+      ssh_user: vps.ssh_user || 'root',
+      ssh_password: vps.ssh_password || ''
+    });
   };
 
   return (
@@ -244,6 +268,9 @@ function AdminVPSPage() {
                               disabled={actionMutation.isPending}
                             >
                               <RotateCcw className="h-4 w-4 text-blue-500" />
+                            </Button>
+                            <Button size="sm" variant="ghost" onClick={() => handleSSHClick(vps)} title="Configurar SSH">
+                              <ShieldCheck className="h-4 w-4" />
                             </Button>
                             <Button size="sm" variant="ghost" onClick={() => handleEdit(vps)}>
                               Editar
@@ -399,6 +426,40 @@ function AdminVPSPage() {
                 className="rounded-xl bg-brand text-brand-foreground hover:bg-brand/90"
               >
                 Confirmar Vinculação
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+        {/* Modal SSH */}
+        <Dialog open={!!showSSHModal} onOpenChange={(open) => !open && setShowSSHModal(null)}>
+          <DialogContent className="max-w-md rounded-3xl border-none">
+            <DialogHeader>
+              <DialogTitle>Configurar Acesso SSH</DialogTitle>
+              <CardDescription>Defina as credenciais para o cliente acessar a VPS.</CardDescription>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+              <div className="grid gap-2">
+                <Label>Host / IP</Label>
+                <Input value={sshValues.ssh_host} onChange={e => setSSHValues({...sshValues, ssh_host: e.target.value})} className="rounded-xl" />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="grid gap-2">
+                  <Label>Porta</Label>
+                  <Input type="number" value={sshValues.ssh_port} onChange={e => setSSHValues({...sshValues, ssh_port: parseInt(e.target.value)})} className="rounded-xl" />
+                </div>
+                <div className="grid gap-2">
+                  <Label>Usuário</Label>
+                  <Input value={sshValues.ssh_user} onChange={e => setSSHValues({...sshValues, ssh_user: e.target.value})} className="rounded-xl" />
+                </div>
+              </div>
+              <div className="grid gap-2">
+                <Label>Senha SSH</Label>
+                <Input value={sshValues.ssh_password} onChange={e => setSSHValues({...sshValues, ssh_password: e.target.value})} className="rounded-xl" />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button onClick={() => sshMutation.mutate(sshValues)} disabled={sshMutation.isPending} className="w-full rounded-xl bg-brand text-brand-foreground">
+                Salvar Credenciais
               </Button>
             </DialogFooter>
           </DialogContent>
