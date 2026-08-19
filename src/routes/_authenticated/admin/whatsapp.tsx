@@ -97,7 +97,7 @@ function AdminWhatsAppPage() {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold tracking-tight text-foreground">Configurações de WhatsApp</h1>
-            <p className="text-muted-foreground mt-2">Integração com Evolution Go para notificações automáticas.</p>
+            <p className="text-muted-foreground mt-2">Integração com a plataforma Evolution Go para notificações automáticas via WhatsApp.</p>
           </div>
           <div className="flex items-center gap-3 bg-muted/30 p-2 rounded-2xl px-4">
             <Label htmlFor="whatsapp-enabled" className="cursor-pointer font-bold">Ativar Integração</Label>
