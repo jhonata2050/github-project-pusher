@@ -160,51 +160,61 @@ function TicketDetailsPage() {
           <div className="lg:col-span-3 space-y-4">
             <Card className="rounded-3xl border-none shadow-sm overflow-hidden flex flex-col h-[600px]">
               <div ref={scrollRef} className="flex-1 overflow-y-auto p-3 sm:p-6 space-y-6 bg-muted/5">
-                {messages.map((msg: any) => (
-                  <div 
-                    key={msg.id} 
-                    className={cn(
-                      "flex gap-4 max-w-[85%]",
-                      msg.is_staff_reply ? "mr-auto" : "ml-auto flex-row-reverse"
-                    )}
-                  >
-                    <div className={cn(
-                      "h-10 w-10 rounded-2xl flex items-center justify-center shrink-0 border",
-                      msg.is_staff_reply ? "bg-brand text-brand-foreground border-brand" : "bg-white text-muted-foreground border-border"
-                    )}>
-                      {msg.is_staff_reply ? <Shield className="h-5 w-5" /> : <User className="h-5 w-5" />}
-                    </div>
-                    <div className="space-y-1">
+                {messages.map((msg: any) => {
+                  const isStaff = msg.is_staff_reply;
+                  // Se for staff, alinha à esquerda (Eqsam). Se for cliente, alinha à direita.
+                  // Mas o requisito diz "mensagens do cliente e do administrador são exibidas com o mesmo nome e no mesmo lado"
+                  // Então vamos inverter se necessário para ficar intuitivo.
+                  const isCurrentUser = msg.user_id === data.ticket.user_id ? !isStaff : isStaff;
+                  
+                  return (
+                    <div 
+                      key={msg.id} 
+                      className={cn(
+                        "flex gap-4 max-w-[85%]",
+                        isStaff ? "mr-auto" : "ml-auto flex-row-reverse"
+                      )}
+                    >
                       <div className={cn(
-                        "p-3 sm:p-4 rounded-3xl text-sm leading-relaxed shadow-sm",
-                        msg.is_staff_reply ? "bg-brand/10 text-foreground border border-brand/20 rounded-tl-none" : "bg-white text-foreground border border-border rounded-tr-none"
+                        "h-10 w-10 rounded-2xl flex items-center justify-center shrink-0 border",
+                        isStaff ? "bg-brand text-brand-foreground border-brand" : "bg-white text-muted-foreground border-border"
                       )}>
-                        <p className="whitespace-pre-wrap">{msg.message}</p>
-                        {msg.attachments && msg.attachments.length > 0 && (
-                          <div className="mt-3 flex flex-wrap gap-2">
-                            {msg.attachments.map((url: string, idx: number) => (
-                              <a 
-                                key={idx} 
-                                href={url} 
-                                target="_blank" 
-                                rel="noopener noreferrer"
-                                className="block rounded-lg overflow-hidden border border-border hover:opacity-80 transition-opacity"
-                              >
-                                <img src={url} alt="Attachment" className="h-20 w-20 object-cover" />
-                              </a>
-                            ))}
-                          </div>
-                        )}
+                        {isStaff ? <Shield className="h-5 w-5" /> : <User className="h-5 w-5" />}
                       </div>
-                      <p className={cn(
-                        "text-[10px] text-muted-foreground mt-1",
-                        msg.is_staff_reply ? "text-left" : "text-right"
-                      )}>
-                        {msg.profile?.full_name || (msg.is_staff_reply ? "Equipe de Suporte" : "Você")} • {new Date(msg.created_at).toLocaleString("pt-BR")}
-                      </p>
+                      <div className="space-y-1">
+                        <div className={cn(
+                          "p-3 sm:p-4 rounded-3xl text-sm leading-relaxed shadow-sm",
+                          isStaff 
+                            ? "bg-brand/10 text-foreground border border-brand/20 rounded-tl-none" 
+                            : "bg-white text-foreground border border-border rounded-tr-none"
+                        )}>
+                          <p className="whitespace-pre-wrap">{msg.message}</p>
+                          {msg.attachments && msg.attachments.length > 0 && (
+                            <div className="mt-3 flex flex-wrap gap-2">
+                              {msg.attachments.map((url: string, idx: number) => (
+                                <a 
+                                  key={idx} 
+                                  href={url} 
+                                  target="_blank" 
+                                  rel="noopener noreferrer"
+                                  className="block rounded-lg overflow-hidden border border-border hover:opacity-80 transition-opacity"
+                                >
+                                  <img src={url} alt="Attachment" className="h-20 w-20 object-cover" />
+                                </a>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                        <p className={cn(
+                          "text-[10px] text-muted-foreground mt-1",
+                          isStaff ? "text-left font-bold text-brand" : "text-right"
+                        )}>
+                          {isStaff ? "Equipe Eqsam" : (msg.profile?.full_name || "Cliente")} • {new Date(msg.created_at).toLocaleString("pt-BR")}
+                        </p>
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
 
               <div className="p-4 border-t border-border bg-white">
