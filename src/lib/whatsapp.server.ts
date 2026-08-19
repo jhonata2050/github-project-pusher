@@ -108,9 +108,10 @@ export async function sendWhatsAppMessage({
         metadata: { to, category, attempts: allAttempts } as any
       });
       
-      const detailedError = allAttempts.find(a => a.status === 404) 
-        ? "Endpoint não encontrado (404). Verifique se a URL da API está correta (incluindo /v1 ou /v2 se necessário)."
-        : JSON.stringify(allAttempts);
+      const isAll404 = allAttempts.every(a => a.status === 404);
+      const detailedError = isAll404 
+        ? "Todos os endpoints retornaram 404. A URL informada (evogo.srvbr.top) pode estar incompleta. Tente adicionar o caminho da API (ex: /v1 ou /v2) no final da URL."
+        : `Erro na API: ${allAttempts.map(a => `${a.name}: ${a.status || 'ERR'}`).join(' | ')}`;
 
       return { success: false, error: detailedError };
     }
@@ -121,6 +122,7 @@ export async function sendWhatsAppMessage({
     } catch (e) {
       result = { raw: finalResponse.text };
     }
+
 
 
 
