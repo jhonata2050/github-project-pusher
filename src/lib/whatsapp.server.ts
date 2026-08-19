@@ -158,7 +158,7 @@ export async function testWhatsAppConnection() {
   const adminPhone = setting?.value?.toString();
 
   if (!adminPhone) {
-    throw new Error("Telefone do administrador não configurado para o teste.");
+    return { success: false, message: "Telefone do administrador não configurado. Preencha e salve antes de testar." };
   }
 
   const result = await sendWhatsAppMessage({
@@ -168,8 +168,31 @@ export async function testWhatsAppConnection() {
   });
 
   if (!result.success) {
-    throw new Error(JSON.stringify(result.error || result.reason));
+    const reasonMap: Record<string, string> = {
+      disabled: "A integração está desativada. Ative e salve as configurações antes de testar.",
+      incomplete_config: "Configurações incompletas: preencha URL, Nome da Instância e Token, e salve antes de testar.",
+    };
+
+    let message = result.reason ? reasonMap[result.reason] : undefined;
+
+    if (!message) {
+      const err: any = result.error;
+      if (typeof err === "string" && err.trim()) {
+        message = err;
+      } else if (err && typeof err === "object") {
+        message =
+          err.message ||
+          err.error ||
+          (Array.isArray(err.response?.message) ? err.response.message.join(", ") : err.response?.message) ||
+          JSON.stringify(err);
+      }
+    }
+
+    return {
+      success: false,
+      message: message && message !== "{}" ? message : "Falha ao contatar a Evolution Go. Verifique URL, instância e token.",
+    };
   }
 
-  return result.data;
+  return { success: true, message: `Mensagem de teste enviada para ${adminPhone}.` };
 }
