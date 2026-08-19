@@ -192,8 +192,8 @@ function VPSDetailsPage() {
                   </div>
                 </div>
                 <div className="space-y-1.5">
-                  <span className="text-[10px] text-slate-500 uppercase font-bold tracking-widest block">Senha</span>
-                  <div className="font-mono text-sm bg-slate-900/50 p-2.5 rounded-xl border border-slate-800/50 text-slate-200 flex items-center justify-between">
+                  <span className="text-[10px] text-slate-400 uppercase font-bold tracking-widest block opacity-70">Senha</span>
+                  <div className="font-mono text-sm bg-[#0f172a]/80 p-3 rounded-xl border border-slate-800/50 text-slate-200 flex items-center justify-between">
                     <span className="truncate">{showPassword ? (vps.ssh_password || '********') : '••••••••'}</span>
                     <Button variant="ghost" size="icon" className="h-5 w-5 hover:bg-slate-800 text-slate-400 hover:text-slate-100" onClick={() => setShowPassword(!showPassword)}>
                       {showPassword ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
