@@ -59,8 +59,13 @@ function AuthPage() {
 
   useEffect(() => {
     if (!loading && user) {
+      console.log("[Auth] User logged in:", user.id, "isStaff:", isStaff, "redirect:", redirect);
       const defaultDest = isStaff ? "/admin" : "/dashboard";
-      void navigate({ to: (redirect as any) || defaultDest });
+      const destination = (redirect as string) || defaultDest;
+      console.log("[Auth] Navigating to:", destination);
+      
+      // Use replace: true to avoid auth page in history
+      void navigate({ to: destination as any, replace: true });
     }
   }, [loading, user, isStaff, navigate, redirect]);
 
