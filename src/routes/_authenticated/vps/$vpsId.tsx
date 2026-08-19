@@ -117,7 +117,7 @@ function VPSDetailsPage() {
               </Link>
             </Button>
             <div>
-              <h1 className="text-3xl font-bold tracking-tight">EQSAM CLOUD: {details.displayName || ipAddress}</h1>
+              <h1 className="text-3xl font-bold tracking-tight">{details.displayName || ipAddress}</h1>
               <div className="flex items-center gap-2 mt-1">
                 <Badge variant={vps.status === 'active' ? 'default' : 'secondary'} className="rounded-full">
                   {vps.status === 'active' ? 'VPS em Operação' : 'Offline'}
