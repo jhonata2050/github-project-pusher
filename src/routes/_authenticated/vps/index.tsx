@@ -104,19 +104,19 @@ function VPSManagementPage() {
                   <div className="grid grid-cols-3 gap-2 text-xs mb-6 border-t pt-4">
                     <div className="flex flex-col gap-1">
                       <span className="text-muted-foreground">CPU</span>
-                      <span className="font-semibold">{vps.cpu_cores || '2'} vCPU</span>
+                      <span className="font-semibold">{vps.last_metrics?.cpu || vps.cpu_cores || '2'} vCPU</span>
                     </div>
                     <div className="flex flex-col gap-1">
                       <span className="text-muted-foreground">RAM</span>
-                      <span className="font-semibold">{vps.ram_gb || '4'} GB</span>
+                      <span className="font-semibold">{vps.last_metrics?.ram || vps.ram_gb || '4'} GB</span>
                     </div>
                     <div className="flex flex-col gap-1">
-                      <span className="text-muted-foreground">Disk</span>
-                      <span className="font-semibold">{vps.disk_gb || '50'} GB</span>
+                      <span className="text-muted-foreground">Disco</span>
+                      <span className="font-semibold">{vps.last_metrics?.disk || vps.disk_gb || '50'} GB</span>
                     </div>
                   </div>
                   
-                  <Button asChild className="w-full rounded-xl gap-2">
+                  <Button asChild className="w-full rounded-xl gap-2 font-bold bg-[#B4F461] hover:bg-[#A3E350] text-black border-none">
                     <Link to="/vps/$vpsId" params={{ vpsId: vps.id }}>
                       Ver Detalhes <Activity className="h-4 w-4" />
                     </Link>
