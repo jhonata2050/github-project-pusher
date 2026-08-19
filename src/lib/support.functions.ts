@@ -248,9 +248,8 @@ export const replyTicket = createServerFn({ method: "POST" })
       }
     }
 
-    // Notificar Admin via WhatsApp sobre nova resposta
+    // Notificar via WhatsApp sobre nova resposta
     try {
-      const { notifyAdminWhatsApp } = await import("./whatsapp.server");
       const { notifyAdminWhatsApp, sendWhatsAppMessage } = await import("./whatsapp.server");
       
       const clientName = (ticket as any)?.profiles?.full_name || "Cliente";
@@ -296,7 +295,11 @@ export const replyTicket = createServerFn({ method: "POST" })
             "_Eqsam Cloud - Excelência em Hospedagem_"
           ].join("\n");
           
-          await sendWhatsAppMessage(clientProfile.phone, clientMsg);
+          await sendWhatsAppMessage({
+            to: clientProfile.phone,
+            message: clientMsg,
+            category: "ticket_reply"
+          });
         }
       }
     } catch (e) {
