@@ -59,15 +59,26 @@ function AuthPage() {
 
   useEffect(() => {
     if (!loading && user) {
+      console.log("[Auth] User logged in:", user.id, "isStaff:", isStaff, "redirect:", redirect);
       const defaultDest = isStaff ? "/admin" : "/dashboard";
-      void navigate({ to: (redirect as any) || defaultDest });
+      const destination = (redirect as string) || defaultDest;
+      console.log("[Auth] Navigating to:", destination);
+      
+      // Use replace: true to avoid auth page in history
+      void navigate({ to: destination as any, replace: true });
     }
   }, [loading, user, isStaff, navigate, redirect]);
 
   async function handleGoogle() {
     setBusy(true);
+    // Preservar o redirecionamento original se houver
+    const searchParams = new URLSearchParams();
+    if (redirect) searchParams.set("redirect", redirect);
+    
+    const callbackUrl = `${window.location.origin}/auth?${searchParams.toString()}`;
+
     const result = await lovable.auth.signInWithOAuth("google", {
-      redirect_uri: window.location.origin,
+      redirect_uri: callbackUrl,
     });
     if (result.error) {
       void logPublicAuthEvent({ data: {
@@ -79,7 +90,6 @@ function AuthPage() {
       return;
     }
     if (result.redirected) return;
-    // Pós-redirecionamento OAuth, o useEffect cuidará do destino correto baseado no papel
   }
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
