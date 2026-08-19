@@ -201,6 +201,12 @@ export const replyTicket = createServerFn({ method: "POST" })
   .handler(async ({ data: input, context }) => {
     const { data: isAdmin } = await context.supabase.rpc("has_role", { _user_id: context.userId, _role: "admin" });
 
+    const { data: replierProfile } = await context.supabase
+      .from("profiles")
+      .select("full_name")
+      .eq("id", context.userId)
+      .single();
+
     const { data, error } = await context.supabase
       .from("ticket_messages")
       .insert({
@@ -215,51 +221,86 @@ export const replyTicket = createServerFn({ method: "POST" })
 
     if (error) throw new Error(error.message);
 
-    await context.supabase
+    const { data: ticket } = await context.supabase
       .from("tickets")
       .update({ 
         status: isAdmin ? "answered" : "customer-reply",
         updated_at: new Date().toISOString()
       })
-      .eq("id", input.ticketId);
+      .eq("id", input.ticketId)
+      .select("subject, user_id, profiles(full_name, email)")
+      .single();
+
+    // Criar notificação no sistema
+    if (ticket) {
+      const notificationUserId = isAdmin ? (ticket as any).user_id : null; // Se admin respondeu, notifica o cliente
+      
+      // Se cliente respondeu, poderíamos notificar os admins, mas vamos focar no requisito de notificar o cliente
+      if (isAdmin && notificationUserId) {
+        await supabaseAdmin
+          .from("notifications")
+          .insert({
+            user_id: notificationUserId,
+            title: "Ticket Respondido",
+            message: `Seu ticket "${ticket.subject}" recebeu uma nova resposta da nossa equipe.`,
+            link: `/tickets/${input.ticketId}`
+          });
+      }
+    }
 
     // Notificar Admin via WhatsApp sobre nova resposta
     try {
       const { notifyAdminWhatsApp } = await import("./whatsapp.server");
-      const { data: ticket } = await context.supabase
-        .from("tickets")
-        .select("subject, profiles(full_name, email)")
-        .eq("id", input.ticketId)
-        .single();
+      const { notifyAdminWhatsApp, sendWhatsAppMessage } = await import("./whatsapp.server");
       
-      const { data: replierProfile } = await context.supabase
-        .from("profiles")
-        .select("full_name")
-        .eq("id", context.userId)
-        .single();
-
       const clientName = (ticket as any)?.profiles?.full_name || "Cliente";
       const clientEmail = (ticket as any)?.profiles?.email || "N/A";
-      const replierName = isAdmin ? "Administrador" : (replierProfile?.full_name || "Cliente");
+      const replierName = isAdmin ? "Eqsam Suporte" : (replierProfile?.full_name || "Cliente");
       const now = new Date().toLocaleString("pt-BR");
 
-      const whatsappMsg = [
-        "📬 *Resposta em Ticket*",
-        "",
-        `*ID:* #${input.ticketId.slice(0, 8)}`,
-        `*Assunto:* ${ticket?.subject}`,
-        `*De:* ${replierName}`,
-        `*Data/Hora:* ${now}`,
-        "",
-        `*Cliente:* ${clientName}`,
-        `*E-mail:* ${clientEmail}`,
-        "",
-        `*Mensagem:* ${input.message.slice(0, 150)}${input.message.length > 150 ? "..." : ""}`
-      ].join("\n");
+      // Notificar Admin se for resposta de cliente
+      if (!isAdmin) {
+        const adminMsg = [
+          "📬 *Resposta em Ticket*",
+          "",
+          `*ID:* #${input.ticketId.slice(0, 8)}`,
+          `*Assunto:* ${ticket?.subject}`,
+          `*De:* ${replierName}`,
+          `*Data/Hora:* ${now}`,
+          "",
+          `*Cliente:* ${clientName}`,
+          `*E-mail:* ${clientEmail}`,
+          "",
+          `*Mensagem:* ${input.message.slice(0, 150)}${input.message.length > 150 ? "..." : ""}`
+        ].join("\n");
+        await notifyAdminWhatsApp(adminMsg, "ticket_events");
+      } 
+      // Notificar Cliente se for resposta de admin
+      else {
+        const { data: clientProfile } = await supabaseAdmin
+          .from("profiles")
+          .select("phone")
+          .eq("id", (ticket as any).user_id)
+          .single();
 
-      await notifyAdminWhatsApp(whatsappMsg, "ticket_events");
+        if (clientProfile?.phone) {
+          const clientMsg = [
+            "✅ *Seu Ticket foi Respondido!*",
+            "",
+            `Olá, *${clientName}*!`,
+            `Seu ticket *#${input.ticketId.slice(0, 8)} - ${ticket?.subject}* acaba de receber uma resposta da nossa equipe técnica.`,
+            "",
+            "Para visualizar a resposta e continuar o atendimento, acesse seu painel:",
+            `🔗 https://eqsam.com/tickets/${input.ticketId}`,
+            "",
+            "_Eqsam Cloud - Excelência em Hospedagem_"
+          ].join("\n");
+          
+          await sendWhatsAppMessage(clientProfile.phone, clientMsg);
+        }
+      }
     } catch (e) {
-      console.warn("[WhatsApp] Falha ao notificar admin sobre resposta em ticket:", e);
+      console.warn("[WhatsApp] Falha ao enviar notificação:", e);
     }
 
     return data;
