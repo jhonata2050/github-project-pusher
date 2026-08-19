@@ -205,13 +205,13 @@ export async function getAdminStatsImplementation(
     .select("*", { count: "exact", head: true })
     .eq("status", "pending");
 
-  // Calcular receita total (simplificado)
+  // Calcular receita total
   const { data: paidInvoices } = await context.supabase
     .from("invoices")
-    .select("total")
+    .select("total_amount")
     .eq("status", "paid");
   
-  const totalRevenue = (paidInvoices || []).reduce((acc, inv) => acc + (Number(inv.total) || 0), 0);
+  const totalRevenue = (paidInvoices || []).reduce((acc, inv) => acc + (Number(inv.total_amount) || 0), 0);
 
   // Obter receita deste mês
   const firstDayOfMonth = new Date();
@@ -220,11 +220,12 @@ export async function getAdminStatsImplementation(
 
   const { data: monthInvoices } = await context.supabase
     .from("invoices")
-    .select("total")
+    .select("total_amount")
     .eq("status", "paid")
     .gte("paid_at", firstDayOfMonth.toISOString());
 
-  const monthRevenue = (monthInvoices || []).reduce((acc, inv) => acc + (Number(inv.total) || 0), 0);
+  const monthRevenue = (monthInvoices || []).reduce((acc, inv) => acc + (Number(inv.total_amount) || 0), 0);
+
 
   return {
     clients: clientsCount || 0,
