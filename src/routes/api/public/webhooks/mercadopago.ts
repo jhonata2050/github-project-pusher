@@ -8,11 +8,43 @@ export const Route = createFileRoute('/api/public/webhooks/mercadopago')({
     handlers: {
       POST: async ({ request }) => {
         const body = await request.text();
+        const xSignature = request.headers.get('x-signature');
+        
+        // 1. Obter segredo do webhook
+        const { data: setting } = await supabaseAdmin
+          .from('system_settings')
+          .select('value')
+          .eq('key', 'mercadopago_webhook_secret')
+          .maybeSingle();
+
+        const webhookSecret = setting?.value as string;
+
+        // 2. Validar assinatura do Mercado Pago (padrão v2)
+        if (webhookSecret && xSignature) {
+          try {
+            const parts = xSignature.split(',');
+            const ts = parts.find(p => p.startsWith('ts='))?.split('=')[1];
+            const hash = parts.find(p => p.startsWith('v1='))?.split('=')[1];
+            
+            if (ts && hash) {
+              const url = new URL(request.url);
+              const resourceId = url.searchParams.get('id');
+              const manifest = `id:${resourceId};request-id:${request.headers.get('x-request-id') || ''};ts:${ts};`;
+              const expected = createHmac('sha256', webhookSecret).update(manifest).digest('hex');
+              
+              if (!timingSafeEqual(Buffer.from(hash), Buffer.from(expected))) {
+                console.error('[Mercado Pago Webhook] Assinatura inválida');
+                return new Response('Invalid signature', { status: 401 });
+              }
+            }
+          } catch (e) {
+            console.warn('[Mercado Pago Webhook] Erro ao validar assinatura:', e);
+          }
+        }
+
         const topic = new URL(request.url).searchParams.get('topic');
         const id = new URL(request.url).searchParams.get('id');
         
-        // Mercado Pago envia notificações de diferentes formas
-        // Se for via body (v1/payments)
         let payload: any = {};
         try { payload = JSON.parse(body); } catch(e) {}
         
@@ -20,8 +52,6 @@ export const Route = createFileRoute('/api/public/webhooks/mercadopago')({
         const action = payload.action || topic;
 
         if (resourceId && (action === 'payment.created' || action === 'payment.updated' || topic === 'payment')) {
-          // Buscar detalhes do pagamento no Mercado Pago (precisaria do Access Token)
-          // Simplificando: vamos buscar a transação no banco pela referência
           const { data: transaction } = await supabaseAdmin
             .from('transactions')
             .select('*, invoices(*)')
@@ -29,10 +59,6 @@ export const Route = createFileRoute('/api/public/webhooks/mercadopago')({
             .single();
 
           if (transaction && transaction.status !== 'completed') {
-            // Aqui em produção você faria um fetch no MP para confirmar o status 'approved'
-            // await fetch(`https://api.mercadopago.com/v1/payments/${resourceId}`, ...)
-            
-            // Simulação de confirmação
             await supabaseAdmin.from('transactions').update({ status: 'completed' }).eq('id', transaction.id);
             const { data: invoice } = await supabaseAdmin
               .from('invoices')
