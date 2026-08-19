@@ -161,7 +161,7 @@ function TicketDetailsPage() {
             <Card className="rounded-3xl border-none shadow-sm overflow-hidden flex flex-col h-[600px]">
               <div ref={scrollRef} className="flex-1 overflow-y-auto p-3 sm:p-6 space-y-6 bg-muted/5">
                 {messages.map((msg: any) => {
-                  const isStaff = msg.is_staff_reply;
+                  const isStaff = msg.is_staff;
                   
                   return (
                     <div 
@@ -171,17 +171,19 @@ function TicketDetailsPage() {
                         isStaff ? "justify-start" : "justify-end"
                       )}
                     >
-                      <div className={cn(
-                        "flex gap-3 max-w-[85%]",
-                        isStaff ? "flex-row" : "flex-row-reverse"
-                      )}>
+                        <div className={cn(
+                          "flex gap-3 max-w-[85%]"
+                        )}>
                         <div className={cn(
                           "h-10 w-10 rounded-2xl flex items-center justify-center shrink-0 border",
-                          isStaff ? "bg-brand text-brand-foreground border-brand" : "bg-white text-muted-foreground border-border"
+                          isStaff ? "bg-brand text-brand-foreground border-brand order-1" : "bg-white text-muted-foreground border-border order-2"
                         )}>
                           {isStaff ? <Shield className="h-5 w-5" /> : <User className="h-5 w-5" />}
                         </div>
-                        <div className="flex flex-col">
+                        <div className={cn(
+                          "flex flex-col",
+                          isStaff ? "order-2" : "order-1"
+                        )}>
                           <div className={cn(
                             "p-3 sm:p-4 rounded-3xl text-sm leading-relaxed shadow-sm",
                             isStaff 
@@ -209,7 +211,7 @@ function TicketDetailsPage() {
                             "text-[10px] text-muted-foreground mt-1",
                             isStaff ? "text-left font-bold text-brand" : "text-right"
                           )}>
-                            {isStaff ? "Equipe Eqsam" : (msg.profile?.full_name || "Cliente")} • {new Date(msg.created_at).toLocaleString("pt-BR")}
+                            {isStaff ? "Equipe de suporte Eqsam" : (msg.profile?.full_name || "Cliente")} • {new Date(msg.created_at).toLocaleString("pt-BR")}
                           </p>
                         </div>
                       </div>
