@@ -124,13 +124,13 @@ function AdminDashboardPage() {
                       Tickets Aguardando Resposta
                     </CardTitle>
                     <Badge className="bg-orange-500 text-white border-none text-[10px] font-bold">
-                      {stats.pendingTicketsCount} PENDENTES
+                      {stats?.pendingTicketsCount ?? 0} PENDENTES
                     </Badge>
                   </div>
                 </CardHeader>
                 <CardContent className="px-0">
                   <div className="divide-y divide-orange-500/10">
-                    {stats.criticalTickets.map((ticket: any) => (
+                    {stats?.criticalTickets?.map((ticket: any) => (
                       <a 
                         key={ticket.id} 
                         href={`/admin/tickets/${ticket.id}`}
@@ -158,7 +158,7 @@ function AdminDashboardPage() {
                   <div className="flex items-center justify-between">
                     <CardTitle className="text-sm font-semibold flex items-center gap-2 text-red-600">
                       <AlertCircle className="size-4" />
-                      Falhas de Provisionamento
+                      Pendências de Provisionamento
                     </CardTitle>
                     <Badge className="bg-red-500 text-white border-none text-[10px] font-bold uppercase">
                       Ação Necessária
@@ -167,7 +167,7 @@ function AdminDashboardPage() {
                 </CardHeader>
                 <CardContent className="px-0">
                   <div className="divide-y divide-red-500/10">
-                    {stats.errorServices.map((service: any) => (
+                    {stats?.errorServices?.map((service: any) => (
                       <div 
                         key={service.id} 
                         className="flex items-center justify-between p-3 px-6 hover:bg-red-500/5 transition-colors"
@@ -175,7 +175,7 @@ function AdminDashboardPage() {
                         <div className="flex flex-col gap-0.5">
                           <span className="text-sm font-medium">{service.domain || service.username}</span>
                           <span className="text-[10px] text-red-500/70 font-medium line-clamp-1">
-                            {service.error_message || "Erro desconhecido no servidor"}
+                            {service.error_message || "Aguardando processamento"}
                           </span>
                         </div>
                         <a href={`/admin/clients/${service.user_id}`} className="p-1.5 rounded-full hover:bg-red-500/10 text-red-500 transition-colors">
