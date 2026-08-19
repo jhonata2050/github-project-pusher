@@ -144,3 +144,32 @@ export async function notifyAdminWhatsApp(message: string, eventType: string) {
     category: `admin_alert:${eventType}`
   });
 }
+
+/**
+ * Testa a conexão e envia uma mensagem de teste
+ */
+export async function testWhatsAppConnection() {
+  const { data: setting } = await supabaseAdmin
+    .from("system_settings")
+    .select("value")
+    .eq("key", "whatsapp_admin_phone")
+    .maybeSingle();
+
+  const adminPhone = setting?.value?.toString();
+
+  if (!adminPhone) {
+    throw new Error("Telefone do administrador não configurado para o teste.");
+  }
+
+  const result = await sendWhatsAppMessage({
+    to: adminPhone,
+    message: "🧪 *Teste de Conexão HostPanel*\n\nSua integração com WhatsApp via Evolution Go está funcionando corretamente!",
+    category: "test_connection"
+  });
+
+  if (!result.success) {
+    throw new Error(JSON.stringify(result.error || result.reason));
+  }
+
+  return result.data;
+}
