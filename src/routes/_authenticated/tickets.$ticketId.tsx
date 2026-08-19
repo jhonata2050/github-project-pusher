@@ -167,46 +167,51 @@ function TicketDetailsPage() {
                     <div 
                       key={msg.id} 
                       className={cn(
-                        "flex gap-4 max-w-[85%]",
-                        isStaff ? "mr-auto" : "ml-auto flex-row-reverse"
+                        "w-full flex",
+                        isStaff ? "justify-start" : "justify-end"
                       )}
                     >
                       <div className={cn(
-                        "h-10 w-10 rounded-2xl flex items-center justify-center shrink-0 border",
-                        isStaff ? "bg-brand text-brand-foreground border-brand" : "bg-white text-muted-foreground border-border"
+                        "flex gap-3 max-w-[85%]",
+                        isStaff ? "flex-row" : "flex-row-reverse"
                       )}>
-                        {isStaff ? <Shield className="h-5 w-5" /> : <User className="h-5 w-5" />}
-                      </div>
-                      <div className="flex flex-col">
                         <div className={cn(
-                          "p-3 sm:p-4 rounded-3xl text-sm leading-relaxed shadow-sm",
-                          isStaff 
-                            ? "bg-brand/10 text-foreground border border-brand/20 rounded-tl-none" 
-                            : "bg-white text-foreground border border-border rounded-tr-none"
+                          "h-10 w-10 rounded-2xl flex items-center justify-center shrink-0 border",
+                          isStaff ? "bg-brand text-brand-foreground border-brand" : "bg-white text-muted-foreground border-border"
                         )}>
-                          <p className="whitespace-pre-wrap">{msg.message}</p>
-                          {msg.attachments && msg.attachments.length > 0 && (
-                            <div className="mt-3 flex flex-wrap gap-2">
-                              {msg.attachments.map((url: string, idx: number) => (
-                                <a 
-                                  key={idx} 
-                                  href={url} 
-                                  target="_blank" 
-                                  rel="noopener noreferrer"
-                                  className="block rounded-lg overflow-hidden border border-border hover:opacity-80 transition-opacity"
-                                >
-                                  <img src={url} alt="Attachment" className="h-20 w-20 object-cover" />
-                                </a>
-                              ))}
-                            </div>
-                          )}
+                          {isStaff ? <Shield className="h-5 w-5" /> : <User className="h-5 w-5" />}
                         </div>
-                        <p className={cn(
-                          "text-[10px] text-muted-foreground mt-1",
-                          isStaff ? "text-left font-bold text-brand" : "text-right"
-                        )}>
-                          {isStaff ? "Equipe Eqsam" : (msg.profile?.full_name || "Cliente")} • {new Date(msg.created_at).toLocaleString("pt-BR")}
-                        </p>
+                        <div className="flex flex-col">
+                          <div className={cn(
+                            "p-3 sm:p-4 rounded-3xl text-sm leading-relaxed shadow-sm",
+                            isStaff 
+                              ? "bg-brand/10 text-foreground border border-brand/20 rounded-tl-none" 
+                              : "bg-white text-foreground border border-border rounded-tr-none"
+                          )}>
+                            <p className="whitespace-pre-wrap">{msg.message}</p>
+                            {msg.attachments && msg.attachments.length > 0 && (
+                              <div className="mt-3 flex flex-wrap gap-2">
+                                {msg.attachments.map((url: string, idx: number) => (
+                                  <a 
+                                    key={idx} 
+                                    href={url} 
+                                    target="_blank" 
+                                    rel="noopener noreferrer"
+                                    className="block rounded-lg overflow-hidden border border-border hover:opacity-80 transition-opacity"
+                                  >
+                                    <img src={url} alt="Attachment" className="h-20 w-20 object-cover" />
+                                  </a>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                          <p className={cn(
+                            "text-[10px] text-muted-foreground mt-1",
+                            isStaff ? "text-left font-bold text-brand" : "text-right"
+                          )}>
+                            {isStaff ? "Equipe Eqsam" : (msg.profile?.full_name || "Cliente")} • {new Date(msg.created_at).toLocaleString("pt-BR")}
+                          </p>
+                        </div>
                       </div>
                     </div>
                   );
