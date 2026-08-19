@@ -225,6 +225,56 @@ export function AppShell({
 
   const hasOverdue = overdueInvoices && overdueInvoices.length > 0;
 
+  const { data: notifications, refetch: refetchNotifications } = useQuery({
+    queryKey: ["notifications", user?.id],
+    queryFn: async () => {
+      if (!user) return [];
+      const { data, error } = await supabase
+        .from("notifications")
+        .select("*")
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false })
+        .limit(10);
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!user,
+  });
+
+  const unreadCount = notifications?.filter(n => !n.read).length || 0;
+
+  useEffect(() => {
+    if (!user) return;
+
+    const channel = supabase
+      .channel("notifications-changes")
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "notifications",
+          filter: `user_id=eq.${user.id}`,
+        },
+        () => {
+          refetchNotifications();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user, refetchNotifications]);
+
+  const markAsRead = async (id: string) => {
+    await supabase
+      .from("notifications")
+      .update({ read: true })
+      .eq("id", id);
+    refetchNotifications();
+  };
+
   const name = profile?.full_name ?? user?.email ?? (user ? "Conta" : "Visitante");
   const initials = name.slice(0, 2).toUpperCase();
 
