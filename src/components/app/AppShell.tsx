@@ -416,12 +416,76 @@ export function AppShell({
             </Sheet>
             <span className="text-lg font-semibold">{branding.app_name}</span>
           </div>
-          <Button variant="ghost" size="icon" className="rounded-full text-muted-foreground relative">
-            <Bell className="size-5" />
-            {hasOverdue && (
-              <span className="absolute top-2 right-2 size-2 bg-destructive rounded-full border-2 border-background" />
-            )}
-          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="icon" className="rounded-full text-muted-foreground relative">
+                <Bell className="size-5" />
+                {(hasOverdue || unreadCount > 0) && (
+                  <span className="absolute top-2 right-2 size-2 bg-destructive rounded-full border-2 border-background" />
+                )}
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-80 p-0 overflow-hidden rounded-2xl">
+              <div className="p-4 border-b border-border bg-muted/30">
+                <h3 className="font-semibold text-sm">Notificações</h3>
+              </div>
+              <div className="max-h-80 overflow-y-auto">
+                {notifications && notifications.length > 0 ? (
+                  notifications.map((n) => (
+                    <DropdownMenuItem 
+                      key={n.id} 
+                      asChild
+                      className={cn(
+                        "p-4 border-b border-border last:border-0 cursor-pointer focus:bg-accent",
+                        !n.read && "bg-brand/5"
+                      )}
+                      onClick={() => markAsRead(n.id)}
+                    >
+                      {n.link ? (
+                        <Link to={n.link} className="block w-full">
+                          <div className="flex justify-between items-start gap-2">
+                            <p className={cn("text-sm", !n.read ? "font-bold text-foreground" : "text-muted-foreground")}>
+                              {n.title}
+                            </p>
+                            {!n.read && <div className="size-2 bg-brand rounded-full shrink-0 mt-1" />}
+                          </div>
+                          <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{n.message}</p>
+                          <p className="text-[10px] text-muted-foreground mt-2">
+                            {new Date(n.created_at).toLocaleString("pt-BR")}
+                          </p>
+                        </Link>
+                      ) : (
+                        <div className="w-full">
+                          <div className="flex justify-between items-start gap-2">
+                            <p className={cn("text-sm", !n.read ? "font-bold text-foreground" : "text-muted-foreground")}>
+                              {n.title}
+                            </p>
+                            {!n.read && <div className="size-2 bg-brand rounded-full shrink-0 mt-1" />}
+                          </div>
+                          <p className="text-xs text-muted-foreground mt-1">{n.message}</p>
+                          <p className="text-[10px] text-muted-foreground mt-2">
+                            {new Date(n.created_at).toLocaleString("pt-BR")}
+                          </p>
+                        </div>
+                      )}
+                    </DropdownMenuItem>
+                  ))
+                ) : (
+                  <div className="p-8 text-center">
+                    <Bell className="size-8 text-muted-foreground/20 mx-auto mb-2" />
+                    <p className="text-sm text-muted-foreground">Nenhuma notificação por aqui.</p>
+                  </div>
+                )}
+              </div>
+              {hasOverdue && (
+                <div className="p-3 bg-destructive/10 border-t border-destructive/20">
+                  <p className="text-[11px] text-destructive font-medium text-center">
+                    Você possui faturas pendentes!
+                  </p>
+                </div>
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
       </header>
 
       <div className="flex min-h-0 flex-1">
