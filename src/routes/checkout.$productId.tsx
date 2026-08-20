@@ -85,6 +85,13 @@ function CheckoutPage() {
     }
   }, [activePrices, billingCycle]);
 
+  const { data: profile } = useProfile();
+  useEffect(() => {
+    if (profile?.tax_id && !cpfCnpj) {
+      setCpfCnpj(profile.tax_id);
+    }
+  }, [profile, cpfCnpj]);
+
   const steps = useMemo(() => {
     const list = [];
     if (productType === "hosting") list.push("Domínio");
@@ -302,7 +309,7 @@ function CheckoutPage() {
     if (stepName === "Domínio" && (!domain || !isDomainValid)) return true;
     if (stepName === "Configuração" && (!vpsConfig.hostname || !vpsConfig.os || !vpsConfig.location)) return true;
     if (stepName === "Conta" && !user) return true;
-    if (stepName === "Pagamento" && paymentMethod === "pix" && !cpfCnpj) return true;
+    if (stepName === "Pagamento" && !cpfCnpj) return true;
     return false;
   };
 

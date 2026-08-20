@@ -111,14 +111,14 @@ export function StepPayment({
         <div className="space-y-3 p-4 border rounded-xl bg-muted/30">
           <div className="flex items-center gap-2 text-sm font-medium">
             <Info className="size-4 text-brand" />
-            <span>Dados para PIX</span>
+            <span>Dados para Pagamento</span>
           </div>
-          <p className="text-xs text-muted-foreground">O CPF/CNPJ é obrigatório para emissão do QR Code PIX.</p>
+          <p className="text-xs text-muted-foreground">O Documento (ID) é obrigatório para emissão da cobrança.</p>
           <div className="space-y-1">
-            <Label htmlFor="cpf" className="text-xs">CPF ou CNPJ</Label>
+            <Label htmlFor="cpf" className="text-xs">Documento de Identificação (CPF, CNPJ, Tax ID...)</Label>
             <Input
               id="cpf"
-              placeholder="000.000.000-00"
+              placeholder="Digite o número do documento"
               value={cpfCnpj}
               onChange={(e) => setCpfCnpj(e.target.value)}
               className="h-10 rounded-lg"
