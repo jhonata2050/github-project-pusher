@@ -6,17 +6,21 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useIsStaff, useRoles } from "@/hooks/use-auth";
 import { useBranding } from "@/hooks/use-branding";
 import { logSessionEvent } from "@/lib/audit.functions";
+import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/_authenticated/admin")({
   beforeLoad: async ({ context }) => {
-    // Redundant security check on navigation (Server-Side)
-    const { data: isAdmin, error } = await context.supabase.rpc('has_role', {
-      _user_id: context.userId,
+    // Redundant security check on navigation (Client-Side because ssr: false in parent)
+    const user = (context as any).user;
+    if (!user) throw redirect({ to: '/auth' });
+
+    const { data: isAdmin, error } = await supabase.rpc('has_role', {
+      _user_id: user.id,
       _role: 'admin'
     });
     
     if (error || !isAdmin) {
-      console.error('[Security] Admin area access denied (Server-Side) for user:', context.userId);
+      console.error('[Security] Admin area access denied for user:', user.id);
       throw redirect({
         to: '/dashboard',
         search: {
@@ -27,6 +31,7 @@ export const Route = createFileRoute("/_authenticated/admin")({
   },
   component: AdminLayout,
 });
+
 
 
 function AdminLayout() {
