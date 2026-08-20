@@ -157,18 +157,20 @@ function AuthPage() {
     try {
       if (mode === "signup") {
         const { data, error } = await supabase.auth.signUp({
-          email: parsedEmail.data,
-          password: parsedPassword.data,
+          email: email.trim(),
+          password,
           options: {
             emailRedirectTo: window.location.origin,
             data: { 
               full_name: fullName.trim().slice(0, 120),
               phone: phone.trim(),
+              tax_id: tax_id.trim(),
+              identification_type: identificationType,
+              country: country,
               lead_source: leadSource,
               lead_source_other: leadSource === "Outro" ? leadSourceOther : null,
               registration_completed: true
             },
-
           },
         });
         if (error) throw error;
