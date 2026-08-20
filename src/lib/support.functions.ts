@@ -652,6 +652,7 @@ export const createProduct = createServerFn({ method: "POST" })
       is_visible: z.boolean().default(true),
       sort_order: z.number().default(0),
       disk_quota_mb: z.number().nullable().optional(),
+      immediate_purchase: z.boolean().optional(),
       prices: z.array(z.object({
         cycle: z.enum(["monthly", "quarterly", "semiannually", "annually", "biennially"]),
         price: z.number(),
