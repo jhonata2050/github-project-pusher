@@ -183,10 +183,10 @@ function AdminDashboardPage() {
                         key={service.id} 
                         className="flex items-center justify-between p-3 px-6 hover:bg-red-500/5 transition-colors"
                       >
-                        <div className="flex flex-col gap-0.5">
-                          <span className="text-sm font-medium">{service.domain || service.username}</span>
-                          <span className="text-[10px] text-red-500/70 font-medium line-clamp-1">
-                            {service.error_message || "Aguardando processamento"}
+                        <div className="flex flex-col gap-0.5 max-w-[85%]">
+                          <span className="text-sm font-medium truncate">{service.domain || service.username || `#${service.id.slice(0,8)}`}</span>
+                          <span className="text-[10px] text-red-500 font-bold line-clamp-2 leading-tight">
+                            {service.notes || service.error_message || "Aguardando processamento manual"}
                           </span>
                         </div>
                         <a href={`/admin/clients/${service.user_id}`} className="p-1.5 rounded-full hover:bg-red-500/10 text-red-500 transition-colors">
