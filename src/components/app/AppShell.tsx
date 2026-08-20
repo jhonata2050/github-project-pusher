@@ -312,7 +312,7 @@ export function AppShell({
 
   return (
 
-    <div className={cn("min-h-screen bg-background flex flex-col", isCheckout && "h-screen overflow-hidden", isAdminArea && "lg:h-screen lg:overflow-hidden")}>
+    <div className={cn("min-h-screen bg-background flex flex-col", isCheckout && "h-screen overflow-hidden", isAdminArea && "lg:h-screen lg:overflow-hidden relative")}>
       {impersonatedClientId && (
         <div className="bg-brand p-3 text-center text-brand-foreground font-medium border-b border-brand/20 flex items-center justify-center gap-4">
           Você está visualizando o painel como cliente ({profile?.full_name || profile?.email}).
