@@ -138,6 +138,7 @@ function ProductsPage() {
       is_visible: true,
       sort_order: 0,
       disk_quota_mb: 0,
+      immediate_purchase: false,
       prices: []
     });
   };
