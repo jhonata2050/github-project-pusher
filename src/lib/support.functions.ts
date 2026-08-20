@@ -818,8 +818,30 @@ export const updateServiceDetails = createServerFn({ method: "POST" })
       })
       .eq("id", input.serviceId);
 
-
     if (error) throw new Error(`Erro ao atualizar serviço: ${error.message}`);
+
+    // Se o serviço foi ativado manualmente agora, disparar provisionamento
+    if (input.status === "active") {
+      try {
+        const { processProvisioning } = await import("./finance.server");
+        
+        // Buscar a fatura pendente ou paga associada a este serviço para provisionar
+        const { data: invoiceItem } = await supabaseAdmin
+          .from("invoice_items")
+          .select("invoice_id")
+          .eq("service_id", input.serviceId)
+          .limit(1)
+          .maybeSingle();
+        
+        if (invoiceItem?.invoice_id) {
+          console.log(`[Admin] Disparando provisionamento manual para fatura ${invoiceItem.invoice_id} após ativação do serviço ${input.serviceId}`);
+          await processProvisioning(invoiceItem.invoice_id);
+        }
+      } catch (e) {
+        console.error("[Admin] Erro ao disparar provisionamento automático após ativação manual:", e);
+      }
+    }
+
     return { success: true };
   });
 
