@@ -49,7 +49,7 @@ function AdminDashboardPage() {
   const { data: stats, isLoading } = useQuery({
     queryKey: ["admin-stats"],
     queryFn: () => getAdminStats(),
-    refetchInterval: 300000, // 5 minutos
+    refetchInterval: 30000, // 30 segundos para dashboard admin
   });
   
   const { data: leadStats } = useQuery({
@@ -65,6 +65,7 @@ function AdminDashboardPage() {
       s.domain?.toLowerCase().includes(search) ||
       s.username?.toLowerCase().includes(search) ||
       s.notes?.toLowerCase().includes(search) ||
+      s.error_message?.toLowerCase().includes(search) ||
       s.profiles?.full_name?.toLowerCase().includes(search) ||
       s.profiles?.email?.toLowerCase().includes(search)
     );
@@ -77,7 +78,12 @@ function AdminDashboardPage() {
     return { label: "PENDENTE", color: "bg-blue-500 text-white" };
   };
 
-
+  const formatCurrency = (value: number) => {
+    return new Intl.NumberFormat('pt-BR', {
+      style: 'currency',
+      currency: 'BRL',
+    }).format(value);
+  };
 
   if (isLoading) {
     return (
@@ -86,16 +92,11 @@ function AdminDashboardPage() {
           {[1, 2, 3, 4].map((i) => (
             <Card key={i} className="rounded-3xl border-border/50 animate-pulse h-28" />
           ))}
-      </div>
-      {selectedServiceId && (
-        <ProvisioningAuditModal 
-          serviceId={selectedServiceId} 
-          onClose={() => setSelectedServiceId(null)} 
-        />
-      )}
-    </AppShell>
-  );
-}
+        </div>
+      </AppShell>
+    );
+  }
+
 
 function ProvisioningAuditModal({ serviceId, onClose }: { serviceId: string, onClose: () => void }) {
   const { data: logs, isLoading } = useQuery({
@@ -168,13 +169,6 @@ function ProvisioningAuditModal({ serviceId, onClose }: { serviceId: string, onC
   );
 }
 
-
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat('pt-BR', {
-      style: 'currency',
-      currency: 'BRL',
-    }).format(value);
-  };
 
   const statCards = [
     {
