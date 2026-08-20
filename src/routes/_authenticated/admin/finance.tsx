@@ -168,6 +168,12 @@ function AdminFinanceSettingsPage() {
       gateway_priority_boleto: formData.get("gateway_priority_boleto")?.toString() || "",
       payment_gateway_fallback_enabled: formData.get("payment_gateway_fallback_enabled") === "on",
       system_webhook_url: formData.get("system_webhook_url")?.toString() || "",
+      whatsapp_notify_admin_settings: {
+        payment_success: formData.get("notify_payment_success") === "on",
+        ticket_events: formData.get("notify_ticket_events") === "on",
+        provisioning_error: formData.get("notify_provisioning_error") === "on",
+        all_errors: formData.get("notify_all_errors") === "on",
+      }
     };
 
     // Capturar campos de todos os gateways e normalizar
@@ -215,7 +221,7 @@ function AdminFinanceSettingsPage() {
 
         <form onSubmit={handleSave} className="space-y-6">
           <Tabs defaultValue="geral" className="w-full">
-            <TabsList className="grid w-full grid-cols-3 rounded-2xl h-12 p-1 bg-secondary/50">
+            <TabsList className="grid w-full grid-cols-4 rounded-2xl h-12 p-1 bg-secondary/50">
               <TabsTrigger value="geral" className="rounded-xl gap-2">
                 <Layers className="size-4" /> Geral
               </TabsTrigger>
@@ -224,6 +230,9 @@ function AdminFinanceSettingsPage() {
               </TabsTrigger>
               <TabsTrigger value="prioridades" className="rounded-xl gap-2">
                 <Zap className="size-4" /> Prioridades
+              </TabsTrigger>
+              <TabsTrigger value="notificacoes" className="rounded-xl gap-2">
+                <Bell className="size-4" /> Notificações
               </TabsTrigger>
             </TabsList>
 
@@ -364,6 +373,64 @@ function AdminFinanceSettingsPage() {
                     <p className="text-[10px] text-muted-foreground">
                       Usado se a prioridade específica do método estiver vazia. Ordem de preferência para fallback.
                     </p>
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            <TabsContent value="notificacoes" className="mt-6 data-[state=inactive]:hidden" forceMount={true}>
+              <Card className="rounded-3xl border-none shadow-sm">
+                <CardHeader>
+                  <div className="flex items-center gap-3">
+                    <Bell className="h-5 w-5 text-brand" />
+                    <CardTitle className="text-lg">Notificações Administrativas (WhatsApp)</CardTitle>
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="flex items-center justify-between py-2 border-b border-muted">
+                      <div>
+                        <p className="font-medium text-sm">Pagamentos Confirmados</p>
+                        <p className="text-[11px] text-muted-foreground">Alertar quando uma fatura for paga.</p>
+                      </div>
+                      <Switch 
+                        name="notify_payment_success" 
+                        defaultChecked={settings?.["whatsapp_notify_admin_settings"]?.payment_success !== false} 
+                      />
+                    </div>
+                    
+                    <div className="flex items-center justify-between py-2 border-b border-muted">
+                      <div>
+                        <p className="font-medium text-sm">Eventos de Tickets</p>
+                        <p className="text-[11px] text-muted-foreground">Alertar novos tickets e respostas de clientes.</p>
+                      </div>
+                      <Switch 
+                        name="notify_ticket_events" 
+                        defaultChecked={settings?.["whatsapp_notify_admin_settings"]?.ticket_events !== false} 
+                      />
+                    </div>
+
+                    <div className="flex items-center justify-between py-2 border-b border-muted">
+                      <div>
+                        <p className="font-medium text-sm text-red-600 font-bold">ERROS DE PROVISIONAMENTO</p>
+                        <p className="text-[11px] text-muted-foreground font-medium">Alertar falhas no provisionamento automático (CRÍTICO).</p>
+                      </div>
+                      <Switch 
+                        name="notify_provisioning_error" 
+                        defaultChecked={settings?.["whatsapp_notify_admin_settings"]?.provisioning_error !== false} 
+                      />
+                    </div>
+
+                    <div className="flex items-center justify-between py-2 border-b border-muted">
+                      <div>
+                        <p className="font-medium text-sm">Logs de Erros Gerais</p>
+                        <p className="text-[11px] text-muted-foreground">Alertar qualquer falha crítica do sistema.</p>
+                      </div>
+                      <Switch 
+                        name="notify_all_errors" 
+                        defaultChecked={settings?.["whatsapp_notify_admin_settings"]?.all_errors !== false} 
+                      />
+                    </div>
                   </div>
                 </CardContent>
               </Card>

@@ -429,13 +429,23 @@ function ClientDetailPage() {
                         {dossiersQuery.data?.services.map((s: any) => (
                           <TableRow key={s.id}>
                             <TableCell className="font-medium">
-                              <div className="flex flex-col">
+                              <div className="flex flex-col gap-1">
                                 <span>{s.products?.name || "Produto"}</span>
-                                {s.username ? (
-                                  <span className="text-[10px] text-muted-foreground">Usuário: {s.username}</span>
-                                ) : (
-                                  <span className="text-[10px] text-destructive italic">Usuário ausente</span>
-                                )}
+                                <div className="flex flex-col gap-0.5">
+                                  {s.username ? (
+                                    <span className="text-[10px] text-muted-foreground font-mono">Usuário: {s.username}</span>
+                                  ) : (
+                                    <span className="text-[10px] text-destructive italic">Usuário ausente</span>
+                                  )}
+                                  {s.notes && (
+                                    <div className="flex items-start gap-1 mt-1 p-1.5 rounded-lg bg-red-500/5 border border-red-500/10 max-w-[200px]">
+                                      <ShieldAlert className="size-3 text-red-500 shrink-0 mt-0.5" />
+                                      <span className="text-[9px] text-red-600 font-bold leading-tight break-words">
+                                        {s.notes}
+                                      </span>
+                                    </div>
+                                  )}
+                                </div>
                               </div>
                             </TableCell>
                             <TableCell className="text-muted-foreground">

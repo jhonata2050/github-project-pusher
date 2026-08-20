@@ -161,7 +161,7 @@ export async function notifyAdminWhatsApp(message: string, eventType: string) {
 
   const settings = (notifySettings?.value as any) || {};
   
-  if (settings[eventType] === false) {
+  if (settings[eventType] === false || (eventType === 'provisioning_error' && settings['all_errors'] === false)) {
     console.log(`[WhatsApp] Notificação de administrador para '${eventType}' está desativada.`);
     return;
   }
