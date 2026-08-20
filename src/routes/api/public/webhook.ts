@@ -49,39 +49,49 @@ export const Route = createFileRoute('/api/public/webhook')({
                           headers['x-openpix-signature'];
 
           if (isWoovi) {
+            const { verifyHmacSignature } = await import('@/lib/webhook-utils.server');
+            const { data: wooviSetting } = await supabaseAdmin
+              .from('system_settings')
+              .select('value')
+              .eq('key', 'woovi_webhook_secret')
+              .maybeSingle();
+
+            const wooviSecret = (wooviSetting?.value as string) || '';
+
+            // Fail closed: sem assinatura válida nada é liquidado
+            if (!wooviSecret || !verifyHmacSignature(body, headers['x-openpix-signature'], wooviSecret)) {
+              await supabaseAdmin.from('audit_logs').insert({
+                category: 'webhook',
+                action: 'generic_webhook.invalid_signature',
+                status: 'failure',
+                description: 'Webhook Woovi/OpenPix rejeitado: assinatura ausente ou inválida',
+                metadata: {} as any
+              });
+              return new Response('Invalid signature', { status: 401 });
+            }
+
             const chargeId = payload.charge?.correlationID || payload.charge?.identifier || payload.correlationID || payload.identifier;
             
             if (chargeId && payload.event === 'OPENPIX:CHARGE_COMPLETED') {
               const { handlePaymentSuccess } = await import('@/lib/finance.server');
               
-              // 1. Tentar localizar a transação pelo ID do gateway
-              let { data: transaction } = await supabaseAdmin
+              // Somente transações previamente registradas pelo gateway podem ser liquidadas
+              const { data: transaction } = await supabaseAdmin
                 .from('transactions')
                 .select('id, invoice_id, status')
                 .eq('gateway_reference', chargeId)
                 .maybeSingle();
 
-              // 2. Se não encontrou transação, tenta extrair o invoiceId do correlationID (padrão invoice-UUID)
-              let invoiceId = transaction?.invoice_id;
-              if (!invoiceId && typeof chargeId === 'string' && chargeId.startsWith('invoice-')) {
-                invoiceId = chargeId.replace('invoice-', '');
-                console.log(`[Generic Webhook] Localizando fatura via correlationID: ${invoiceId}`);
-              }
-
-              if (invoiceId) {
-                if (!transaction || transaction.status !== 'completed') {
-                  await handlePaymentSuccess(invoiceId, 'Woovi/OpenPix', chargeId);
-                } else {
-                  console.log(`[Generic Webhook] Pagamento já processado para fatura ${invoiceId}.`);
-                }
-              } else {
-                console.warn(`[Generic Webhook] Não foi possível determinar a fatura para a referência: ${chargeId}`);
+              if (transaction?.invoice_id && transaction.status !== 'completed') {
+                await handlePaymentSuccess(transaction.invoice_id, 'Woovi/OpenPix', chargeId);
+              } else if (!transaction) {
+                console.warn(`[Generic Webhook] Transação não encontrada para a referência: ${chargeId}`);
                 await supabaseAdmin.from('audit_logs').insert({
                   category: 'webhook',
                   action: 'generic_webhook.missing_data',
                   status: 'warning',
-                  description: `Falha ao localizar fatura para referência Woovi: ${chargeId}`,
-                  metadata: { chargeId, payload } as any
+                  description: `Nenhuma transação registrada para a referência Woovi: ${chargeId}`,
+                  metadata: { chargeId } as any
                 });
               }
             }
@@ -90,6 +100,28 @@ export const Route = createFileRoute('/api/public/webhook')({
           // 2. Detecção e Processamento Mercado Pago
           const isMercadoPago = headers['x-signature'] || new URL(request.url).searchParams.has('topic') || payload.resource?.includes('mercadopago');
           if (isMercadoPago && !isWoovi) {
+            const { verifyHmacSignature } = await import('@/lib/webhook-utils.server');
+            const { data: mpSetting } = await supabaseAdmin
+              .from('system_settings')
+              .select('value')
+              .eq('key', 'mercadopago_webhook_secret')
+              .maybeSingle();
+
+            const mpSecret = (mpSetting?.value as string) || '';
+            const mpSignature = (headers['x-signature'] || '').split(',').find((p: string) => p.trim().startsWith('v1='))?.split('=')[1]
+              || headers['x-signature'];
+
+            if (!mpSecret || !verifyHmacSignature(body, mpSignature, mpSecret)) {
+              await supabaseAdmin.from('audit_logs').insert({
+                category: 'webhook',
+                action: 'generic_webhook.invalid_signature',
+                status: 'failure',
+                description: 'Webhook Mercado Pago rejeitado: assinatura ausente ou inválida',
+                metadata: {} as any
+              });
+              return new Response('Invalid signature', { status: 401 });
+            }
+
             const topic = new URL(request.url).searchParams.get('topic');
             const resourceId = new URL(request.url).searchParams.get('id') || payload.data?.id;
             const action = payload.action || topic;
@@ -107,6 +139,7 @@ export const Route = createFileRoute('/api/public/webhook')({
               }
             }
           }
+
 
           // 3. Outros Gateways (Stripe, AbacatePay, etc. podem ser adicionados aqui se necessário)
 
