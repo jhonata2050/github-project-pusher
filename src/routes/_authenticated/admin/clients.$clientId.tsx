@@ -248,9 +248,23 @@ function ClientDetailPage() {
               <TabsTrigger value="emails" className="rounded-xl flex gap-2"><Mail className="size-4" /> E-mails</TabsTrigger>
               <TabsTrigger value="tickets" className="rounded-xl flex gap-2"><LifeBuoy className="size-4" /> Tickets</TabsTrigger>
               <TabsTrigger value="provisioning" className="rounded-xl flex gap-2"><History className="size-4" /> Provisionamento</TabsTrigger>
-
+              <TabsTrigger value="system-logs" className="rounded-xl flex gap-2"><Database className="size-4" /> Auditoria</TabsTrigger>
             </TabsList>
           </div>
+
+          <TabsContent value="system-logs" className="mt-6">
+            <Card className="rounded-3xl border-none bg-card shadow-sm overflow-hidden">
+               <CardHeader>
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <Database className="size-4 text-brand" /> Logs de Auditoria do Cliente
+                  </CardTitle>
+                  <CardDescription>Histórico detalhado de conflitos e segurança.</CardDescription>
+               </CardHeader>
+               <CardContent className="p-0">
+                  <SystemLogsList clientId={clientId} />
+               </CardContent>
+            </Card>
+          </TabsContent>
 
           <TabsContent value="info" className="mt-6">
             <Card className="rounded-3xl border-none bg-card shadow-sm">
