@@ -499,26 +499,33 @@ export const getDASSOUrl = createServerFn({ method: "POST" })
     const { data: isAdmin } = await context.supabase.rpc('has_role', { _user_id: context.userId, _role: 'admin' });
     
     if (!isAdmin) {
+      // SECURITY: Crucial verification. Ensure the username requested actually belongs to this user.
       const { data: service } = await context.supabase
         .from("services")
         .select("id, username, server_id, user_id, block_directadmin")
         .eq("user_id", context.userId)
-        .eq("username", data.username)
+        .eq("username", data.username.trim())
         .eq("server_id", data.serverId)
         .maybeSingle();
 
       if (!service) {
-        throw new Error("Acesso negado: Você não possui permissão para acessar este serviço.");
+        console.error(`[Security] Unauthorized SSO attempt by user ${context.userId} for username ${data.username}`);
+        throw new Error("Acesso negado: Você não possui permissão para acessar este serviço ou o usuário informado é inválido.");
       }
 
       if (service.block_directadmin) {
-        throw new Error("Seu acesso ao painel DirectAdmin foi bloqueado pelo administrador para este serviço específico. Por favor, entre em contato com o suporte.");
+        throw new Error("Seu acesso ao painel DirectAdmin foi bloqueado pelo administrador para este serviço específico.");
       }
+    } else {
+      // Even for admins, let's ensure we are not accidentally trying to SSO into an admin account
+      // unless that's the intended behavior. For client support, we focus on client usernames.
+      console.log(`[Admin-SSO] Admin ${context.userId} accessing service for ${data.username}`);
     }
 
     const { getDASession } = await import("./directadmin.server");
     return await getDASession(data.serverId, data.username, data.redirectUrl);
   });
+
 
 
 

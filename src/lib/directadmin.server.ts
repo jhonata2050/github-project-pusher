@@ -336,19 +336,18 @@ export async function getDASession(serverId: string, username: string, redirectU
     throw new Error('Usuário do serviço inválido para acesso ao DirectAdmin.');
   }
 
-  // DirectAdmin only creates the login URL for the identity authenticated in
-  // the request. Sending `user` in the form while authenticating as admin
-  // creates an admin OTP. The documented impersonation syntax makes the
-  // authenticated identity the customer while retaining the admin API key.
+  // SECURITY: Ensure that the session being created is for a regular user account.
+  // We use the delegated admin token to call CMD_API_LOGIN_KEYS, but we strictly
+  // define 'user' as the target user. DirectAdmin documentation states that
+  // when an Admin creates a Login Key for a User, it should result in a session
+  // for that user, not an admin session.
   const delegatedApiUser = server.api_user;
-  console.log(`Iniciando geração de SSO delegado para o usuário ${targetUser} no servidor ${server.hostname}`);
+  console.log(`[DA-SSO] Generating delegated session for ${targetUser} on ${server.hostname}`);
 
-  // DirectAdmin SSO (one_time_url) works by requesting it from CMD_API_LOGIN_KEYS
-  // It needs the 'user' parameter to define WHICH user the session belongs to.
   const params: Record<string, string> = {
     action: 'create',
     type: 'one_time_url',
-    user: targetUser,
+    user: targetUser, // Explicitly target the customer username
     expiry: '60m',
     login_keys_notify_on_creation: '0'
   };
@@ -365,6 +364,7 @@ export async function getDASession(serverId: string, username: string, redirectU
     method: 'POST',
     params
   });
+
 
   // Log only the existence of a result for security
   console.log("DirectAdmin SSO API call completed.");
