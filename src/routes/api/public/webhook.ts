@@ -49,7 +49,7 @@ export const Route = createFileRoute('/api/public/webhook')({
                           headers['x-openpix-signature'];
 
           if (isWoovi) {
-            const chargeId = payload.charge?.correlationID || payload.charge?.identifier;
+            const chargeId = payload.charge?.correlationID || payload.charge?.identifier || payload.correlationID || payload.identifier;
             
             if (chargeId && payload.event === 'OPENPIX:CHARGE_COMPLETED') {
               const { handlePaymentSuccess } = await import('@/lib/finance.server');
@@ -59,8 +59,21 @@ export const Route = createFileRoute('/api/public/webhook')({
                 .eq('gateway_reference', chargeId)
                 .maybeSingle();
 
-              if (transaction && transaction.status !== 'completed' && transaction.invoice_id) {
-                await handlePaymentSuccess(transaction.invoice_id, 'Woovi/OpenPix', chargeId);
+              if (transaction) {
+                if (transaction.status !== 'completed' && transaction.invoice_id) {
+                  await handlePaymentSuccess(transaction.invoice_id, 'Woovi/OpenPix', chargeId);
+                } else {
+                  console.log(`[Generic Webhook] Transação ${chargeId} já está completa ou sem fatura.`);
+                }
+              } else {
+                console.warn(`[Generic Webhook] Transação não encontrada para referência: ${chargeId}`);
+                await supabaseAdmin.from('audit_logs').insert({
+                  category: 'webhook',
+                  action: 'generic_webhook.missing_transaction',
+                  status: 'warning',
+                  description: `Transação não encontrada para referência Woovi: ${chargeId}`,
+                  metadata: { chargeId, payload } as any
+                });
               }
             }
           }
