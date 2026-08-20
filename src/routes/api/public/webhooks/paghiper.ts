@@ -11,15 +11,15 @@ export const Route = createFileRoute('/api/public/webhooks/paghiper')({
           const transactionId = formData.get('transaction_id') as string;
           const status = formData.get('status');
 
-          if (status === 'paid' || status === 'completed') {
+          if (transactionId && (status === 'paid' || status === 'completed')) {
              const { data: transaction } = await supabaseAdmin
               .from('transactions')
               .select('id, invoice_id, status')
-              .eq('gateway_reference', transactionId)
+              .eq('gateway_reference', transactionId.toString())
               .maybeSingle();
 
             if (transaction && transaction.status !== 'completed' && transaction.invoice_id) {
-              await handlePaymentSuccess(transaction.invoice_id, 'PagHiper', transactionId);
+              await handlePaymentSuccess(transaction.invoice_id, 'PagHiper', transactionId.toString());
             }
           }
           
