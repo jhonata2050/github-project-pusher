@@ -181,10 +181,10 @@ function AuthPage() {
         ) : (
           <>
             <h1 className="text-center text-3xl font-semibold leading-tight">
-              Boas vindas a <span className="text-brand">Eqsam.</span>
+              <span className="text-brand">Eqsam.</span>
             </h1>
             <p className="mt-3 text-center text-sm text-muted-foreground">
-              Gerencie sua hospedagem, faturas e suporte em um só lugar. Sem burocracia.
+              O seu Data Center de serviços Cloud
             </p>
 
             <Button
