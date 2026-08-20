@@ -229,12 +229,17 @@ export async function processProvisioning(invoiceId: string) {
         const username = service.username || `u${Math.random().toString(36).slice(-7)}`;
         const domain = service.domain || `${username}.temp.eqsam.com`;
         
-        await createDAAccount(server.id, {
+        const result = await createDAAccount(server.id, {
           username,
           domain,
           email: profile?.email || "user@example.com",
           package: product.directadmin_package
         });
+
+        // Validar se o DA retornou erro no corpo (mesmo com status 200)
+        if (result && (result.error === '1' || result.error === 1)) {
+          throw new Error(result.details || result.text || "O servidor DirectAdmin recusou a criação da conta.");
+        }
 
         await supabaseAdmin
           .from("services")
