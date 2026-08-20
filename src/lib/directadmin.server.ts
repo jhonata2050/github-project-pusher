@@ -55,7 +55,7 @@ function generateStrongPassword(length = 32): string {
 }
 
 
-async function callDA({ hostname, apiUser, apiToken, command, method = 'GET', params = {} }: DARequestOptions) {
+export async function callDA({ hostname, apiUser, apiToken, command, method = 'GET', params = {} }: DARequestOptions) {
   // Limpa o hostname e garante o uso da porta 2222
   const cleanHostname = hostname.replace(/^https?:\/\//, '').split(':')[0];
   const url = `https://${cleanHostname}:2222/${command}`;
