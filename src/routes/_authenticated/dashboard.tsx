@@ -6,6 +6,7 @@ import { AppShell } from "@/components/app/AppShell";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth, useProfile } from "@/hooks/use-auth";
+import { useBranding } from "@/hooks/use-branding";
 import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
@@ -30,6 +31,7 @@ const brl = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" 
 function ClientDashboardPage() {
   const { user, impersonatedClientId } = useAuth();
   const { data: profile } = useProfile();
+  const branding = useBranding();
   const effectiveUserId = impersonatedClientId || user?.id;
 
   const stats = useQuery({
@@ -66,7 +68,7 @@ function ClientDashboardPage() {
         Olá, {profile?.full_name?.split(" ")[0] ?? "bem-vindo"}
       </h1>
       <p className="mt-1 text-sm text-muted-foreground">
-        Aqui você acompanha seus serviços, faturas e atendimentos.
+        Aqui você acompanha seus serviços, faturas e atendimentos no painel {branding.app_name}.
       </p>
 
       <div className="mt-6 grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
