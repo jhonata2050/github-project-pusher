@@ -46,7 +46,7 @@ export function CountrySelector({ value, onChange, disabled, className }: Countr
           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0 rounded-xl overflow-hidden shadow-xl border-border/40" align="start" side="bottom" sideOffset={4}>
+      <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0 rounded-xl overflow-hidden shadow-xl border-border/40" align="start" side="bottom" sideOffset={4} avoidCollisions={false}>
         <Command className="rounded-xl">
           <div className="flex items-center border-b px-3">
             <Search className="mr-2 h-4 w-4 shrink-0 opacity-50" />
