@@ -85,22 +85,6 @@ function CheckoutPage() {
     }
   }, [activePrices, billingCycle]);
   
-  // Lógica de Venda Imediata: Pula passos se o parâmetro 'immediate' estiver presente
-  useEffect(() => {
-    if (product.data?.immediate_purchase) {
-      const searchParams = new URLSearchParams(window.location.search);
-      if (searchParams.get("immediate") === "true") {
-        // Se for venda imediata, pula configuração técnica se possível
-        // Mas para Hosting (Domínio) e VPS (Hostname/OS) ainda são necessários dados.
-        // O "pulo" aqui é mais conceitual no sentido de levar direto ao checkout
-        // Podemos forçar o step inicial a ser Ciclo de Faturamento se for Other
-        if (productType !== "hosting" && productType !== "vps" && step === 1) {
-          const cycleIdx = steps.indexOf("Ciclo de Faturamento");
-          if (cycleIdx >= 0) setStep(cycleIdx + 1);
-        }
-      }
-    }
-  }, [product.data, productType, steps, step]);
 
   const { data: profile } = useProfile();
   useEffect(() => {
