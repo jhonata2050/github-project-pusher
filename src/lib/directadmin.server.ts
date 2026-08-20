@@ -332,23 +332,29 @@ export async function getDASession(serverId: string, username: string, redirectU
   if (error || !server) throw new Error("Servidor não encontrado");
 
   const targetUser = username.trim();
-  if (!targetUser || targetUser.includes('|') || targetUser.includes(':')) {
+  
+  // SECURITY: Hard-restrict system usernames to prevent accidental admin escalation
+  const restrictedUsernames = ["admin", "root", "superuser", "da_admin"];
+  if (restrictedUsernames.includes(targetUser.toLowerCase())) {
+    throw new Error('Acesso negado: Não é permitido login via SSO em contas administrativas do sistema.');
+  }
+
+  if (!targetUser || targetUser.includes('|') || targetUser.includes(':') || targetUser.includes(' ')) {
     throw new Error('Usuário do serviço inválido para acesso ao DirectAdmin.');
   }
 
   // SECURITY: Ensure that the session being created is for a regular user account.
   // We use the delegated admin token to call CMD_API_LOGIN_KEYS, but we strictly
-  // define 'user' as the target user. DirectAdmin documentation states that
-  // when an Admin creates a Login Key for a User, it should result in a session
-  // for that user, not an admin session.
+  // define 'user' as the target user. 
+  // We also force 'type=one_time_url' which expires quickly.
   const delegatedApiUser = server.api_user;
   console.log(`[DA-SSO] Generating delegated session for ${targetUser} on ${server.hostname}`);
 
   const params: Record<string, string> = {
     action: 'create',
     type: 'one_time_url',
-    user: targetUser, // Explicitly target the customer username
-    expiry: '60m',
+    user: targetUser, // CRITICAL: Explicitly target the customer username
+    expiry: '10m',    // Reduced from 60m to 10m for tighter security
     login_keys_notify_on_creation: '0'
   };
 
