@@ -113,7 +113,7 @@ function LogsPage() {
                   </TableHeader>
                 <TableBody>
                   {logs.length > 0 ? (
-                    logs.map((log) => (
+                    logs.map((log: any) => (
                       <TableRow key={log.id}>
                         <TableCell className="text-xs">
                           {format(new Date(log.createdAt), "dd/MM/yyyy HH:mm:ss", { locale: ptBR })}
