@@ -5,7 +5,7 @@ import { useRouterState } from "@tanstack/react-router";
  * It uses the router's loading state to automatically show/hide.
  */
 export function Preloader() {
-  const isLoading = useRouterState({ select: (s) => s.isLoading });
+  const isLoading = useRouterState({ select: (s) => s.status === 'pending' });
 
   if (!isLoading) return null;
 
