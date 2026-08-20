@@ -526,6 +526,7 @@ export type Database = {
           email: string | null
           full_name: string | null
           id: string
+          identification_type: string | null
           lead_source: string | null
           lead_source_other: string | null
           notes: string | null
@@ -549,6 +550,7 @@ export type Database = {
           email?: string | null
           full_name?: string | null
           id: string
+          identification_type?: string | null
           lead_source?: string | null
           lead_source_other?: string | null
           notes?: string | null
@@ -572,6 +574,7 @@ export type Database = {
           email?: string | null
           full_name?: string | null
           id?: string
+          identification_type?: string | null
           lead_source?: string | null
           lead_source_other?: string | null
           notes?: string | null
