@@ -7,7 +7,6 @@ import {
   TrendingUp, 
   ArrowUpRight, 
   Layout,
-  AlertCircle,
   MessageSquare,
   Clock,
   ArrowRight,
@@ -34,69 +33,9 @@ import { toast } from "sonner";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
-
-
-
-
 export const Route = createFileRoute("/_authenticated/admin/")({
   component: AdminDashboardPage,
 });
-
-function AdminDashboardPage() {
-  const [searchTerm, setSearchTerm] = useState("");
-  const [selectedServiceId, setSelectedServiceId] = useState<string | null>(null);
-
-  const { data: stats, isLoading } = useQuery({
-    queryKey: ["admin-stats"],
-    queryFn: () => getAdminStats(),
-    refetchInterval: 30000, // 30 segundos para dashboard admin
-  });
-  
-  const { data: leadStats } = useQuery({
-    queryKey: ["admin-lead-stats"],
-    queryFn: () => getLeadSourceStats(),
-  });
-
-  const COLORS = ["#B4F461", "#3B82F6", "#F59E0B", "#EF4444", "#8B5CF6", "#64748B"];
-
-  const filteredServices = stats?.errorServices?.filter((s: any) => {
-    const search = searchTerm.toLowerCase();
-    return (
-      s.domain?.toLowerCase().includes(search) ||
-      s.username?.toLowerCase().includes(search) ||
-      s.notes?.toLowerCase().includes(search) ||
-      s.error_message?.toLowerCase().includes(search) ||
-      s.profiles?.full_name?.toLowerCase().includes(search) ||
-      s.profiles?.email?.toLowerCase().includes(search)
-    );
-  }) || [];
-
-  const getSLAStatus = (date: string) => {
-    const hours = (Date.now() - new Date(date).getTime()) / (1000 * 60 * 60);
-    if (hours > 24) return { label: "CRÍTICO (>24h)", color: "bg-red-500 text-white" };
-    if (hours > 4) return { label: "ALERTA (>4h)", color: "bg-orange-500 text-white" };
-    return { label: "PENDENTE", color: "bg-blue-500 text-white" };
-  };
-
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat('pt-BR', {
-      style: 'currency',
-      currency: 'BRL',
-    }).format(value);
-  };
-
-  if (isLoading) {
-    return (
-      <AppShell area="admin" breadcrumb={<span>Administração</span>}>
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mt-6">
-          {[1, 2, 3, 4].map((i) => (
-            <Card key={i} className="rounded-3xl border-border/50 animate-pulse h-28" />
-          ))}
-        </div>
-      </AppShell>
-    );
-  }
-
 
 function ProvisioningAuditModal({ serviceId, onClose }: { serviceId: string, onClose: () => void }) {
   const { data: logs, isLoading } = useQuery({
@@ -169,6 +108,60 @@ function ProvisioningAuditModal({ serviceId, onClose }: { serviceId: string, onC
   );
 }
 
+function AdminDashboardPage() {
+  const [searchTerm, setSearchTerm] = useState("");
+  const [selectedServiceId, setSelectedServiceId] = useState<string | null>(null);
+
+  const { data: stats, isLoading } = useQuery({
+    queryKey: ["admin-stats"],
+    queryFn: () => getAdminStats(),
+    refetchInterval: 30000,
+  });
+  
+  const { data: leadStats } = useQuery({
+    queryKey: ["admin-lead-stats"],
+    queryFn: () => getLeadSourceStats(),
+  });
+
+  const COLORS = ["#B4F461", "#3B82F6", "#F59E0B", "#EF4444", "#8B5CF6", "#64748B"];
+
+  const filteredServices = stats?.errorServices?.filter((s: any) => {
+    const search = searchTerm.toLowerCase();
+    return (
+      s.domain?.toLowerCase().includes(search) ||
+      s.username?.toLowerCase().includes(search) ||
+      s.notes?.toLowerCase().includes(search) ||
+      s.error_message?.toLowerCase().includes(search) ||
+      s.profiles?.user_id?.full_name?.toLowerCase().includes(search) ||
+      s.profiles?.user_id?.email?.toLowerCase().includes(search)
+    );
+  }) || [];
+
+  const getSLAStatus = (date: string) => {
+    const hours = (Date.now() - new Date(date).getTime()) / (1000 * 60 * 60);
+    if (hours > 24) return { label: "CRÍTICO (>24h)", color: "bg-red-500 text-white" };
+    if (hours > 4) return { label: "ALERTA (>4h)", color: "bg-orange-500 text-white" };
+    return { label: "PENDENTE", color: "bg-blue-500 text-white" };
+  };
+
+  const formatCurrency = (value: number) => {
+    return new Intl.NumberFormat('pt-BR', {
+      style: 'currency',
+      currency: 'BRL',
+    }).format(value);
+  };
+
+  if (isLoading) {
+    return (
+      <AppShell area="admin" breadcrumb={<span>Administração</span>}>
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mt-6">
+          {[1, 2, 3, 4].map((i) => (
+            <Card key={i} className="rounded-3xl border-border/50 animate-pulse h-28" />
+          ))}
+        </div>
+      </AppShell>
+    );
+  }
 
   const statCards = [
     {
@@ -336,7 +329,6 @@ function ProvisioningAuditModal({ serviceId, onClose }: { serviceId: string, onC
                             >
                               <History className="size-4" />
                             </button>
-
                           </div>
                         </div>
                       );
@@ -349,7 +341,6 @@ function ProvisioningAuditModal({ serviceId, onClose }: { serviceId: string, onC
                 </CardContent>
               </Card>
             )}
-
           </div>
         )}
 
@@ -470,7 +461,6 @@ function ProvisioningAuditModal({ serviceId, onClose }: { serviceId: string, onC
                       {leadStats.map((entry: any, index: number) => (
                         <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length] || "#888888"} />
                       ))}
-
                     </Pie>
                     <Tooltip 
                       contentStyle={{ backgroundColor: 'hsl(var(--card))', borderRadius: '12px', border: '1px solid hsl(var(--border))' }}
@@ -486,7 +476,6 @@ function ProvisioningAuditModal({ serviceId, onClose }: { serviceId: string, onC
               )}
             </CardContent>
           </Card>
-        </div>
         </div>
       </div>
       {selectedServiceId && (
