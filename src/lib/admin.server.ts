@@ -202,10 +202,11 @@ export async function getAdminStatsImplementation(
   // Serviços pendentes (provisionamento)
   const { data: errorServices } = await context.supabase
     .from("services")
-    .select("id, username, domain, error_message, notes, updated_at, user_id")
+    .select("id, username, domain, error_message, notes, updated_at, user_id, profiles:user_id(full_name, email)")
     .eq("status", "pending")
     .order("updated_at", { ascending: false })
-    .limit(15);
+    .limit(30);
+
 
   // Obter contagem de faturas pendentes
   const { count: pendingInvoicesCount } = await context.supabase
