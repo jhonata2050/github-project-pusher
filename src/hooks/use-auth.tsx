@@ -159,12 +159,16 @@ export function useIsStaff() {
   const { data: roles, isPending, isFetching, error } = useRoles();
   const list = roles ?? [];
   
-  // Se houver erro ao carregar os papéis, não é um carregamento infinito.
-  const isLoading = authLoading || (Boolean(user) && isPending && !error);
+  // O carregamento é verdadeiro se o auth ainda está carregando OU 
+  // se temos um usuário mas os papéis ainda estão sendo buscados pela primeira vez (sem erro)
+  const isLoading = authLoading || (Boolean(user) && isPending && !error && list.length === 0);
   
+  const isAdmin = list.includes("admin");
+  const isStaff = isAdmin || list.includes("staff");
+
   return {
-    isAdmin: list.includes("admin"),
-    isStaff: list.includes("admin") || list.includes("staff"),
+    isAdmin,
+    isStaff,
     roles: list,
     error,
     isLoading,
