@@ -51,9 +51,6 @@ function ClientServicesPage() {
           products (
             name,
             directadmin_package
-          ),
-          profiles (
-            block_directadmin
           )
         `)
         .eq("user_id", effectiveUserId!)
@@ -174,9 +171,8 @@ function ClientServicesPage() {
                       size="sm" 
                       className="rounded-xl border-brand/20 text-brand hover:bg-brand/5"
                       onClick={async () => {
-                        // @ts-ignore
-                        if (svc.profiles?.block_directadmin) {
-                          toast.error("Acesso bloqueado pelo administrador.");
+                        if (svc.block_directadmin) {
+                          toast.error("Acesso bloqueado para este serviço.");
                           return;
                         }
 

@@ -630,6 +630,7 @@ export type Database = {
         Row: {
           auto_renew: boolean | null
           billing_cycle: Database["public"]["Enums"]["billing_cycle"] | null
+          block_directadmin: boolean | null
           created_at: string
           domain: string | null
           id: string
@@ -647,6 +648,7 @@ export type Database = {
         Insert: {
           auto_renew?: boolean | null
           billing_cycle?: Database["public"]["Enums"]["billing_cycle"] | null
+          block_directadmin?: boolean | null
           created_at?: string
           domain?: string | null
           id?: string
@@ -664,6 +666,7 @@ export type Database = {
         Update: {
           auto_renew?: boolean | null
           billing_cycle?: Database["public"]["Enums"]["billing_cycle"] | null
+          block_directadmin?: boolean | null
           created_at?: string
           domain?: string | null
           id?: string
