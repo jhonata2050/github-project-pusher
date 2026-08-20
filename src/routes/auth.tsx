@@ -41,7 +41,12 @@ const emailSchema = z.string().trim().email("Informe um e-mail válido").max(255
 const passwordSchema = z
   .string()
   .min(8, "A senha deve ter pelo menos 8 caracteres")
+  .regex(/[A-Z]/, "Deve conter pelo menos uma letra maiúscula")
+  .regex(/[a-z]/, "Deve conter pelo menos uma letra minúscula")
+  .regex(/[0-9]/, "Deve conter pelo menos um número")
+  .regex(/[^A-Za-z0-9]/, "Deve conter pelo menos um caractere especial")
   .max(72, "A senha deve ter no máximo 72 caracteres");
+
 
 function AuthPage() {
   const navigate = useNavigate();
@@ -52,8 +57,12 @@ function AuthPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
+  const [phone, setPhone] = useState("");
+  const [leadSource, setLeadSource] = useState("");
+  const [leadSourceOther, setLeadSourceOther] = useState("");
   const [busy, setBusy] = useState(false);
   const [checkEmail, setCheckEmail] = useState(false);
+
 
   const loading = authLoading || (!!user && staffLoading);
 
@@ -113,7 +122,14 @@ function AuthPage() {
           password: parsedPassword.data,
           options: {
             emailRedirectTo: window.location.origin,
-            data: { full_name: fullName.trim().slice(0, 120) },
+            data: { 
+              full_name: fullName.trim().slice(0, 120),
+              phone: phone.trim(),
+              lead_source: leadSource,
+              lead_source_other: leadSource === "Outro" ? leadSourceOther : null,
+              registration_completed: true
+            },
+
           },
         });
         if (error) throw error;
@@ -195,6 +211,53 @@ function AuthPage() {
                   />
                 </div>
               )}
+              {mode === "signup" && (
+                <div className="space-y-2">
+                  <Label htmlFor="phone">Telefone / WhatsApp</Label>
+                  <Input
+                    id="phone"
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
+                    placeholder="(00) 00000-0000"
+                    className="h-12 rounded-xl"
+                    required
+                  />
+                </div>
+              )}
+              {mode === "signup" && (
+                <div className="space-y-2">
+                  <Label htmlFor="leadSource">Como nos conheceu?</Label>
+                  <select
+                    id="leadSource"
+                    value={leadSource}
+                    onChange={(e) => setLeadSource(e.target.value)}
+                    className="flex h-12 w-full rounded-xl border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                    required
+                  >
+                    <option value="">Selecione uma opção</option>
+                    <option value="Google">Google</option>
+                    <option value="Facebook">Facebook</option>
+                    <option value="Instagram">Instagram</option>
+                    <option value="TikTok">TikTok</option>
+                    <option value="Indicação">Indicação</option>
+                    <option value="Outro">Outro</option>
+                  </select>
+                </div>
+              )}
+              {mode === "signup" && leadSource === "Outro" && (
+                <div className="space-y-2">
+                  <Label htmlFor="leadSourceOther">Especifique</Label>
+                  <Input
+                    id="leadSourceOther"
+                    value={leadSourceOther}
+                    onChange={(e) => setLeadSourceOther(e.target.value)}
+                    placeholder="Ex: Blog, Podcast..."
+                    className="h-12 rounded-xl"
+                    required
+                  />
+                </div>
+              )}
+
               <div className="space-y-2">
                 <Label htmlFor="email">E-mail de acesso</Label>
                 <Input
