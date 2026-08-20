@@ -644,7 +644,7 @@ export function AppShell({
           </aside>
         )}
 
-        <main className="min-w-0 flex-1 px-3 py-4 lg:px-6 lg:py-6 lg:h-screen lg:overflow-y-auto">
+        <main className="min-w-0 flex-1 px-3 py-4 lg:px-6 lg:py-6 lg:overflow-y-auto">
           <header className="hidden items-center justify-between gap-4 pb-4 lg:flex">
             <div className="flex items-center gap-2 text-sm text-muted-foreground">{breadcrumb}</div>
             <div className="flex items-center gap-2">
