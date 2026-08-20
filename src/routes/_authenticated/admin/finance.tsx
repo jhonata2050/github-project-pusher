@@ -153,22 +153,35 @@ function AdminFinanceSettingsPage() {
 
   const handleSave = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    const formData = new FormData(e.currentTarget);
+    const form = e.currentTarget;
+    const formData = new FormData(form);
+    
+    // Log para depuração (visível apenas no console do desenvolvedor)
+    console.log("Saving finance settings...");
+    
     const data: Record<string, any> = {
       auto_suspend: formData.get("auto_suspend") === "on",
       auto_delete_days: Number(formData.get("auto_delete_days")) || 30,
-      payment_gateway_priority: formData.get("payment_gateway_priority") || "",
-      gateway_priority_pix: formData.get("gateway_priority_pix") || "",
-      gateway_priority_credit_card: formData.get("gateway_priority_credit_card") || "",
-      gateway_priority_boleto: formData.get("gateway_priority_boleto") || "",
+      payment_gateway_priority: formData.get("payment_gateway_priority")?.toString() || "",
+      gateway_priority_pix: formData.get("gateway_priority_pix")?.toString() || "",
+      gateway_priority_credit_card: formData.get("gateway_priority_credit_card")?.toString() || "",
+      gateway_priority_boleto: formData.get("gateway_priority_boleto")?.toString() || "",
       payment_gateway_fallback_enabled: formData.get("payment_gateway_fallback_enabled") === "on",
-      system_webhook_url: formData.get("system_webhook_url") || "",
+      system_webhook_url: formData.get("system_webhook_url")?.toString() || "",
     };
+
+    // Capturar campos de todos os gateways
     for (const gateway of GATEWAYS) {
       for (const field of gateway.fields) {
-        data[field.key] = formData.get(field.key) ?? "";
+        const val = formData.get(field.key);
+        // Só incluímos se o campo existir no FormData para evitar deleções acidentais
+        // de campos que podem não ter sido renderizados por algum motivo
+        if (val !== null) {
+          data[field.key] = val.toString();
+        }
       }
     }
+    
     updateSettingsMutation.mutate(data);
   };
 
@@ -211,8 +224,8 @@ function AdminFinanceSettingsPage() {
               </TabsTrigger>
             </TabsList>
 
-            <TabsContent value="geral" className="space-y-6 mt-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <TabsContent value="geral" className="space-y-6 mt-6" forceMount={true}>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 data-[state=inactive]:hidden">
                 <Card className="rounded-3xl border-none shadow-sm">
                   <CardHeader>
                     <div className="flex items-center gap-3">
@@ -279,16 +292,16 @@ function AdminFinanceSettingsPage() {
               </div>
             </TabsContent>
 
-            <TabsContent value="gateways" className="mt-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <TabsContent value="gateways" className="mt-6" forceMount={true}>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 data-[state=inactive]:hidden">
                 {GATEWAYS.filter(g => g.id !== 'contabo').map((gateway) => (
                   <GatewayCard key={gateway.id} gateway={gateway} settings={settings} />
                 ))}
               </div>
             </TabsContent>
 
-            <TabsContent value="prioridades" className="mt-6">
-              <Card className="rounded-3xl border-none shadow-sm">
+            <TabsContent value="prioridades" className="mt-6" forceMount={true}>
+              <Card className="rounded-3xl border-none shadow-sm data-[state=inactive]:hidden">
                 <CardHeader>
                   <div className="flex items-center gap-3">
                     <Zap className="h-5 w-5 text-brand" />
