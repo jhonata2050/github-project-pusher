@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/hooks/use-auth";
+import { useAuth, useProfile } from "@/hooks/use-auth";
 import { createOrder, getInvoiceDetails } from "@/lib/finance.functions";
 import { initializePayment } from "@/lib/payments.functions";
 import { useServerFn } from "@tanstack/react-start";
