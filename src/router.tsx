@@ -21,6 +21,9 @@ export const getRouter = () => {
     defaultPreload: "intent",
     defaultPreloadStaleTime: 1000 * 60 * 5,
     defaultStaleTime: 1000 * 60 * 5,
+    defaultPendingMs: 300, // Mostra o preloader após 300ms de carregamento
+    defaultPendingMinMs: 500, // Garante que o preloader fique visível por pelo menos 500ms se aparecer
+
   });
 
   return router;

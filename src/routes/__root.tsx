@@ -111,6 +111,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
   }),
   shellComponent: RootShell,
   component: RootComponent,
+  pendingComponent: Preloader,
   notFoundComponent: NotFoundComponent,
   errorComponent: ErrorComponent,
 });
@@ -157,7 +158,6 @@ function RootComponent() {
       <AuthProvider>
         {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
         <div className="min-h-screen">
-          <Preloader />
           <Outlet />
         </div>
 
