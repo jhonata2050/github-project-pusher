@@ -677,6 +677,7 @@ export const createProduct = createServerFn({ method: "POST" })
         is_visible: input.is_visible,
         sort_order: input.sort_order,
         disk_quota_mb: input.disk_quota_mb || null,
+        immediate_purchase: input.immediate_purchase || false,
         setup_fee: 0,
         auto_provision: true,
         is_featured: false
