@@ -2,18 +2,15 @@ import { useEffect, useState } from "react";
 import { useRouterState } from "@tanstack/react-router";
 
 export function Preloader() {
-  const isLoading = useRouterState({ select: (s) => s.status === "pending" });
+  const isLoading = useRouterState({ select: (s) => s.isLoading });
   const [show, setShow] = useState(false);
 
   useEffect(() => {
-    let timeout: ReturnType<typeof setTimeout>;
     if (isLoading) {
-      // Pequeno delay para evitar flash em carregamentos instantâneos
-      timeout = setTimeout(() => setShow(true), 200);
+      setShow(true);
     } else {
       setShow(false);
     }
-    return () => clearTimeout(timeout);
   }, [isLoading]);
 
   if (!show) return null;
