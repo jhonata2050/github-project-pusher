@@ -9,11 +9,19 @@ import { countries } from "@/lib/countries";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { CountrySelector } from "@/components/app/CountrySelector";
 import { useAuth, useIsStaff } from "@/hooks/use-auth";
 import { useBranding } from "@/hooks/use-branding";
 import { lovable } from "@/integrations/lovable/index";
 import { supabase } from "@/integrations/supabase/client";
 import { logPublicAuthEvent, logSessionEvent } from "@/lib/audit.functions";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 export const Route = createFileRoute("/auth")({
   validateSearch: (search: Record<string, unknown>) => {
@@ -268,23 +276,16 @@ function AuthPage() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="country">País</Label>
-                    <select
-                      id="country"
+                    <CountrySelector
                       value={country}
-                      onChange={(e) => {
-                        setCountry(e.target.value);
-                        const selectedCountry = countries.find(c => c.code === e.target.value);
+                      onChange={(val) => {
+                        setCountry(val);
+                        const selectedCountry = countries.find(c => c.code === val);
                         if (selectedCountry && !phone.startsWith('+')) {
                           setPhone(selectedCountry.ddi + " ");
                         }
                       }}
-                      className="flex h-12 w-full rounded-xl border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                      required
-                    >
-                      {countries.map(c => (
-                        <option key={c.code} value={c.code}>{c.name}</option>
-                      ))}
-                    </select>
+                    />
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="phone">Telefone / WhatsApp</Label>
@@ -303,18 +304,20 @@ function AuthPage() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="identificationType">Tipo de Documento</Label>
-                    <select
-                      id="identificationType"
+                    <Select
                       value={identificationType}
-                      onChange={(e) => setIdentificationType(e.target.value)}
-                      className="flex h-12 w-full rounded-xl border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                      required
+                      onValueChange={(val) => setIdentificationType(val)}
                     >
-                      <option value="cpf">CPF (Pessoa Física)</option>
-                      <option value="cnpj">CNPJ (Empresa)</option>
-                      <option value="tax_id">Tax ID (Internacional)</option>
-                      <option value="passport">Passaporte</option>
-                    </select>
+                      <SelectTrigger id="identificationType" className="h-12 rounded-xl border-input bg-background">
+                        <SelectValue placeholder="Selecione o tipo" />
+                      </SelectTrigger>
+                      <SelectContent className="rounded-xl border-border/40 shadow-xl">
+                        <SelectItem value="cpf">CPF (Pessoa Física)</SelectItem>
+                        <SelectItem value="cnpj">CNPJ (Empresa)</SelectItem>
+                        <SelectItem value="tax_id">Tax ID (Internacional)</SelectItem>
+                        <SelectItem value="passport">Passaporte</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="tax_id">Documento (ID)</Label>
@@ -332,21 +335,22 @@ function AuthPage() {
               {mode === "signup" && (
                 <div className="space-y-2">
                   <Label htmlFor="leadSource">Como nos conheceu?</Label>
-                  <select
-                    id="leadSource"
+                  <Select
                     value={leadSource}
-                    onChange={(e) => setLeadSource(e.target.value)}
-                    className="flex h-12 w-full rounded-xl border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                    required
+                    onValueChange={(val) => setLeadSource(val)}
                   >
-                    <option value="">Selecione uma opção</option>
-                    <option value="Google">Google</option>
-                    <option value="Facebook">Facebook</option>
-                    <option value="Instagram">Instagram</option>
-                    <option value="TikTok">TikTok</option>
-                    <option value="Indicação">Indicação</option>
-                    <option value="Outro">Outro</option>
-                  </select>
+                    <SelectTrigger id="leadSource" className="h-12 rounded-xl border-input bg-background">
+                      <SelectValue placeholder="Selecione uma opção" />
+                    </SelectTrigger>
+                    <SelectContent className="rounded-xl border-border/40 shadow-xl">
+                      <SelectItem value="Google">Google</SelectItem>
+                      <SelectItem value="Facebook">Facebook</SelectItem>
+                      <SelectItem value="Instagram">Instagram</SelectItem>
+                      <SelectItem value="TikTok">TikTok</SelectItem>
+                      <SelectItem value="Indicação">Indicação</SelectItem>
+                      <SelectItem value="Outro">Outro</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
               )}
               {mode === "signup" && leadSource === "Outro" && (

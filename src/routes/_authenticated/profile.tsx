@@ -9,9 +9,17 @@ import { AppShell } from "@/components/app/AppShell";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { CountrySelector } from "@/components/app/CountrySelector";
 import { useAuth, useProfile } from "@/hooks/use-auth";
 import { supabase } from "@/integrations/supabase/client";
 import { countries } from "@/lib/countries";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 export const Route = createFileRoute("/_authenticated/profile")({
   head: () => ({
@@ -159,32 +167,30 @@ function ProfilePage() {
         
         <div className="space-y-2">
           <Label htmlFor="identification_type">Tipo de Documento</Label>
-          <select
-            id="identification_type"
+          <Select
             value={form.identification_type}
-            onChange={(e) => setForm((prev) => ({ ...prev, identification_type: e.target.value }))}
-            className="flex h-11 w-full rounded-xl border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+            onValueChange={(val) => setForm((prev) => ({ ...prev, identification_type: val }))}
           >
-            <option value="cpf">CPF (Pessoa Física)</option>
-            <option value="cnpj">CNPJ (Empresa)</option>
-            <option value="tax_id">Tax ID (Internacional)</option>
-            <option value="passport">Passaporte</option>
-          </select>
+            <SelectTrigger id="identification_type" className="h-11 rounded-xl border-input bg-background cursor-pointer shadow-sm">
+              <SelectValue placeholder="Selecione o tipo" />
+            </SelectTrigger>
+            <SelectContent className="rounded-xl border-border/40 shadow-xl">
+              <SelectItem value="cpf">CPF (Pessoa Física)</SelectItem>
+              <SelectItem value="cnpj">CNPJ (Empresa)</SelectItem>
+              <SelectItem value="tax_id">Tax ID (Internacional)</SelectItem>
+              <SelectItem value="passport">Passaporte</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
         {field("tax_id", "Documento (ID)")}
 
         <div className="space-y-2">
           <Label htmlFor="country">País</Label>
-          <select
-            id="country"
+          <CountrySelector
             value={form.country}
-            onChange={(e) => setForm((prev) => ({ ...prev, country: e.target.value }))}
-            className="flex h-11 w-full rounded-xl border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            {countries.map(c => (
-              <option key={c.code} value={c.code}>{c.name}</option>
-            ))}
-          </select>
+            onChange={(val) => setForm((prev) => ({ ...prev, country: val }))}
+            className="h-11"
+          />
         </div>
         {field("phone", "Telefone")}
 

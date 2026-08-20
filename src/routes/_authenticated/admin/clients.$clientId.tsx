@@ -36,6 +36,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { CountrySelector } from "@/components/app/CountrySelector";
+import { countries } from "@/lib/countries";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
 import { getClientDossier } from "@/lib/client-dossier.functions";
@@ -52,6 +54,13 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { getServers, updateServiceDetails, getAllProducts } from "@/lib/support.functions";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 export const Route = createFileRoute("/_authenticated/admin/clients/$clientId")({
   head: ({ params }) => ({
@@ -272,18 +281,25 @@ function ClientDetailPage() {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label htmlFor="identification_type">Tipo de Documento</Label>
-                      <select 
-                        id="identification_type" 
-                        name="identification_type" 
+                      <Select 
                         defaultValue={(client as any).identification_type || "cpf"} 
                         disabled={!isEditing}
-                        className="flex h-11 w-full rounded-xl border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                        onValueChange={(val) => {
+                          const el = document.getElementById('identification_type_hidden') as HTMLInputElement;
+                          if (el) el.value = val;
+                        }}
                       >
-                        <option value="cpf">CPF</option>
-                        <option value="cnpj">CNPJ</option>
-                        <option value="tax_id">Tax ID</option>
-                        <option value="passport">Passaporte</option>
-                      </select>
+                        <SelectTrigger className="h-11 rounded-xl border-input bg-background shadow-sm">
+                          <SelectValue placeholder="Selecione o tipo" />
+                        </SelectTrigger>
+                        <SelectContent className="rounded-xl border-border/40 shadow-xl">
+                          <SelectItem value="cpf">CPF (Pessoa Física)</SelectItem>
+                          <SelectItem value="cnpj">CNPJ (Empresa)</SelectItem>
+                          <SelectItem value="tax_id">Tax ID (Internacional)</SelectItem>
+                          <SelectItem value="passport">Passaporte</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <input type="hidden" id="identification_type_hidden" name="identification_type" defaultValue={(client as any).identification_type || "cpf"} />
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="tax_id">Documento (ID)</Label>
@@ -296,16 +312,23 @@ function ClientDetailPage() {
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="status">Status</Label>
-                    <select 
-                      id="status" 
-                      name="status" 
+                    <Select 
                       defaultValue={client.status} 
                       disabled={!isEditing}
-                      className="flex h-11 w-full rounded-xl border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                      onValueChange={(val) => {
+                        const el = document.getElementById('status_hidden') as HTMLInputElement;
+                        if (el) el.value = val;
+                      }}
                     >
-                      <option value="active">Ativo</option>
-                      <option value="inactive">Inativo</option>
-                    </select>
+                      <SelectTrigger className="h-11 rounded-xl border-input bg-background shadow-sm">
+                        <SelectValue placeholder="Selecione o status" />
+                      </SelectTrigger>
+                      <SelectContent className="rounded-xl border-border/40 shadow-xl">
+                        <SelectItem value="active">Ativo</SelectItem>
+                        <SelectItem value="inactive">Inativo</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <input type="hidden" id="status_hidden" name="status" defaultValue={client.status} />
                   </div>
                   
                   <div className="col-span-full border-t pt-4">
@@ -334,18 +357,17 @@ function ClientDetailPage() {
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="country">País</Label>
-                    <select 
-                      id="country" 
-                      name="country" 
-                      defaultValue={(client as any).country || "BR"} 
+                    <CountrySelector
+                      value={(client as any).country || "BR"}
+                      onChange={(val) => {
+                        // Forçamos a atualização do campo no form se houver um ref ou lidar via handleSubmit
+                        const el = document.getElementById('country_hidden') as HTMLInputElement;
+                        if (el) el.value = val;
+                      }}
                       disabled={!isEditing}
-                      className="flex h-11 w-full rounded-xl border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                    >
-                      <option value="BR">Brasil</option>
-                      <option value="US">Estados Unidos</option>
-                      <option value="PT">Portugal</option>
-                      {/* Adicionar mais conforme necessário ou importar a lista completa */}
-                    </select>
+                      className="h-11"
+                    />
+                    <input type="hidden" id="country_hidden" name="country" defaultValue={(client as any).country || "BR"} />
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="postal_code">CEP / Zip Code</Label>
@@ -638,17 +660,20 @@ function ClientDetailPage() {
             <form onSubmit={handleUpdateService} className="space-y-4 py-4">
               <div className="grid gap-2">
                 <Label htmlFor="product_id">Produto / Plano</Label>
-                <select 
-                  id="product_id" 
+                <Select 
                   name="product_id" 
                   defaultValue={editingService.product_id || ""}
-                  className="flex h-11 w-full rounded-xl border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                 >
-                  <option value="">Selecione um produto</option>
-                  {allProducts?.map((p: any) => (
-                    <option key={p.id} value={p.id}>{p.name}</option>
-                  ))}
-                </select>
+                  <SelectTrigger id="product_id" className="h-11 rounded-xl border-input bg-background shadow-sm">
+                    <SelectValue placeholder="Selecione um produto" />
+                  </SelectTrigger>
+                  <SelectContent className="rounded-xl border-border/40 shadow-xl">
+                    <SelectItem value="none">Selecione um produto</SelectItem>
+                    {allProducts?.map((p: any) => (
+                      <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
               <div className="grid gap-2">
                 <Label htmlFor="username">Usuário do Servidor (SSO)</Label>
@@ -682,32 +707,38 @@ function ClientDetailPage() {
               </div>
               <div className="grid gap-2">
                 <Label htmlFor="server_id">Servidor Vinculado</Label>
-                <select 
-                  id="server_id" 
+                <Select 
                   name="server_id" 
                   defaultValue={editingService.server_id || ""}
-                  className="flex h-11 w-full rounded-xl border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                 >
-                  <option value="">Nenhum</option>
-                  {servers?.map((sv) => (
-                    <option key={sv.id} value={sv.id}>{sv.hostname}</option>
-                  ))}
-                </select>
+                  <SelectTrigger id="server_id" className="h-11 rounded-xl border-input bg-background shadow-sm">
+                    <SelectValue placeholder="Nenhum" />
+                  </SelectTrigger>
+                  <SelectContent className="rounded-xl border-border/40 shadow-xl">
+                    <SelectItem value="none">Nenhum</SelectItem>
+                    {servers?.map((sv) => (
+                      <SelectItem key={sv.id} value={sv.id}>{sv.hostname}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
               <div className="grid gap-2">
                 <Label htmlFor="status">Status</Label>
-                <select 
-                  id="status" 
+                <Select 
                   name="status" 
                   defaultValue={editingService.status}
-                  className="flex h-11 w-full rounded-xl border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                 >
-                  <option value="active">Ativo</option>
-                  <option value="pending">Pendente</option>
-                  <option value="suspended">Suspenso</option>
-                  <option value="terminated">Terminado</option>
-                  <option value="cancelled">Cancelado</option>
-                </select>
+                  <SelectTrigger id="status" className="h-11 rounded-xl border-input bg-background shadow-sm">
+                    <SelectValue placeholder="Selecione o status" />
+                  </SelectTrigger>
+                  <SelectContent className="rounded-xl border-border/40 shadow-xl">
+                    <SelectItem value="active">Ativo</SelectItem>
+                    <SelectItem value="pending">Pendente</SelectItem>
+                    <SelectItem value="suspended">Suspenso</SelectItem>
+                    <SelectItem value="terminated">Terminado</SelectItem>
+                    <SelectItem value="cancelled">Cancelado</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
               <DialogFooter className="pt-4">
                 <Button 
