@@ -339,7 +339,7 @@ export function AppShell({
         </div>
       )}
       {/* Mobile Header */}
-      <header className="sticky top-0 z-40 flex h-16 w-full shrink-0 items-center justify-between border-b border-border bg-card px-4 lg:hidden">
+      <header className="sticky top-0 z-[100] flex h-16 w-full shrink-0 items-center justify-between border-b border-border bg-card px-4 lg:hidden">
 
           <div className="flex items-center gap-2">
             <Sheet>
