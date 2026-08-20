@@ -277,10 +277,15 @@ export async function handlePaymentSuccess(
 
     // 3. Atualizar transação relacionada (se houver referência)
     if (externalReference) {
-      await supabaseAdmin
+      const { error: tUpdateError } = await supabaseAdmin
         .from("transactions")
-        .update({ status: "completed" })
-        .eq("gateway_reference", externalReference);
+        .update({ 
+          status: "completed",
+          updated_at: new Date().toISOString()
+        })
+        .eq("gateway_reference", externalReference.toString());
+      
+      if (tUpdateError) console.warn(`[Finance] Aviso: Não foi possível atualizar transação ${externalReference}:`, tUpdateError.message);
     }
 
     // 4. Provisionar serviços

@@ -29,16 +29,18 @@ export const Route = createFileRoute('/api/public/webhooks/abacatepay')({
           const payload = JSON.parse(body);
           
           if (payload.event === 'billing.paid' || (payload.data && payload.data.status === 'PAID')) {
-            const gatewayRef = payload.data.id;
+            const gatewayRef = payload.data?.id;
             
-            const { data: transaction } = await supabaseAdmin
-              .from('transactions')
-              .select('id, invoice_id, status')
-              .eq('gateway_reference', gatewayRef)
-              .maybeSingle();
-              
-            if (transaction && transaction.status !== 'completed' && transaction.invoice_id) {
-              await handlePaymentSuccess(transaction.invoice_id, 'AbacatePay', gatewayRef);
+            if (gatewayRef) {
+              const { data: transaction } = await supabaseAdmin
+                .from('transactions')
+                .select('id, invoice_id, status')
+                .eq('gateway_reference', gatewayRef.toString())
+                .maybeSingle();
+                
+              if (transaction && transaction.status !== 'completed' && transaction.invoice_id) {
+                await handlePaymentSuccess(transaction.invoice_id, 'AbacatePay', gatewayRef.toString());
+              }
             }
           }
           

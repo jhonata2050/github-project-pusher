@@ -52,15 +52,16 @@ export const Route = createFileRoute('/api/public/webhooks/mercadopago')({
           const resourceId = id || payload.data?.id || payload.resource?.split('/').pop();
           const action = payload.action || topic;
 
+          // Validação robusta de IDs e ações
           if (resourceId && (action === 'payment.created' || action === 'payment.updated' || topic === 'payment')) {
             const { data: transaction } = await supabaseAdmin
               .from('transactions')
               .select('id, invoice_id, status')
-              .eq('gateway_reference', resourceId)
+              .eq('gateway_reference', resourceId.toString())
               .maybeSingle();
 
             if (transaction && transaction.status !== 'completed' && transaction.invoice_id) {
-              await handlePaymentSuccess(transaction.invoice_id, 'Mercado Pago', resourceId);
+              await handlePaymentSuccess(transaction.invoice_id, 'Mercado Pago', resourceId.toString());
             }
           }
           

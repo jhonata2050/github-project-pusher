@@ -28,12 +28,13 @@ export const Route = createFileRoute('/api/public/webhooks/stripe')({
           
           const payload = JSON.parse(body);
           
-          if (payload.type === 'checkout.session.completed') {
-            const session = payload.data.object;
-            const invoiceId = session.client_reference_id;
+          if (payload.type === 'checkout.session.completed' || payload.type === 'payment_intent.succeeded') {
+            const session = payload.data?.object;
+            const invoiceId = session?.client_reference_id || session?.metadata?.invoiceId;
+            const gatewayRef = session?.id || session?.payment_intent;
             
             if (invoiceId) {
-              await handlePaymentSuccess(invoiceId, 'Stripe');
+              await handlePaymentSuccess(invoiceId, 'Stripe', gatewayRef);
             }
           }
           
