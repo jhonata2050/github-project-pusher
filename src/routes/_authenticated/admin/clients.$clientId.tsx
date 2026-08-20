@@ -764,6 +764,7 @@ function ClientDetailPage() {
                   />
                   <input type="hidden" id="block_directadmin_service_hidden" name="block_directadmin_service" defaultValue={editingService.block_directadmin ? 'true' : 'false'} />
                 </div>
+              </div>
               <DialogFooter className="pt-4">
                 <Button 
                   type="submit" 
