@@ -736,6 +736,7 @@ function ClientDetailPage() {
                     <SelectItem value="pending">Pendente</SelectItem>
                     <SelectItem value="suspended">Suspenso</SelectItem>
                     <SelectItem value="terminated">Terminado</SelectItem>
+                    <SelectItem value="cancelled">Cancelado</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
