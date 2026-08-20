@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useAuth, useIsStaff } from "@/hooks/use-auth";
+import { useBranding } from "@/hooks/use-branding";
 import { lovable } from "@/integrations/lovable/index";
 import { supabase } from "@/integrations/supabase/client";
 import { logPublicAuthEvent, logSessionEvent } from "@/lib/audit.functions";
@@ -54,6 +55,7 @@ function AuthPage() {
   const navigate = useNavigate();
   const { redirect } = Route.useSearch();
   const { user, loading: authLoading } = useAuth();
+  const branding = useBranding();
   const { isStaff, isLoading: staffLoading } = useIsStaff();
   const [mode, setMode] = useState<"signin" | "signup">("signin");
   const [email, setEmail] = useState("");
@@ -167,6 +169,17 @@ function AuthPage() {
   return (
     <div className="lime-backdrop flex min-h-screen items-center justify-center px-4 py-12">
       <div className="w-full max-w-md rounded-3xl border border-border bg-card p-8 shadow-[var(--shadow-card)]">
+        <div className="flex justify-center mb-8">
+          {branding.logo_url ? (
+            <img
+              src={branding.logo_url}
+              alt={branding.app_name}
+              className="h-10 w-auto max-w-[180px] object-contain"
+            />
+          ) : (
+            <span className="text-2xl font-bold text-brand">{branding.app_name}.</span>
+          )}
+        </div>
         {checkEmail ? (
           <div className="space-y-4 text-center">
             <h1 className="text-2xl font-semibold">Confirme seu e-mail</h1>
@@ -180,10 +193,7 @@ function AuthPage() {
           </div>
         ) : (
           <>
-            <h1 className="text-center text-3xl font-semibold leading-tight">
-              <span className="text-brand">Eqsam.</span>
-            </h1>
-            <p className="mt-3 text-center text-sm text-muted-foreground">
+            <p className="-mt-2 mb-6 text-center text-sm text-muted-foreground">
               O seu Data Center de serviços Cloud
             </p>
 
