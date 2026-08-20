@@ -168,6 +168,12 @@ function AdminFinanceSettingsPage() {
       gateway_priority_boleto: formData.get("gateway_priority_boleto")?.toString() || "",
       payment_gateway_fallback_enabled: formData.get("payment_gateway_fallback_enabled") === "on",
       system_webhook_url: formData.get("system_webhook_url")?.toString() || "",
+      whatsapp_notify_admin_settings: {
+        payment_success: formData.get("notify_payment_success") === "on",
+        ticket_events: formData.get("notify_ticket_events") === "on",
+        provisioning_error: formData.get("notify_provisioning_error") === "on",
+        all_errors: formData.get("notify_all_errors") === "on",
+      }
     };
 
     // Capturar campos de todos os gateways e normalizar
@@ -215,7 +221,7 @@ function AdminFinanceSettingsPage() {
 
         <form onSubmit={handleSave} className="space-y-6">
           <Tabs defaultValue="geral" className="w-full">
-            <TabsList className="grid w-full grid-cols-3 rounded-2xl h-12 p-1 bg-secondary/50">
+            <TabsList className="grid w-full grid-cols-4 rounded-2xl h-12 p-1 bg-secondary/50">
               <TabsTrigger value="geral" className="rounded-xl gap-2">
                 <Layers className="size-4" /> Geral
               </TabsTrigger>
@@ -224,6 +230,9 @@ function AdminFinanceSettingsPage() {
               </TabsTrigger>
               <TabsTrigger value="prioridades" className="rounded-xl gap-2">
                 <Zap className="size-4" /> Prioridades
+              </TabsTrigger>
+              <TabsTrigger value="notificacoes" className="rounded-xl gap-2">
+                <Bell className="size-4" /> Notificações
               </TabsTrigger>
             </TabsList>
 
