@@ -192,7 +192,21 @@ function ProfilePage() {
             className="h-11"
           />
         </div>
-        {field("phone", "Telefone")}
+        <div className="space-y-2">
+          <Label htmlFor="phone">Telefone / WhatsApp</Label>
+          <div className="relative">
+            <Input
+              id="phone"
+              value={form.phone ?? ""}
+              placeholder="(00) 00000-0000"
+              onChange={(e) => setForm((prev) => ({ ...prev, phone: e.target.value }))}
+              className="h-11 rounded-xl pl-12"
+            />
+            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[10px] font-bold text-muted-foreground bg-muted/50 px-1 py-0.5 rounded">
+              {countries.find(c => c.code === form.country)?.ddi}
+            </span>
+          </div>
+        </div>
 
         {field("address_line", "Endereço (Rua, nº)")}
         {field("address_line2", "Complemento (opcional)")}

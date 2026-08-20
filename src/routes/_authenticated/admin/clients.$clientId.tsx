@@ -310,8 +310,19 @@ function ClientDetailPage() {
                     </div>
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="phone">Telefone</Label>
-                    <Input id="phone" name="phone" defaultValue={client.phone || ""} disabled={!isEditing} className="rounded-xl h-11" />
+                    <Label htmlFor="phone">Telefone / WhatsApp</Label>
+                    <div className="relative">
+                      <Input 
+                        id="phone" 
+                        name="phone" 
+                        defaultValue={client.phone || ""} 
+                        disabled={!isEditing} 
+                        className="rounded-xl h-11 pl-12" 
+                      />
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[10px] font-bold text-muted-foreground bg-muted/50 px-1 py-0.5 rounded">
+                        {countries.find(c => c.code === ((client as any).country || "BR"))?.ddi}
+                      </span>
+                    </div>
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="status">Status</Label>
