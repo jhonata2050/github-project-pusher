@@ -40,6 +40,16 @@ export const updateSystemSettings = createServerFn({ method: "POST" })
     if (!isAdmin) throw new Error("Unauthorized");
 
     for (const [key, value] of Object.entries(settings)) {
+      // Se o valor for uma string vazia, deletamos a chave para manter o banco limpo
+      // e permitir que o frontend mostre os placeholders corretamente.
+      if (value === "" || value === null || value === undefined) {
+        await supabaseAdmin
+          .from("system_settings")
+          .delete()
+          .eq("key", key);
+        continue;
+      }
+
       const { error } = await supabaseAdmin
         .from("system_settings")
         .upsert({ key, value }, { onConflict: 'key' });
