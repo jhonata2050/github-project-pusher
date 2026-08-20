@@ -20,6 +20,7 @@ import {
   Edit2,
   ExternalLink,
   Link2,
+  ShieldAlert,
 } from "lucide-react";
 
 import { useState } from "react";
@@ -61,6 +62,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
 
 export const Route = createFileRoute("/_authenticated/admin/clients/$clientId")({
   head: ({ params }) => ({
@@ -330,8 +332,32 @@ function ClientDetailPage() {
                     </Select>
                     <input type="hidden" id="status_hidden" name="status" defaultValue={client.status} />
                   </div>
-                  
                   <div className="col-span-full border-t pt-4">
+                    <div className="flex items-center justify-between p-4 rounded-2xl bg-destructive/5 border border-destructive/10 mb-4">
+                      <div className="space-y-0.5">
+                        <Label htmlFor="block_directadmin" className="text-base font-semibold text-destructive flex items-center gap-2">
+                          <ShieldAlert className="size-4" /> Bloquear Acesso ao DirectAdmin
+                        </Label>
+                        <p className="text-sm text-muted-foreground">
+                          Impede o cliente de acessar o painel de controle, mas mantém o site e e-mails ativos.
+                        </p>
+                      </div>
+                      <Switch 
+                        id="block_directadmin" 
+                        name="block_directadmin" 
+                        defaultChecked={(client as any).block_directadmin || false} 
+                        disabled={!isEditing}
+                        onCheckedChange={(checked) => {
+                          const el = document.getElementById('block_directadmin_hidden') as HTMLInputElement;
+                          if (el) el.value = checked ? 'true' : 'false';
+                        }}
+                      />
+                      <input type="hidden" id="block_directadmin_hidden" name="block_directadmin" defaultValue={(client as any).block_directadmin ? 'true' : 'false'} />
+                    </div>
+                  </div>
+
+                  <div className="col-span-full border-t pt-4">
+
                     <h3 className="text-lg font-medium mb-4 flex items-center gap-2">
                       <MapPin className="size-4" /> Endereço
                     </h3>
