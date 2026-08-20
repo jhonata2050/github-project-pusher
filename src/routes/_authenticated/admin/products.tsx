@@ -264,7 +264,7 @@ function ProductsPage() {
                           className="size-6 h-6 w-6"
                           onClick={(e) => {
                             e.stopPropagation();
-                            const url = `${window.location.origin}/checkout/${product.id}?immediate=true`;
+                            const url = `${window.location.origin}/checkout/${product.id}?immediate=true&mode=signup`;
                             navigator.clipboard.writeText(url);
                             toast.success("Link copiado!");
                           }}
@@ -377,7 +377,7 @@ function ProductsPage() {
                       size="icon" 
                       className="size-8"
                       onClick={() => {
-                        const url = `${window.location.origin}/checkout/${editingProduct.id}?immediate=true`;
+                        const url = `${window.location.origin}/checkout/${editingProduct.id}?immediate=true&mode=signup`;
                         navigator.clipboard.writeText(url);
                         toast.success("Link copiado!");
                       }}
