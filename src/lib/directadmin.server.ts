@@ -340,12 +340,17 @@ export async function checkDAUserExists(serverId: string, username: string): Pro
       params: { user: username.trim() }
     });
 
-    // Se o usuário não existe, o DA costuma retornar error=1 ou similar
+    // Se o DA retornar um erro 500 ou objeto de erro, o callDA já lança exceção ou retorna o erro.
+    // O DA retorna "error=0" em sucesso.
     if (result && (result.error === '1' || result.error === 1)) return false;
     
-    // Se retornou dados do usuário, ele existe
-    return !!(result && (result.username || result.email));
+    return !!(result && (result.username || result.email || result.error === '0'));
   } catch (e) {
+    // Se o erro for 500 com "You don't have control over that user", significa que o usuário não existe para este token
+    const errorStr = String(e);
+    if (errorStr.includes("You don't have control over that user") || errorStr.includes("Cannot show user")) {
+      return false;
+    }
     console.error(`[DA-Security] Erro ao verificar existência do usuário ${username}:`, e);
     return false;
   }

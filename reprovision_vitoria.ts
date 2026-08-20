@@ -19,12 +19,21 @@ async function run() {
   console.log("Usuário NÃO existe no servidor. Tentando criar conta...");
   
   try {
+    const newUsername = `v${Math.random().toString(36).slice(-6)}`;
     const result = await createDAAccount(serverId, {
-      username,
+      username: newUsername,
       domain,
       email,
       package: packageName
     });
+
+    if (result && (result.error === '0' || result.error === 0)) {
+      console.log(`Conta criada com sucesso no DirectAdmin! Novo usuário: ${newUsername}`);
+      await supabaseAdmin.from("services").update({ 
+        username: newUsername,
+        notes: "Provisionamento corrigido manualmente após falha inicial."
+      }).eq("id", "e86fcd34-47f0-4929-b109-82d0cfe01f62");
+    }
     
     console.log("Resultado da API:", JSON.stringify(result));
     
