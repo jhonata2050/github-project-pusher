@@ -15,7 +15,7 @@ export const trackEvent = (event: AnalyticsEvent, data?: Record<string, any>) =>
   }
 
   // Console log for debugging in dev
-  if (process.env.NODE_ENV === "development") {
+  if (process.env['NODE_ENV'] === "development") {
     console.log(`[Analytics] Tracked: ${event}`, data);
   }
 };
