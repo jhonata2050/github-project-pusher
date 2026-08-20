@@ -14,7 +14,8 @@ import {
   PieChart as PieChartIcon,
   Search,
   History,
-  ShieldAlert
+  ShieldAlert,
+  Database
 } from "lucide-react";
 import { useState } from "react";
 
@@ -400,17 +401,17 @@ function AdminDashboardPage() {
                 {[
                   { label: "Clientes", to: "/admin/clients", icon: Users },
                   { label: "Serviços", to: "/admin/products", icon: Server },
-                  { label: "Financeiro", to: "/admin/invoices", icon: Receipt },
+                  { label: "Logs", to: "/admin/logs", icon: Database },
                   { label: "Tickets", to: "/admin/tickets", icon: MessageSquare },
                 ].map((link, i) => (
-                  <a
+                  <Link
                     key={i}
-                    href={link.to}
+                    to={link.to as any}
                     className="flex flex-col items-start gap-2 p-3 rounded-2xl bg-muted/30 hover:bg-primary/5 border border-border/50 transition-all group"
                   >
                     <link.icon className="size-4 text-muted-foreground group-hover:text-primary transition-colors" />
                     <span className="text-xs font-semibold">{link.label}</span>
-                  </a>
+                  </Link>
                 ))}
               </CardContent>
             </Card>

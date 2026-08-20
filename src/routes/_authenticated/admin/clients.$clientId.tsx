@@ -21,8 +21,9 @@ import {
   ExternalLink,
   Link2,
   ShieldAlert,
+  Database,
 } from "lucide-react";
-
+import { cn } from "@/lib/utils";
 import { useState } from "react";
 import { toast } from "sonner";
 import { useNavigate } from "@tanstack/react-router";
@@ -248,9 +249,23 @@ function ClientDetailPage() {
               <TabsTrigger value="emails" className="rounded-xl flex gap-2"><Mail className="size-4" /> E-mails</TabsTrigger>
               <TabsTrigger value="tickets" className="rounded-xl flex gap-2"><LifeBuoy className="size-4" /> Tickets</TabsTrigger>
               <TabsTrigger value="provisioning" className="rounded-xl flex gap-2"><History className="size-4" /> Provisionamento</TabsTrigger>
-
+              <TabsTrigger value="system-logs" className="rounded-xl flex gap-2"><Database className="size-4" /> Auditoria</TabsTrigger>
             </TabsList>
           </div>
+
+          <TabsContent value="system-logs" className="mt-6">
+            <Card className="rounded-3xl border-none bg-card shadow-sm overflow-hidden">
+               <CardHeader>
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <Database className="size-4 text-brand" /> Logs de Auditoria do Cliente
+                  </CardTitle>
+                  <CardDescription>Histórico detalhado de conflitos e segurança.</CardDescription>
+               </CardHeader>
+               <CardContent className="p-0">
+                  <SystemLogsList clientId={clientId} />
+               </CardContent>
+            </Card>
+          </TabsContent>
 
           <TabsContent value="info" className="mt-6">
             <Card className="rounded-3xl border-none bg-card shadow-sm">
@@ -892,5 +907,52 @@ function ProvisioningLogsTable({ clientId, serviceId }: { clientId?: string, ser
     </Card>
   );
 }
+
+function SystemLogsList({ clientId }: { clientId: string }) {
+  const { data: logs, isLoading } = useQuery({
+    queryKey: ["admin-client-logs", clientId],
+    queryFn: async () => {
+      const { getSystemLogs } = await import("@/lib/system-logs.functions");
+      return getSystemLogs({ data: { actorId: clientId, limit: 50 } });
+    },
+  });
+
+  if (isLoading) return <div className="p-8 space-y-3">{[1, 2, 3].map(i => <div key={i} className="h-12 bg-muted animate-pulse rounded-xl" />)}</div>;
+
+  if (!logs || logs.length === 0) return <div className="p-12 text-center text-sm text-muted-foreground italic">Nenhum log de auditoria registrado para este cliente.</div>;
+
+  return (
+    <div className="divide-y divide-border/50">
+      {logs.map((log: any) => (
+        <div key={log.id} className={cn(
+          "p-4 flex flex-col gap-1.5",
+          log.level === 'critical' && "bg-red-500/[0.02]"
+        )}>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Badge variant="outline" className="text-[9px] uppercase font-bold">{log.category}</Badge>
+              <Badge className={cn(
+                "text-[9px] font-black border-none text-white",
+                log.level === 'critical' ? "bg-red-600" : log.level === 'error' ? "bg-red-500" : "bg-blue-500"
+              )}>
+                {log.level.toUpperCase()}
+              </Badge>
+            </div>
+            <span className="text-[10px] text-muted-foreground">
+              {format(new Date(log.created_at), "dd/MM/yyyy HH:mm:ss", { locale: ptBR })}
+            </span>
+          </div>
+          <p className="text-sm font-medium">{log.message}</p>
+          {log.services && (
+            <div className="text-[10px] text-muted-foreground flex items-center gap-1">
+              <Server className="size-3" /> {log.services.domain}
+            </div>
+          )}
+        </div>
+      ))}
+    </div>
+  );
+}
+
 
 

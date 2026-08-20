@@ -43,6 +43,19 @@ export async function logProvisioningAttempt({
     if (status === 'failure') {
       await handleProvisioningFailure(serviceId, userId, errorMessage || "Erro desconhecido");
     }
+    // Registrar log no sistema geral para auditoria centralizada
+    const { createSystemLog } = await import("./system-logs.server");
+    await createSystemLog({
+      category: 'provisioning',
+      level: status === 'success' ? 'info' : status === 'failure' ? 'error' : 'warning',
+      message: status === 'success' 
+        ? `Provisionamento concluído com sucesso: ${serviceId}` 
+        : `Falha no provisionamento: ${errorMessage || 'Erro desconhecido'}`,
+      serviceId,
+      actorId: userId,
+      metadata: { ...metadata, attemptNumber: nextAttempt, errorCode }
+    });
+
   } catch (error) {
     console.error("[ProvisioningAudit] Erro ao gravar log:", error);
   }

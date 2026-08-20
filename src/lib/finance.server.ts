@@ -229,6 +229,12 @@ export async function processProvisioning(invoiceId: string) {
         const username = service.username || `u${Math.random().toString(36).slice(-7)}`;
         const domain = service.domain || `${username}.temp.eqsam.com`;
         
+        // Verificar se já existe para evitar conflito de domínio fatal
+        const alreadyExists = await (await import("./directadmin.server")).checkDAUserExists(server.id, username, service.id);
+        if (alreadyExists) {
+          throw new Error(`Conflito: O usuário/domínio ${username} já está em uso neste servidor.`);
+        }
+
         const result = await createDAAccount(server.id, {
           username,
           domain,
