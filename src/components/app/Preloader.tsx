@@ -6,18 +6,28 @@ export function Preloader() {
   const [show, setShow] = useState(false);
 
   useEffect(() => {
+    let timeout: ReturnType<typeof setTimeout>;
+    
     if (isLoading) {
       setShow(true);
+      // Timeout de segurança: esconde após 8 segundos se o router travar
+      timeout = setTimeout(() => {
+        setShow(false);
+      }, 8000);
     } else {
       setShow(false);
     }
+    
+    return () => {
+      if (timeout) clearTimeout(timeout);
+    };
   }, [isLoading]);
 
   if (!show) return null;
 
   return (
-    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-background/80 backdrop-blur-sm animate-in fade-in duration-300">
-      <div className="relative size-48">
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-background/60 backdrop-blur-[2px] animate-in fade-in duration-300 pointer-events-none">
+      <div className="relative size-48 flex flex-col items-center justify-center">
         <iframe 
           src="https://lottie.host/embed/d547b7c9-e884-4e94-8450-79ba42c27d71/L2Zj25Eagv.lottie"
           className="size-full border-none pointer-events-none"
@@ -27,3 +37,4 @@ export function Preloader() {
     </div>
   );
 }
+
