@@ -30,6 +30,9 @@ import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from "recha
 import { formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { toast } from "sonner";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+
 
 
 
@@ -40,6 +43,8 @@ export const Route = createFileRoute("/_authenticated/admin/")({
 
 function AdminDashboardPage() {
   const [searchTerm, setSearchTerm] = useState("");
+  const [selectedServiceId, setSelectedServiceId] = useState<string | null>(null);
+
   const { data: stats, isLoading } = useQuery({
     queryKey: ["admin-stats"],
     queryFn: () => getAdminStats(),
@@ -80,10 +85,88 @@ function AdminDashboardPage() {
           {[1, 2, 3, 4].map((i) => (
             <Card key={i} className="rounded-3xl border-border/50 animate-pulse h-28" />
           ))}
+      </div>
+      {selectedServiceId && (
+        <ProvisioningAuditModal 
+          serviceId={selectedServiceId} 
+          onClose={() => setSelectedServiceId(null)} 
+        />
+      )}
+    </AppShell>
+  );
+}
+
+function ProvisioningAuditModal({ serviceId, onClose }: { serviceId: string, onClose: () => void }) {
+  const { data: logs, isLoading } = useQuery({
+    queryKey: ["provisioning-logs", serviceId],
+    queryFn: async () => {
+      const { getProvisioningLogs } = await import("@/lib/provisioning.functions");
+      return getProvisioningLogs({ data: { serviceId } });
+    },
+    enabled: !!serviceId
+  });
+
+  return (
+    <Dialog open={!!serviceId} onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="rounded-3xl border-none shadow-2xl max-w-3xl max-h-[80vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle className="text-2xl font-bold flex items-center gap-2">
+            <History className="size-6 text-brand" /> Histórico de Provisionamento
+          </DialogTitle>
+          <DialogDescription>
+            Audit log detalhado das tentativas de ativação deste serviço.
+          </DialogDescription>
+        </DialogHeader>
+        
+        <div className="py-4">
+          {isLoading ? (
+            <div className="space-y-3">
+              {[1, 2, 3].map(i => <div key={i} className="h-12 bg-muted animate-pulse rounded-xl" />)}
+            </div>
+          ) : logs && logs.length > 0 ? (
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Data</TableHead>
+                    <TableHead>Tentativa</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Código</TableHead>
+                    <TableHead>Mensagem</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {logs.map((log: any) => (
+                    <TableRow key={log.id}>
+                      <TableCell className="text-[10px] whitespace-nowrap">
+                        {format(new Date(log.created_at), "dd/MM HH:mm:ss", { locale: ptBR })}
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="outline" className="text-[10px]">#{log.attempt_number}</Badge>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant={log.status === 'success' ? 'default' : log.status === 'failure' ? 'destructive' : 'secondary'} className="text-[9px] uppercase">
+                          {log.status === 'success' ? 'Sucesso' : log.status === 'failure' ? 'Falha' : 'Pendente'}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-[10px] font-mono text-red-500">{log.error_code || "—"}</TableCell>
+                      <TableCell className="text-[10px] max-w-[250px] break-words">{log.error_message || "—"}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          ) : (
+            <div className="text-center py-12 text-muted-foreground text-sm italic">
+              Nenhuma tentativa de provisionamento registrada ainda.
+            </div>
+          )}
         </div>
-      </AppShell>
-    );
-  }
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', {
@@ -252,12 +335,13 @@ function AdminDashboardPage() {
                               <ArrowRight className="size-4" />
                             </Link>
                             <button 
-                              onClick={() => toast.info("Histórico em breve")} 
+                              onClick={() => setSelectedServiceId(service.id)} 
                               className="p-1.5 rounded-full hover:bg-muted text-muted-foreground transition-colors"
                               title="Ver Histórico"
                             >
                               <History className="size-4" />
                             </button>
+
                           </div>
                         </div>
                       );
