@@ -33,22 +33,28 @@ export const Route = createFileRoute("/_authenticated/profile")({
 const schema = z.object({
   full_name: z.string().trim().min(2, "Informe seu nome").max(120),
   company_name: z.string().trim().max(120).optional(),
-  tax_id: z.string().trim().max(20).optional(),
-  phone: z.string().trim().max(20).optional(),
-  address_line: z.string().trim().max(160).optional(),
-  city: z.string().trim().max(80).optional(),
+  tax_id: z.string().trim().min(5, "Documento obrigatório").max(30),
+  identification_type: z.string().min(1, "Selecione o tipo de identificação"),
+  country: z.string().min(2, "Selecione o país"),
+  phone: z.string().trim().min(5, "Telefone inválido").max(20),
+  address_line: z.string().trim().min(2, "Endereço obrigatório").max(160),
+  address_line2: z.string().trim().max(160).optional(),
+  city: z.string().trim().min(2, "Cidade obrigatória").max(80),
   state: z.string().trim().max(40).optional(),
-  postal_code: z.string().trim().max(12).optional(),
+  postal_code: z.string().trim().max(20).optional(),
 });
 
-type FormState = Record<keyof z.infer<typeof schema>, string>;
+type FormState = z.infer<typeof schema>;
 
 const EMPTY: FormState = {
   full_name: "",
   company_name: "",
   tax_id: "",
+  identification_type: "cpf",
+  country: "BR",
   phone: "",
   address_line: "",
+  address_line2: "",
   city: "",
   state: "",
   postal_code: "",
@@ -84,16 +90,16 @@ function ProfilePage() {
         .from("profiles")
         .update({
           full_name: parsed.full_name,
-          company_name: parsed.company_name || null,
-          tax_id: parsed.tax_id,
-          identification_type: parsed.identification_type,
-          country: parsed.country,
-          phone: parsed.phone,
-          address_line: parsed.address_line,
-          address_line2: parsed.address_line2 || null,
-          city: parsed.city,
-          state: parsed.state || null,
-          postal_code: parsed.postal_code || null,
+          company_name: parsed.company_name ?? null,
+          tax_id: parsed.tax_id ?? null,
+          identification_type: parsed.identification_type as any,
+          country: parsed.country as any,
+          phone: parsed.phone ?? null,
+          address_line: parsed.address_line ?? null,
+          address_line2: parsed.address_line2 ?? null,
+          city: parsed.city ?? null,
+          state: parsed.state ?? null,
+          postal_code: parsed.postal_code ?? null,
         })
         .eq("id", user!.id);
       if (error) throw error;
@@ -118,7 +124,7 @@ function ProfilePage() {
       <Label htmlFor={key}>{label}</Label>
       <Input
         id={key}
-        value={form[key]}
+        value={(form as any)[key] ?? ""}
         placeholder={placeholder ?? ""}
         onChange={(e) => setForm((prev) => ({ ...prev, [key]: e.target.value }))}
         className="h-11 rounded-xl"
