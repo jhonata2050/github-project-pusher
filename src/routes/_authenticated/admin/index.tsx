@@ -14,7 +14,8 @@ import {
   PieChart as PieChartIcon,
   Search,
   History,
-  ShieldAlert
+  ShieldAlert,
+  Database
 } from "lucide-react";
 import { useState } from "react";
 
