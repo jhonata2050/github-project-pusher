@@ -200,7 +200,7 @@ function AdminFinanceSettingsPage() {
 
   return (
     <AppShell area="admin" breadcrumb={<span>Sistema / Financeiro e Gateways</span>}>
-      <div className="space-y-8 max-w-5xl mx-auto">
+      <div className="space-y-8 max-w-5xl mx-auto pb-20">
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
           <div>
             <h1 className="text-3xl font-bold tracking-tight text-foreground">Configurações Financeiras</h1>
