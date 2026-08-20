@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Package, Plus, Search, Store, Edit2, Save, X, Server } from "lucide-react";
+import { Package, Plus, Search, Store, Edit2, Save, X, Server, Link as LinkIcon, Copy } from "lucide-react";
 import { useEffect, useState } from "react";
 
 import { AppShell } from "@/components/app/AppShell";
@@ -53,7 +53,7 @@ function ProductsPage() {
       const { data, error } = await supabase
         .from("products")
         .select(
-          "id, name, slug, description, directadmin_package, external_id, disk_quota_mb, is_visible, sort_order, product_type, group_id, product_groups(name), product_prices(cycle, price, is_active)",
+          "id, name, slug, description, directadmin_package, external_id, disk_quota_mb, is_visible, sort_order, product_type, group_id, immediate_purchase, product_groups(name), product_prices(cycle, price, is_active)",
         )
         .order("sort_order");
       if (error) throw error;
@@ -121,6 +121,7 @@ function ProductsPage() {
       ...product,
       directadmin_package: product.directadmin_package || "",
       external_id: product.external_id || "",
+      immediate_purchase: !!product.immediate_purchase,
       prices: product.product_prices || []
     });
   };
@@ -137,6 +138,7 @@ function ProductsPage() {
       is_visible: true,
       sort_order: 0,
       disk_quota_mb: 0,
+      immediate_purchase: false,
       prices: []
     });
   };
@@ -154,6 +156,7 @@ function ProductsPage() {
       is_visible: editingProduct.is_visible,
       sort_order: editingProduct.sort_order,
       disk_quota_mb: editingProduct.disk_quota_mb,
+      immediate_purchase: editingProduct.immediate_purchase,
       prices: editingProduct.prices.map((p: any) => ({
         cycle: p.cycle,
         price: Number(p.price),
@@ -251,6 +254,26 @@ function ProductsPage() {
                     <dt>Preços ativos</dt>
                     <dd className="text-foreground">{product.product_prices?.filter(p => p.is_active).length ?? 0}</dd>
                   </div>
+                  {product.immediate_purchase && (
+                    <div className="flex justify-between items-center mt-1">
+                      <dt className="text-brand font-medium">Link de Venda</dt>
+                      <dd>
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          className="size-6 h-6 w-6"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            const url = `${window.location.origin}/checkout/${product.id}?immediate=true`;
+                            navigator.clipboard.writeText(url);
+                            toast.success("Link copiado!");
+                          }}
+                        >
+                          <Copy className="size-3" />
+                        </Button>
+                      </dd>
+                    </div>
+                  )}
                 </dl>
                 <p className="mt-4 text-lg font-semibold">
                   {monthly ? brl.format(Number(monthly.price)) : "Sem preço mensal"}
@@ -330,7 +353,42 @@ function ProductsPage() {
               </div>
 
               <div className="grid gap-4 md:grid-cols-2">
-                <div className="space-y-2">
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="flex items-center justify-between border border-border rounded-xl p-4 bg-muted/20">
+                  <div className="space-y-0.5">
+                    <Label className="text-sm font-medium">Venda Imediata</Label>
+                    <p className="text-[10px] text-muted-foreground">Gera link direto para checkout</p>
+                  </div>
+                  <Switch 
+                    checked={editingProduct.immediate_purchase} 
+                    onCheckedChange={val => setEditingProduct({...editingProduct, immediate_purchase: val})}
+                  />
+                </div>
+                {editingProduct.immediate_purchase && editingProduct.id && (
+                  <div className="flex items-center gap-2 border border-border rounded-xl p-4 bg-brand/5">
+                    <div className="flex-1 min-w-0">
+                      <Label className="text-[10px] text-brand font-bold uppercase">Link do Plano</Label>
+                      <p className="text-[10px] truncate text-muted-foreground">
+                        {`${window.location.origin.replace('http://', '').replace('https://', '')}/checkout/${editingProduct.id}...`}
+                      </p>
+                    </div>
+                    <Button 
+                      variant="ghost" 
+                      size="icon" 
+                      className="size-8"
+                      onClick={() => {
+                        const url = `${window.location.origin}/checkout/${editingProduct.id}?immediate=true`;
+                        navigator.clipboard.writeText(url);
+                        toast.success("Link copiado!");
+                      }}
+                    >
+                      <Copy className="size-4 text-brand" />
+                    </Button>
+                  </div>
+                )}
+              </div>
+
+              <div className="space-y-2">
                   <Label>Espaço em Disco (MB)</Label>
                   <Input 
                     type="number"

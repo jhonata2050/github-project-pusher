@@ -449,6 +449,7 @@ export type Database = {
           external_id: string | null
           group_id: string | null
           id: string
+          immediate_purchase: boolean | null
           is_featured: boolean
           is_visible: boolean
           name: string
@@ -472,6 +473,7 @@ export type Database = {
           external_id?: string | null
           group_id?: string | null
           id?: string
+          immediate_purchase?: boolean | null
           is_featured?: boolean
           is_visible?: boolean
           name: string
@@ -495,6 +497,7 @@ export type Database = {
           external_id?: string | null
           group_id?: string | null
           id?: string
+          immediate_purchase?: boolean | null
           is_featured?: boolean
           is_visible?: boolean
           name?: string

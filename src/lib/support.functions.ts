@@ -652,6 +652,7 @@ export const createProduct = createServerFn({ method: "POST" })
       is_visible: z.boolean().default(true),
       sort_order: z.number().default(0),
       disk_quota_mb: z.number().nullable().optional(),
+      immediate_purchase: z.boolean().optional(),
       prices: z.array(z.object({
         cycle: z.enum(["monthly", "quarterly", "semiannually", "annually", "biennially"]),
         price: z.number(),
@@ -676,6 +677,7 @@ export const createProduct = createServerFn({ method: "POST" })
         is_visible: input.is_visible,
         sort_order: input.sort_order,
         disk_quota_mb: input.disk_quota_mb || null,
+        immediate_purchase: input.immediate_purchase || false,
         setup_fee: 0,
         auto_provision: true,
         is_featured: false
@@ -716,6 +718,7 @@ export const updateProduct = createServerFn({ method: "POST" })
       is_visible: z.boolean(),
       sort_order: z.number(),
       disk_quota_mb: z.number().nullable(),
+      immediate_purchase: z.boolean().optional(),
       prices: z.array(z.object({
         cycle: z.enum(["monthly", "quarterly", "semiannually", "annually", "biennially"]),
         price: z.number(),
@@ -738,7 +741,8 @@ export const updateProduct = createServerFn({ method: "POST" })
         whmcs_id: input.external_id ? parseInt(input.external_id) : null,
         is_visible: input.is_visible,
         sort_order: input.sort_order,
-        disk_quota_mb: input.disk_quota_mb
+        disk_quota_mb: input.disk_quota_mb,
+        immediate_purchase: input.immediate_purchase || false
       })
       .eq("id", input.id);
 

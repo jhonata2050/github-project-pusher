@@ -84,6 +84,7 @@ function CheckoutPage() {
       if (chosen?.cycle) setBillingCycle(chosen.cycle);
     }
   }, [activePrices, billingCycle]);
+  
 
   const { data: profile } = useProfile();
   useEffect(() => {
@@ -102,6 +103,19 @@ function CheckoutPage() {
     list.push("Pagamento");
     return list;
   }, [productType, user]);
+
+  // Lógica de Venda Imediata: Pula passos se o parâmetro 'immediate' estiver presente
+  useEffect(() => {
+    if (product.data?.immediate_purchase) {
+      const searchParams = new URLSearchParams(typeof window !== 'undefined' ? window.location.search : '');
+      if (searchParams.get("immediate") === "true") {
+        if (productType !== "hosting" && productType !== "vps" && step === 1) {
+          const cycleIdx = steps.indexOf("Ciclo de Faturamento");
+          if (cycleIdx >= 0) setStep(cycleIdx + 1);
+        }
+      }
+    }
+  }, [product.data, productType, steps, step]);
 
   const orderMutation = useMutation({
     mutationFn: async () => {
@@ -197,7 +211,14 @@ function CheckoutPage() {
 
   useEffect(() => {
     if (!user && !product.isLoading) {
-      navigate({ to: "/auth", search: { redirect: `/checkout/${productId}` } as any });
+      const searchParams = new URLSearchParams(window.location.search);
+      const isImmediate = searchParams.get("immediate") === "true";
+      navigate({ 
+        to: "/auth", 
+        search: { 
+          redirect: `/checkout/${productId}${isImmediate ? '?immediate=true' : ''}` 
+        } as any 
+      });
     }
   }, [user, product.isLoading, productId, navigate]);
 

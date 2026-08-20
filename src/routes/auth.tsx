@@ -98,7 +98,11 @@ function AuthPage() {
     if (!loading && user) {
       console.log("[Auth] User logged in:", user.id, "isStaff:", isStaff, "redirect:", redirect);
       const defaultDest = isStaff ? "/admin" : "/dashboard";
-      const destination = (redirect as string) || defaultDest;
+      let destination = (redirect as string) || defaultDest;
+      
+      // Sanitização básica para evitar loops ou redirecionamentos maliciosos
+      if (destination.includes('/auth')) destination = defaultDest;
+      
       console.log("[Auth] Navigating to:", destination);
       
       // Use replace: true to avoid auth page in history
