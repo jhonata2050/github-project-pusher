@@ -487,8 +487,14 @@ function ProvisioningAuditModal({ serviceId, onClose }: { serviceId: string, onC
             </CardContent>
           </Card>
         </div>
+        </div>
       </div>
+      {selectedServiceId && (
+        <ProvisioningAuditModal 
+          serviceId={selectedServiceId} 
+          onClose={() => setSelectedServiceId(null)} 
+        />
+      )}
     </AppShell>
-
   );
 }

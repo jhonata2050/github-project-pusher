@@ -680,8 +680,10 @@ export type Database = {
           block_directadmin: boolean | null
           created_at: string
           domain: string | null
+          error_message: string | null
           id: string
           next_due_date: string | null
+          notes: string | null
           order_id: string | null
           product_id: string | null
           server_id: string | null
@@ -698,8 +700,10 @@ export type Database = {
           block_directadmin?: boolean | null
           created_at?: string
           domain?: string | null
+          error_message?: string | null
           id?: string
           next_due_date?: string | null
+          notes?: string | null
           order_id?: string | null
           product_id?: string | null
           server_id?: string | null
@@ -716,8 +720,10 @@ export type Database = {
           block_directadmin?: boolean | null
           created_at?: string
           domain?: string | null
+          error_message?: string | null
           id?: string
           next_due_date?: string | null
+          notes?: string | null
           order_id?: string | null
           product_id?: string | null
           server_id?: string | null
