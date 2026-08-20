@@ -427,7 +427,15 @@ export function AppShell({
                 </div>
               </SheetContent>
             </Sheet>
-            <span className="text-lg font-semibold">{branding.app_name}</span>
+            {branding.logo_url ? (
+              <img
+                src={branding.logo_url}
+                alt={branding.app_name}
+                className="h-8 w-auto max-w-[120px] object-contain"
+              />
+            ) : (
+              <span className="text-lg font-semibold">{branding.app_name}</span>
+            )}
           </div>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
