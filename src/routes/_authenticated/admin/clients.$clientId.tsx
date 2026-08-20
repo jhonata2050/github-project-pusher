@@ -756,13 +756,14 @@ function ClientDetailPage() {
                   </div>
                   <Switch 
                     id="block_directadmin_service" 
-                    defaultChecked={editingService.block_directadmin || false} 
+                    checked={editingService.block_directadmin || false} 
                     onCheckedChange={(checked) => {
+                      setEditingService({ ...editingService, block_directadmin: checked });
                       const el = document.getElementById('block_directadmin_service_hidden') as HTMLInputElement;
                       if (el) el.value = checked ? 'true' : 'false';
                     }}
                   />
-                  <input type="hidden" id="block_directadmin_service_hidden" name="block_directadmin_service" defaultValue={editingService.block_directadmin ? 'true' : 'false'} />
+                  <input type="hidden" id="block_directadmin_service_hidden" name="block_directadmin_service" value={editingService.block_directadmin ? 'true' : 'false'} />
                 </div>
               </div>
               <DialogFooter className="pt-4">
