@@ -345,14 +345,14 @@ function ClientDetailPage() {
                       <Switch 
                         id="block_directadmin" 
                         name="block_directadmin" 
-                        defaultChecked={client.block_directadmin || false} 
+                        defaultChecked={(client as any).block_directadmin || false} 
                         disabled={!isEditing}
                         onCheckedChange={(checked) => {
                           const el = document.getElementById('block_directadmin_hidden') as HTMLInputElement;
                           if (el) el.value = checked ? 'true' : 'false';
                         }}
                       />
-                      <input type="hidden" id="block_directadmin_hidden" name="block_directadmin" defaultValue={client.block_directadmin ? 'true' : 'false'} />
+                      <input type="hidden" id="block_directadmin_hidden" name="block_directadmin" defaultValue={(client as any).block_directadmin ? 'true' : 'false'} />
                     </div>
                   </div>
 
