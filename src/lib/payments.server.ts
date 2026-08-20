@@ -1,6 +1,6 @@
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { getRequest } from "@tanstack/react-start/server";
-import { ALL_GATEWAY_SETTING_KEYS, gatewayById, type PaymentMethod } from "./gateways";
+import { ALL_GATEWAY_SETTING_KEYS, gatewayById, type PaymentMethod, GATEWAYS } from "./gateways";
 import { getCajuPayCredentials, getCajuPayHeaders, readCajuPayError } from "./cajupay.server";
 
 type PaymentResult = {
