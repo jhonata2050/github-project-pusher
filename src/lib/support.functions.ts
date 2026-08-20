@@ -741,7 +741,8 @@ export const updateProduct = createServerFn({ method: "POST" })
         whmcs_id: input.external_id ? parseInt(input.external_id) : null,
         is_visible: input.is_visible,
         sort_order: input.sort_order,
-        disk_quota_mb: input.disk_quota_mb
+        disk_quota_mb: input.disk_quota_mb,
+        immediate_purchase: input.immediate_purchase || false
       })
       .eq("id", input.id);
 
