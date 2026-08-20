@@ -21,6 +21,7 @@ import {
   ExternalLink,
   Link2,
   ShieldAlert,
+  Database,
 } from "lucide-react";
 
 import { useState } from "react";
