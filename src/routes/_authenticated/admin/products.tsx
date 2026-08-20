@@ -121,6 +121,7 @@ function ProductsPage() {
       ...product,
       directadmin_package: product.directadmin_package || "",
       external_id: product.external_id || "",
+      immediate_purchase: !!product.immediate_purchase,
       prices: product.product_prices || []
     });
   };
