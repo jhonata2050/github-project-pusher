@@ -23,7 +23,8 @@ export const getSystemSettings = createServerFn({ method: "GET" })
 
     const settings: Record<string, any> = {};
     data.forEach((s: any) => {
-      settings[s.key] = s.value;
+      // Garantir que valores vazios no banco não quebrem a lógica do frontend
+      settings[s.key] = (s.value === "" || s.value === null) ? null : s.value;
     });
 
     return settings;

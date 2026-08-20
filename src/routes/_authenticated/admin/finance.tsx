@@ -78,7 +78,7 @@ function GatewayCard({ gateway, settings, isVPS = false }: { gateway: GatewayDef
             </Button>
             <Badge
               variant={configured ? "default" : "secondary"}
-              className="shrink-0 rounded-full text-[10px] uppercase"
+              className={`shrink-0 rounded-full text-[10px] uppercase ${configured ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20' : 'bg-slate-100 text-slate-400'}`}
             >
               {configured ? "Ativo" : "Inativo"}
             </Badge>
@@ -124,9 +124,9 @@ function GatewayCard({ gateway, settings, isVPS = false }: { gateway: GatewayDef
             <Input
               name={field.key}
               type={field.secret ? "password" : "text"}
-              placeholder={field.placeholder}
-              defaultValue={(settings?.[field.key] as string) ?? ""}
-              className="rounded-xl"
+              placeholder={field.placeholder || (field.secret ? "••••••••••••••••" : "")}
+              defaultValue={(settings?.[field.key] as string) || ""}
+              className="rounded-xl focus-visible:ring-brand"
             />
           </div>
         ))}
