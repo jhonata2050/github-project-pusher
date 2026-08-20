@@ -339,7 +339,7 @@ export async function getDASession(serverId: string, username: string, redirectU
   // the request. Sending `user` in the form while authenticating as admin
   // creates an admin OTP. The documented impersonation syntax makes the
   // authenticated identity the customer while retaining the admin API key.
-  const delegatedApiUser = `${server.api_user}|${targetUser}`;
+  const delegatedApiUser = server.api_user;
   console.log(`Iniciando geração de SSO delegado para o usuário ${targetUser} no servidor ${server.hostname}`);
 
   // DirectAdmin SSO (one_time_url) works by requesting it from CMD_API_LOGIN_KEYS
