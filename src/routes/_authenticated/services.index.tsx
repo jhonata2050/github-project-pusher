@@ -126,8 +126,11 @@ function ClientServicesPage() {
                     )}>
                       <Store className="size-5" />
                     </div>
-                    <Badge variant="outline" className={cn("rounded-full border-none px-3 text-[10px] font-bold uppercase", status.color)}>
-                      {status.label}
+                    <Badge variant="outline" className={cn(
+                      "rounded-full border-none px-3 text-[10px] font-bold uppercase", 
+                      svc.block_directadmin ? "bg-destructive text-destructive-foreground" : status.color
+                    )}>
+                      {svc.block_directadmin ? "Bloqueado" : status.label}
                     </Badge>
                   </div>
 
