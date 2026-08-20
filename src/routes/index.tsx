@@ -228,8 +228,17 @@ function Index() {
 
       </section>
 
-      <footer className="border-t border-border px-4 py-8 text-center text-sm text-muted-foreground">
-        {branding.app_name} — plataforma de gestão de serviços de hospedagem.
+      <footer className="border-t border-border px-4 py-8 text-center text-sm text-muted-foreground flex flex-col items-center gap-4">
+        {branding.logo_url ? (
+          <img
+            src={branding.logo_url}
+            alt={branding.app_name}
+            className="h-6 w-auto opacity-50 grayscale hover:grayscale-0 transition-all"
+          />
+        ) : (
+          <span>{branding.app_name}</span>
+        )}
+        <p>plataforma de gestão de serviços de hospedagem.</p>
       </footer>
     </div>
   );
