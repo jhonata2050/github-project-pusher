@@ -265,8 +265,13 @@ function AdminFinanceSettingsPage() {
                           <Copy className="size-4" />
                         </Button>
                       </div>
-                      <p className="text-[10px] text-muted-foreground">
-                        Vital para receber notificações de pagamentos dos gateways.
+                      <p className="text-[10px] text-muted-foreground flex flex-col gap-1">
+                        <span>Vital para receber notificações de pagamentos dos gateways.</span>
+                        {typeof window !== 'undefined' && window.location.origin.includes('id-preview--') && (
+                          <span className="text-amber-500 font-medium">
+                            ⚠️ Você está no ambiente de desenvolvimento. Use a URL pública acima para os gateways.
+                          </span>
+                        )}
                       </p>
                     </div>
                   </CardContent>
