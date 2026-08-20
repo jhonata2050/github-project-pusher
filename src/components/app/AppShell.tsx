@@ -182,6 +182,13 @@ export function AppShell({
   const { isStaff } = useIsStaff();
   const { user, impersonatedClientId, setImpersonatedClientId } = useAuth();
   const { data: profile } = useProfile();
+
+  useEffect(() => {
+    if (user && profile && !profile.registration_completed && pathname !== "/complete-profile") {
+      void navigate({ to: "/complete-profile" });
+    }
+  }, [user, profile, pathname, navigate]);
+
   const brandingData = useBranding();
   const isAdminArea = area ? area === "admin" : (user ? (isStaff && pathname.startsWith("/admin")) : false);
   
