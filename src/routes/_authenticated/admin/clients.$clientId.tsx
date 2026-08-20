@@ -54,6 +54,13 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { getServers, updateServiceDetails, getAllProducts } from "@/lib/support.functions";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 export const Route = createFileRoute("/_authenticated/admin/clients/$clientId")({
   head: ({ params }) => ({
@@ -274,18 +281,25 @@ function ClientDetailPage() {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label htmlFor="identification_type">Tipo de Documento</Label>
-                      <select 
-                        id="identification_type" 
-                        name="identification_type" 
+                      <Select 
                         defaultValue={(client as any).identification_type || "cpf"} 
                         disabled={!isEditing}
-                        className="flex h-11 w-full rounded-xl border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                        onValueChange={(val) => {
+                          const el = document.getElementById('identification_type_hidden') as HTMLInputElement;
+                          if (el) el.value = val;
+                        }}
                       >
-                        <option value="cpf">CPF (Pessoa Física)</option>
-                        <option value="cnpj">CNPJ (Empresa)</option>
-                        <option value="tax_id">Tax ID (Internacional)</option>
-                        <option value="passport">Passaporte</option>
-                      </select>
+                        <SelectTrigger className="h-11 rounded-xl border-input bg-background shadow-sm">
+                          <SelectValue placeholder="Selecione o tipo" />
+                        </SelectTrigger>
+                        <SelectContent className="rounded-xl border-border/40 shadow-xl">
+                          <SelectItem value="cpf">CPF (Pessoa Física)</SelectItem>
+                          <SelectItem value="cnpj">CNPJ (Empresa)</SelectItem>
+                          <SelectItem value="tax_id">Tax ID (Internacional)</SelectItem>
+                          <SelectItem value="passport">Passaporte</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <input type="hidden" id="identification_type_hidden" name="identification_type" defaultValue={(client as any).identification_type || "cpf"} />
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="tax_id">Documento (ID)</Label>
@@ -298,16 +312,23 @@ function ClientDetailPage() {
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="status">Status</Label>
-                    <select 
-                      id="status" 
-                      name="status" 
+                    <Select 
                       defaultValue={client.status} 
                       disabled={!isEditing}
-                      className="flex h-11 w-full rounded-xl border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                      onValueChange={(val) => {
+                        const el = document.getElementById('status_hidden') as HTMLInputElement;
+                        if (el) el.value = val;
+                      }}
                     >
-                      <option value="active">Ativo</option>
-                      <option value="inactive">Inativo</option>
-                    </select>
+                      <SelectTrigger className="h-11 rounded-xl border-input bg-background shadow-sm">
+                        <SelectValue placeholder="Selecione o status" />
+                      </SelectTrigger>
+                      <SelectContent className="rounded-xl border-border/40 shadow-xl">
+                        <SelectItem value="active">Ativo</SelectItem>
+                        <SelectItem value="inactive">Inativo</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <input type="hidden" id="status_hidden" name="status" defaultValue={client.status} />
                   </div>
                   
                   <div className="col-span-full border-t pt-4">
