@@ -21,6 +21,13 @@ export const Route = createFileRoute('/api/public/webhooks/woovi')({
 
           if (webhookSecret && !verifyHmacSignature(body, signature, webhookSecret)) {
             console.error('[Woovi Webhook] Assinatura inválida');
+            await supabaseAdmin.from('audit_logs').insert({
+              category: 'webhook',
+              action: 'woovi.invalid_signature',
+              status: 'failure',
+              description: 'Tentativa de webhook com assinatura HMAC inválida',
+              metadata: { headers: request.headers } as any
+            });
             return new Response('Invalid signature', { status: 401 });
           }
 
