@@ -150,14 +150,23 @@ export async function fetchInvoiceDetails(userId: string, id: string) {
 }
 
 export async function processProvisioning(invoiceId: string) {
+  console.log(`[Provisioning] Iniciando processamento para fatura #${invoiceId}`);
+  
   const { data: invoice, error: iError } = await supabaseAdmin
     .from("invoices")
     .select("*, invoice_items(*, services(*, products(*)))")
     .eq("id", invoiceId)
     .single();
 
-  if (iError || !invoice) throw new Error("Fatura não encontrada");
-  if (invoice.status !== "paid") return { success: false, message: "Fatura não está paga" };
+  if (iError || !invoice) {
+    console.error(`[Provisioning] Erro ao buscar fatura #${invoiceId}:`, iError);
+    throw new Error("Fatura não encontrada");
+  }
+  
+  if (invoice.status !== "paid") {
+    console.warn(`[Provisioning] Abortando: fatura #${invoiceId} tem status ${invoice.status}`);
+    return { success: false, message: "Fatura não está paga" };
+  }
 
   const { data: profile } = await supabaseAdmin
     .from("profiles")
@@ -165,73 +174,109 @@ export async function processProvisioning(invoiceId: string) {
     .eq("id", invoice.user_id)
     .single();
 
+  let results = [];
+
   for (const item of (invoice as any).invoice_items) {
     const service = item.services;
     const product = service?.products;
 
-    if (service && service.status === "pending" && product?.directadmin_package) {
-      // Find a server to provision
+    if (!service) {
+      console.warn(`[Provisioning] Item da fatura sem serviço associado. Fatura: #${invoiceId}`);
+      continue;
+    }
+
+    if (service.status !== "pending") {
+      console.log(`[Provisioning] Serviço ${service.id} já está ${service.status}. Pulando.`);
+      continue;
+    }
+
+    // 1. Caso: Hospedagem via DirectAdmin
+    if (product?.directadmin_package) {
+      console.log(`[Provisioning] Provisionando hospedagem DirectAdmin para serviço ${service.id}`);
+      
       const { data: server } = await supabaseAdmin
         .from("servers")
         .select("*")
         .limit(1)
         .single();
 
-      if (server) {
-        try {
-          const username = `u${Math.random().toString(36).slice(-7)}`;
-          const domain = service.domain || `${username}.temp.eqsam.com`;
-          
-          await createDAAccount(server.id, {
-            username,
-            domain,
-            email: profile?.email || "user@example.com",
-            package: product.directadmin_package
-          });
-
-          await supabaseAdmin
-            .from("services")
-            .update({
-              status: "active",
-              username,
-              server_id: server.id,
-              domain,
-              next_due_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
-            } as any)
-            .eq("id", service.id);
-
-
-          console.log(`Provisioned service ${service.id} on server ${server.id}`);
-
-          // Notificar via WhatsApp
-          try {
-            const { sendWhatsAppMessage, notifyAdminWhatsApp } = await import("./whatsapp.server");
-            
-            // Notificar Cliente
-            if (profile?.phone) {
-              await sendWhatsAppMessage({
-                to: profile.phone,
-                message: `✅ *Serviço Ativo!*\n\nOlá ${profile.full_name},\nSeu serviço *${product.name}* foi ativado com sucesso!\n\n*Domínio:* ${domain}\n*Usuário:* ${username}\n\nObrigado por escolher nossa plataforma!`,
-                category: "service_activation"
-              });
-            }
-
-            // Notificar Admin
-            await notifyAdminWhatsApp(
-              `🚀 *Serviço Provisionado*\n\n*Produto:* ${product.name}\n*Cliente:* ${profile?.full_name}\n*Domínio:* ${domain}`,
-              "service_activation"
-            );
-          } catch (e) {
-            console.warn("[WhatsApp] Falha ao enviar notificações de provisionamento:", e);
-          }
-        } catch (err: any) {
-          console.error(`Provisioning error: ${err.message}`);
-        }
+      if (!server) {
+        const errorMsg = "Nenhum servidor DirectAdmin disponível para provisionamento.";
+        console.error(`[Provisioning] ${errorMsg}`);
+        await supabaseAdmin.from("services").update({ notes: `Erro de Provisionamento: ${errorMsg}` }).eq("id", service.id);
+        results.push({ serviceId: service.id, success: false, error: errorMsg });
+        continue;
       }
+
+      try {
+        const username = service.username || `u${Math.random().toString(36).slice(-7)}`;
+        const domain = service.domain || `${username}.temp.eqsam.com`;
+        
+        await createDAAccount(server.id, {
+          username,
+          domain,
+          email: profile?.email || "user@example.com",
+          package: product.directadmin_package
+        });
+
+        await supabaseAdmin
+          .from("services")
+          .update({
+            status: "active",
+            username,
+            server_id: server.id,
+            domain,
+            next_due_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+            notes: "Provisionado automaticamente via DirectAdmin"
+          } as any)
+          .eq("id", service.id);
+
+        console.log(`[Provisioning] Sucesso: serviço ${service.id} ativo no servidor ${server.id}`);
+
+        // Notificações via WhatsApp
+        try {
+          if (profile?.phone) {
+            await sendWhatsAppMessage({
+              to: profile.phone,
+              message: `✅ *Serviço Ativo!*\n\nOlá ${profile.full_name},\nSeu serviço *${product.name}* foi ativado com sucesso!\n\n*Domínio:* ${domain}\n*Usuário:* ${username}\n\nObrigado por escolher nossa plataforma!`,
+              category: "service_activation"
+            });
+          }
+
+          await notifyAdminWhatsApp(
+            `🚀 *Serviço Provisionado*\n\n*Produto:* ${product.name}\n*Cliente:* ${profile?.full_name}\n*Domínio:* ${domain}`,
+            "service_activation"
+          );
+        } catch (e) {
+          console.warn("[WhatsApp] Falha ao enviar notificações:", e);
+        }
+        
+        results.push({ serviceId: service.id, success: true });
+      } catch (err: any) {
+        console.error(`[Provisioning] Erro na API DirectAdmin para serviço ${service.id}:`, err.message);
+        await supabaseAdmin.from("services").update({ 
+          notes: `Erro DirectAdmin: ${err.message}` 
+        }).eq("id", service.id);
+        results.push({ serviceId: service.id, success: false, error: err.message });
+      }
+    } 
+    // 2. Caso: Instância VPS (Provisionamento Manual/Híbrido por enquanto)
+    else if (product?.category === 'vps' || product?.name?.toLowerCase().includes('vps')) {
+      console.log(`[Provisioning] Detectado produto VPS para serviço ${service.id}. Aguardando ativação manual ou vinculação externa.`);
+      
+      await supabaseAdmin.from("services").update({
+        notes: "Aguardando provisionamento da instância VPS pelo administrador."
+      }).eq("id", service.id);
+      
+      results.push({ serviceId: service.id, success: true, message: "VPS aguardando admin" });
+    }
+    else {
+      console.log(`[Provisioning] Produto sem regras de auto-provisionamento para serviço ${service.id}`);
+      results.push({ serviceId: service.id, success: true, message: "Sem provisionamento automático" });
     }
   }
 
-  return { success: true };
+  return { success: true, results };
 }
 
 /**

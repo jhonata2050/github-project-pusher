@@ -53,25 +53,34 @@ export const Route = createFileRoute('/api/public/webhook')({
             
             if (chargeId && payload.event === 'OPENPIX:CHARGE_COMPLETED') {
               const { handlePaymentSuccess } = await import('@/lib/finance.server');
-              const { data: transaction } = await supabaseAdmin
+              
+              // 1. Tentar localizar a transação pelo ID do gateway
+              let { data: transaction } = await supabaseAdmin
                 .from('transactions')
                 .select('id, invoice_id, status')
                 .eq('gateway_reference', chargeId)
                 .maybeSingle();
 
-              if (transaction) {
-                if (transaction.status !== 'completed' && transaction.invoice_id) {
-                  await handlePaymentSuccess(transaction.invoice_id, 'Woovi/OpenPix', chargeId);
+              // 2. Se não encontrou transação, tenta extrair o invoiceId do correlationID (padrão invoice-UUID)
+              let invoiceId = transaction?.invoice_id;
+              if (!invoiceId && typeof chargeId === 'string' && chargeId.startsWith('invoice-')) {
+                invoiceId = chargeId.replace('invoice-', '');
+                console.log(`[Generic Webhook] Localizando fatura via correlationID: ${invoiceId}`);
+              }
+
+              if (invoiceId) {
+                if (!transaction || transaction.status !== 'completed') {
+                  await handlePaymentSuccess(invoiceId, 'Woovi/OpenPix', chargeId);
                 } else {
-                  console.log(`[Generic Webhook] Transação ${chargeId} já está completa ou sem fatura.`);
+                  console.log(`[Generic Webhook] Pagamento já processado para fatura ${invoiceId}.`);
                 }
               } else {
-                console.warn(`[Generic Webhook] Transação não encontrada para referência: ${chargeId}`);
+                console.warn(`[Generic Webhook] Não foi possível determinar a fatura para a referência: ${chargeId}`);
                 await supabaseAdmin.from('audit_logs').insert({
                   category: 'webhook',
-                  action: 'generic_webhook.missing_transaction',
+                  action: 'generic_webhook.missing_data',
                   status: 'warning',
-                  description: `Transação não encontrada para referência Woovi: ${chargeId}`,
+                  description: `Falha ao localizar fatura para referência Woovi: ${chargeId}`,
                   metadata: { chargeId, payload } as any
                 });
               }
