@@ -814,8 +814,8 @@ function ClientDetailPage() {
 function ProvisioningLogsTable({ clientId, serviceId }: { clientId?: string, serviceId?: string }) {
   const { data: logs, isLoading } = useQuery({
     queryKey: ["provisioning-logs", clientId, serviceId],
-    queryFn: () => {
-      const { getProvisioningLogs } = require("@/lib/provisioning.functions");
+    queryFn: async () => {
+      const { getProvisioningLogs } = await import("@/lib/provisioning.functions");
       return getProvisioningLogs({ data: { clientId, serviceId } });
     }
   });
