@@ -104,6 +104,19 @@ function CheckoutPage() {
     return list;
   }, [productType, user]);
 
+  // Lógica de Venda Imediata: Pula passos se o parâmetro 'immediate' estiver presente
+  useEffect(() => {
+    if (product.data?.immediate_purchase) {
+      const searchParams = new URLSearchParams(typeof window !== 'undefined' ? window.location.search : '');
+      if (searchParams.get("immediate") === "true") {
+        if (productType !== "hosting" && productType !== "vps" && step === 1) {
+          const cycleIdx = steps.indexOf("Ciclo de Faturamento");
+          if (cycleIdx >= 0) setStep(cycleIdx + 1);
+        }
+      }
+    }
+  }, [product.data, productType, steps, step]);
+
   const orderMutation = useMutation({
     mutationFn: async () => {
       const { data: sessionData } = await supabase.auth.getSession();
