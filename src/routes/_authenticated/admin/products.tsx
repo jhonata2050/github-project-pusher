@@ -156,6 +156,7 @@ function ProductsPage() {
       is_visible: editingProduct.is_visible,
       sort_order: editingProduct.sort_order,
       disk_quota_mb: editingProduct.disk_quota_mb,
+      immediate_purchase: editingProduct.immediate_purchase,
       prices: editingProduct.prices.map((p: any) => ({
         cycle: p.cycle,
         price: Number(p.price),
