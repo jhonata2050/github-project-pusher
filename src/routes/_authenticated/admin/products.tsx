@@ -254,6 +254,26 @@ function ProductsPage() {
                     <dt>Preços ativos</dt>
                     <dd className="text-foreground">{product.product_prices?.filter(p => p.is_active).length ?? 0}</dd>
                   </div>
+                  {product.immediate_purchase && (
+                    <div className="flex justify-between items-center mt-1">
+                      <dt className="text-brand font-medium">Link de Venda</dt>
+                      <dd>
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          className="size-6 h-6 w-6"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            const url = `${window.location.origin}/checkout/${product.id}?immediate=true`;
+                            navigator.clipboard.writeText(url);
+                            toast.success("Link copiado!");
+                          }}
+                        >
+                          <Copy className="size-3" />
+                        </Button>
+                      </dd>
+                    </div>
+                  )}
                 </dl>
                 <p className="mt-4 text-lg font-semibold">
                   {monthly ? brl.format(Number(monthly.price)) : "Sem preço mensal"}
