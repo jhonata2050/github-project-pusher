@@ -260,3 +260,32 @@ export async function getAdminStatsImplementation(
   };
 }
 
+export async function getLeadSourceStatsImplementation(
+  context: { supabase: SupabaseClient<Database>; userId: string }
+) {
+  // Check permissions
+  const { data: isAdmin } = await context.supabase.rpc("has_role", {
+    _user_id: context.userId,
+    _role: "admin",
+  });
+
+  if (!isAdmin) {
+    throw new Error("Não autorizado");
+  }
+
+  const { data, error } = await context.supabase
+    .from("profiles")
+    .select("lead_source");
+
+  if (error) throw error;
+
+  const stats: Record<string, number> = {};
+  data.forEach((p: any) => {
+    const source = p.lead_source || "Não informado";
+    stats[source] = (stats[source] || 0) + 1;
+  });
+
+  return Object.entries(stats).map(([name, value]) => ({ name, value }));
+}
+
+

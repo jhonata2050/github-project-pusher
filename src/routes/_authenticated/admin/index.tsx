@@ -12,14 +12,16 @@ import {
   Clock,
   ArrowRight,
   CheckCircle2,
-  AlertTriangle
+  PieChart as PieChartIcon
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { AppShell } from "@/components/app/AppShell";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { getAdminStats } from "@/lib/dashboard-admin.functions";
+import { getAdminStats, getLeadSourceStats } from "@/lib/dashboard-admin.functions";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from "recharts";
+
 
 export const Route = createFileRoute("/_authenticated/admin/")({
   component: AdminDashboardPage,
@@ -31,6 +33,14 @@ function AdminDashboardPage() {
     queryFn: () => getAdminStats(),
     refetchInterval: 300000, // 5 minutos
   });
+  
+  const { data: leadStats } = useQuery({
+    queryKey: ["admin-lead-stats"],
+    queryFn: () => getLeadSourceStats(),
+  });
+
+  const COLORS = ["#B4F461", "#3B82F6", "#F59E0B", "#EF4444", "#8B5CF6", "#64748B"];
+
 
   if (isLoading) {
     return (
@@ -284,8 +294,49 @@ function AdminDashboardPage() {
               </CardContent>
             </Card>
           </div>
+
+          <Card className="col-span-full lg:col-span-3 rounded-3xl border-border/50 shadow-sm border">
+            <CardHeader>
+              <CardTitle className="text-base flex items-center gap-2">
+                <PieChartIcon className="size-4 text-primary" /> Origem dos Clientes
+              </CardTitle>
+              <CardDescription className="text-xs">Distribuição de como os clientes nos conheceram.</CardDescription>
+            </CardHeader>
+            <CardContent className="h-[300px]">
+              {leadStats && leadStats.length > 0 ? (
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={leadStats}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={60}
+                      outerRadius={80}
+                      paddingAngle={5}
+                      dataKey="value"
+                    >
+                      {leadStats.map((entry: any, index: number) => (
+                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length] || "#888888"} />
+                      ))}
+
+                    </Pie>
+                    <Tooltip 
+                      contentStyle={{ backgroundColor: 'hsl(var(--card))', borderRadius: '12px', border: '1px solid hsl(var(--border))' }}
+                      itemStyle={{ fontSize: '12px' }}
+                    />
+                    <Legend />
+                  </PieChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className="flex items-center justify-center h-full text-muted-foreground text-xs">
+                  Aguardando dados...
+                </div>
+              )}
+            </CardContent>
+          </Card>
         </div>
       </div>
     </AppShell>
+
   );
 }

@@ -179,9 +179,17 @@ export function AppShell({
   area?: "admin" | "client";
 }) {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const navigate = useNavigate();
   const { isStaff } = useIsStaff();
   const { user, impersonatedClientId, setImpersonatedClientId } = useAuth();
   const { data: profile } = useProfile();
+
+  useEffect(() => {
+    if (user && profile && !(profile as any).registration_completed && pathname !== "/complete-profile" && !pathname.startsWith("/auth")) {
+      void navigate({ to: "/complete-profile" });
+    }
+  }, [user, profile, pathname, navigate]);
+
   const brandingData = useBranding();
   const isAdminArea = area ? area === "admin" : (user ? (isStaff && pathname.startsWith("/admin")) : false);
   
@@ -194,8 +202,8 @@ export function AppShell({
     favicon_url: null,
   } : brandingData;
 
-  const navigate = useNavigate();
   const queryClient = useQueryClient();
+
   const [hideBanner, setHideBanner] = useState(false);
 
 
