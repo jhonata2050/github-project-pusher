@@ -1,6 +1,8 @@
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { createDAAccount } from "./directadmin.server";
 import { notifyAdminWhatsApp, sendWhatsAppMessage } from "./whatsapp.server";
+import { logProvisioningAttempt } from "./provisioning-audit.server";
+
 
 
 
@@ -203,19 +205,25 @@ export async function processProvisioning(invoiceId: string) {
       if (!server) {
         const errorMsg = "Nenhum servidor DirectAdmin disponível para provisionamento automático.";
         console.error(`[Provisioning] ${errorMsg}`);
+        
+        await logProvisioningAttempt({
+          serviceId: service.id,
+          userId: invoice.user_id,
+          status: 'failure',
+          errorCode: 'NO_SERVER_AVAILABLE',
+          errorMessage: errorMsg,
+          metadata: { productId: product.id }
+        });
+
         await supabaseAdmin.from("services").update({ 
           notes: `ERRO CRÍTICO: ${errorMsg}`,
-          status: "pending" // Garante que continue como pendente para ação manual
+          status: "pending"
         }).eq("id", service.id);
-        
-        await notifyAdminWhatsApp(
-          `⚠️ *FALHA DE PROVISIONAMENTO*\n\n*Serviço:* ${product.name}\n*Cliente:* ${profile?.full_name}\n*Motivo:* ${errorMsg}\n\nO serviço continua pendente no dashboard.`,
-          "provisioning_error"
-        );
         
         results.push({ serviceId: service.id, success: false, error: errorMsg });
         continue;
       }
+
 
       try {
         const username = service.username || `u${Math.random().toString(36).slice(-7)}`;
@@ -240,7 +248,15 @@ export async function processProvisioning(invoiceId: string) {
           } as any)
           .eq("id", service.id);
 
+        await logProvisioningAttempt({
+          serviceId: service.id,
+          userId: invoice.user_id,
+          status: 'success',
+          metadata: { username, domain, serverId: server.id }
+        });
+
         console.log(`[Provisioning] Sucesso: serviço ${service.id} ativo no servidor ${server.id}`);
+
 
         // Notificações via WhatsApp
         try {
@@ -265,17 +281,22 @@ export async function processProvisioning(invoiceId: string) {
         const errorDetail = err.message || "Erro desconhecido na API";
         console.error(`[Provisioning] Erro na API DirectAdmin para serviço ${service.id}:`, errorDetail);
         
+        await logProvisioningAttempt({
+          serviceId: service.id,
+          userId: invoice.user_id,
+          status: 'failure',
+          errorCode: 'API_ERROR',
+          errorMessage: errorDetail,
+          metadata: { error: err }
+        });
+
         await supabaseAdmin.from("services").update({ 
           notes: `FALHA API: ${errorDetail}`,
           status: "pending"
         }).eq("id", service.id);
 
-        await notifyAdminWhatsApp(
-          `🚨 *ERRO API DIRECTADMIN*\n\n*Serviço:* ${product.name}\n*Cliente:* ${profile?.full_name}\n*Erro:* ${errorDetail}\n\nAção manual necessária no painel administrativo.`,
-          "provisioning_error"
-        );
-
         results.push({ serviceId: service.id, success: false, error: errorDetail });
+
       }
     } 
     // 2. Caso: Instância VPS (Provisionamento Manual/Híbrido por enquanto)
