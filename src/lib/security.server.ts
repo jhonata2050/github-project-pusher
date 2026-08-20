@@ -17,6 +17,10 @@ export async function validateDASSORequest(
 
   const cleanUsername = username.trim();
 
+  // SECURITY: ALWAYS verify ownership for non-admins.
+  // CRITICAL: We also check the 'profiles' table to ensure the user doesn't have a legacy role that bypasses RLS
+  // but isn't a system admin.
+  
   if (!isAdmin) {
     // 2. For regular users, verify they OWN the service with this username on this server
     const { data: service, error } = await supabaseAdmin
@@ -29,19 +33,25 @@ export async function validateDASSORequest(
 
     if (error || !service) {
       console.error(`[Security-Alert] Unauthorized DA-SSO attempt by user ${userId} for username ${cleanUsername}`);
-      throw new Error("Acesso negado: Você não possui permissão para acessar este serviço.");
+      throw new Error("Acesso negado: Você não possui permissão para acessar este serviço ou o usuário informado é inválido.");
     }
 
     if (service.block_directadmin) {
       throw new Error("Seu acesso ao painel DirectAdmin foi bloqueado pelo administrador.");
     }
+
+    // 3. Additional check: ensure the target username isn't a system one even if database says they own it (tamper check)
+    const restrictedUsernames = ["admin", "root", "superuser", "da_admin", "eqsa7232"];
+    if (restrictedUsernames.includes(cleanUsername.toLowerCase())) {
+      console.error(`[Security-Violation] User ${userId} attempted to SSO into restricted username ${cleanUsername} (DB Ownership Claimed)`);
+      throw new Error("Acesso negado: Tentativa de acesso a conta de sistema detectada.");
+    }
   } else {
-    // 3. For admins, verify they aren't accidentally trying to login as 'admin' or 'root' via customer SSO
-    const restrictedUsernames = ["admin", "root", "superuser", "da_admin"];
+    // 4. For admins, verify they aren't accidentally trying to login as the root reseller or system accounts
+    const restrictedUsernames = ["admin", "root", "superuser", "da_admin", "eqsa7232"];
     if (restrictedUsernames.includes(cleanUsername.toLowerCase())) {
       console.warn(`[Security-Warning] Admin ${userId} attempted SSO into a restricted system account: ${cleanUsername}`);
-      // Note: We might allow this if the user IS a system admin, but generally, 
-      // SSO links should be for customer accounts to avoid sharing root-level one-time links.
+      throw new Error("Acesso negado: Administradores não podem acessar contas de sistema via SSO de cliente.");
     }
   }
 
