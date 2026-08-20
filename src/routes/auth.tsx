@@ -2,6 +2,8 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { z } from "zod";
+import { trackEvent } from "@/lib/analytics";
+
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -133,7 +135,11 @@ function AuthPage() {
           },
         });
         if (error) throw error;
-        if (data.session) void logSessionEvent({ data: { action: "signup.succeeded", description: "Conta criada com sucesso" } });
+        if (data.session) {
+          void logSessionEvent({ data: { action: "signup.succeeded", description: "Conta criada com sucesso" } });
+          trackEvent("sign_up", { method: "email", lead_source: leadSource });
+        }
+
         if (!data.session) {
           setCheckEmail(true);
           return;

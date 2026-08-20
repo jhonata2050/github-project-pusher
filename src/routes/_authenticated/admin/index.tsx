@@ -316,8 +316,9 @@ function AdminDashboardPage() {
                       dataKey="value"
                     >
                       {leadStats.map((entry: any, index: number) => (
-                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length] || "#888888"} />
                       ))}
+
                     </Pie>
                     <Tooltip 
                       contentStyle={{ backgroundColor: 'hsl(var(--card))', borderRadius: '12px', border: '1px solid hsl(var(--border))' }}
