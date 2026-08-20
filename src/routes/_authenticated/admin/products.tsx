@@ -353,7 +353,42 @@ function ProductsPage() {
               </div>
 
               <div className="grid gap-4 md:grid-cols-2">
-                <div className="space-y-2">
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="flex items-center justify-between border border-border rounded-xl p-4 bg-muted/20">
+                  <div className="space-y-0.5">
+                    <Label className="text-sm font-medium">Venda Imediata</Label>
+                    <p className="text-[10px] text-muted-foreground">Gera link direto para checkout</p>
+                  </div>
+                  <Switch 
+                    checked={editingProduct.immediate_purchase} 
+                    onCheckedChange={val => setEditingProduct({...editingProduct, immediate_purchase: val})}
+                  />
+                </div>
+                {editingProduct.immediate_purchase && editingProduct.id && (
+                  <div className="flex items-center gap-2 border border-border rounded-xl p-4 bg-brand/5">
+                    <div className="flex-1 min-w-0">
+                      <Label className="text-[10px] text-brand font-bold uppercase">Link do Plano</Label>
+                      <p className="text-[10px] truncate text-muted-foreground">
+                        {`${window.location.origin.replace('http://', '').replace('https://', '')}/checkout/${editingProduct.id}...`}
+                      </p>
+                    </div>
+                    <Button 
+                      variant="ghost" 
+                      size="icon" 
+                      className="size-8"
+                      onClick={() => {
+                        const url = `${window.location.origin}/checkout/${editingProduct.id}?immediate=true`;
+                        navigator.clipboard.writeText(url);
+                        toast.success("Link copiado!");
+                      }}
+                    >
+                      <Copy className="size-4 text-brand" />
+                    </Button>
+                  </div>
+                )}
+              </div>
+
+              <div className="space-y-2">
                   <Label>Espaço em Disco (MB)</Label>
                   <Input 
                     type="number"
