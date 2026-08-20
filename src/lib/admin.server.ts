@@ -200,12 +200,29 @@ export async function getAdminStatsImplementation(
     .eq("status", "active");
 
   // Serviços pendentes (provisionamento)
-  const { data: errorServices } = await context.supabase
+  const { data: rawErrorServices, error: errorServicesError } = await context.supabase
     .from("services")
-    .select("id, username, domain, error_message, notes, updated_at, user_id, profiles:user_id(full_name, email)")
+    .select("id, username, domain, error_message, notes, updated_at, user_id")
     .eq("status", "pending")
     .order("updated_at", { ascending: false })
     .limit(30);
+
+  if (errorServicesError) {
+    console.error("[AdminStats] Erro ao buscar serviços pendentes:", errorServicesError);
+  }
+
+  // Buscar perfis dos clientes desses serviços (relação não é direta no schema)
+  let errorServices: any[] = rawErrorServices || [];
+  if (errorServices.length > 0) {
+    const userIds = [...new Set(errorServices.map((s) => s.user_id))];
+    const { data: owners } = await context.supabase
+      .from("profiles")
+      .select("id, full_name, email")
+      .in("id", userIds);
+
+    const map = new Map((owners || []).map((o) => [o.id, o]));
+    errorServices = errorServices.map((s) => ({ ...s, profiles: map.get(s.user_id) || null }));
+  }
 
 
   // Obter contagem de faturas pendentes
