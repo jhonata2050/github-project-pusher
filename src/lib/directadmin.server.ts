@@ -412,10 +412,10 @@ export async function getDASession(serverId: string, username: string, redirectU
   }
 
   // CRITICAL: Pre-verify user existence on the remote server
-  const exists = await checkDAUserExists(serverId, targetUser);
+  const exists = await checkDAUserExists(serverId, targetUser, undefined); // No serviceId context here usually
   if (!exists) {
     console.error(`[Security-Alert] SSO failed: User ${targetUser} does not exist on server ${server.hostname}`);
-    throw new Error(`Falha de provisionamento: O usuário ${targetUser} não foi encontrado no servidor. Por favor, entre em contato com o suporte.`);
+    throw new Error(`Acesso Negado: O usuário ${targetUser} não foi encontrado no servidor. Se este problema persistir após o pagamento, entre em contato com o suporte.`);
   }
 
   const delegatedApiUser = server.api_user;
