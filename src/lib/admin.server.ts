@@ -178,15 +178,19 @@ export async function bulkDeleteClientsImplementation(
 export async function getAdminStatsImplementation(
   context: { supabase: SupabaseClient<Database>; userId: string }
 ) {
-  // Verificar permissões
-  const { data: isAdmin } = await context.supabase.rpc("has_role", {
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  
+  // SECURITY: ALWAYS re-verify role directly from DB using privileged client
+  const { data: isAdmin, error: roleError } = await supabaseAdmin.rpc("has_role", {
     _user_id: context.userId,
     _role: "admin",
   });
 
-  if (!isAdmin) {
+  if (roleError || !isAdmin) {
+    console.error(`[Security-Violation] Unauthorized admin stats access by ${context.userId}`);
     throw new Error("Não autorizado");
   }
+
 
   // Obter contagem de clientes
   const { count: clientsCount } = await context.supabase

@@ -25,7 +25,7 @@ export async function validateDASSORequest(
     // 2. For regular users, verify they OWN the service with this username on this server
     const { data: service, error } = await supabaseAdmin
       .from("services")
-      .select("id, user_id, username, block_directadmin")
+      .select("id, user_id, username, status, block_directadmin")
       .eq("user_id", userId)
       .eq("username", cleanUsername)
       .eq("server_id", serverId)
@@ -34,8 +34,24 @@ export async function validateDASSORequest(
     if (error || !service) {
       console.error(`[Security-Alert] Unauthorized DA-SSO attempt by user ${userId} for username ${cleanUsername}`);
       await logSecurityEvent(userId, "unauthorized_sso_attempt", { username: cleanUsername, serverId });
+      
+      // Notificar Admin via WhatsApp sobre tentativa de invasão/acesso indevido
+      try {
+        const { notifyAdminWhatsApp } = await import("./whatsapp.server");
+        await notifyAdminWhatsApp(
+          `🛑 *ALERTA DE SEGURANÇA*\n\nTentativa de acesso não autorizado ao DirectAdmin detectada!\n\n*Usuário Lovable:* ${userId}\n*Usuário DA Alvo:* ${cleanUsername}\n*Servidor:* ${serverId}\n\nO acesso foi BLOQUEADO automaticamente.`,
+          "security_alerts"
+        );
+      } catch (e) {}
+
       throw new Error("Acesso negado: Você não possui permissão para acessar este serviço ou o usuário informado é inválido.");
     }
+
+    if (service.status === 'suspended') {
+      await logSecurityEvent(userId, "suspended_service_sso_attempt", { username: cleanUsername, serviceId: service.id });
+      throw new Error("Seu serviço está suspenso. O acesso ao painel DirectAdmin não é permitido.");
+    }
+
 
     if (service.block_directadmin) {
       await logSecurityEvent(userId, "blocked_sso_attempt", { username: cleanUsername, serviceId: service.id });

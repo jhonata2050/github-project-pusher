@@ -335,14 +335,16 @@ export async function getDASession(serverId: string, username: string, redirectU
   
   // SECURITY: Hard-restrict system usernames to prevent accidental admin escalation
   // Includes 'eqsa7232' which is the detected API user for the server.
-  const restrictedUsernames = ["admin", "root", "superuser", "da_admin", "eqsa7232"];
+  const restrictedUsernames = ["admin", "root", "superuser", "da_admin", "eqsa7232", "reseller"];
   if (restrictedUsernames.includes(targetUser.toLowerCase())) {
+    console.error(`[Security-DA] Attempt to login via SSO to restricted user: ${targetUser}`);
     throw new Error('Acesso negado: Não é permitido login via SSO em contas administrativas do sistema.');
   }
 
-  if (!targetUser || targetUser.includes('|') || targetUser.includes(':') || targetUser.includes(' ')) {
+  if (!targetUser || targetUser.length < 3 || targetUser.includes('|') || targetUser.includes(':') || targetUser.includes(' ')) {
     throw new Error('Usuário do serviço inválido para acesso ao DirectAdmin.');
   }
+
 
   // SECURITY: Ensure that the session being created is for a regular user account.
   // We use the delegated admin token to call CMD_API_LOGIN_KEYS, but we strictly
