@@ -48,6 +48,7 @@ import { Route as AuthenticatedVpsVpsIdRouteImport } from './routes/_authenticat
 import { Route as ApiPublicBrandingRouteImport } from './routes/api/public/branding'
 import { Route as ApiPublicPasswordResetRouteImport } from './routes/api/public/password-reset'
 import { Route as ApiPublicVpsMetricsRouteImport } from './routes/api/public/vps-metrics'
+import { Route as ApiPublicWebhookRouteImport } from './routes/api/public/webhook'
 import { Route as AuthenticatedAdminClientsIndexRouteImport } from './routes/_authenticated/admin/clients.index'
 import { Route as AuthenticatedAdminClientsClientIdRouteImport } from './routes/_authenticated/admin/clients.$clientId'
 import { Route as AuthenticatedAdminVpsIndexRouteImport } from './routes/_authenticated/admin/vps/index'
@@ -277,6 +278,11 @@ const ApiPublicVpsMetricsRoute = ApiPublicVpsMetricsRouteImport.update({
   path: '/api/public/vps-metrics',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicWebhookRoute = ApiPublicWebhookRouteImport.update({
+  id: '/api/public/webhook',
+  path: '/api/public/webhook',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AuthenticatedAdminClientsIndexRoute =
   AuthenticatedAdminClientsIndexRouteImport.update({
     id: '/',
@@ -387,6 +393,7 @@ export interface FileRoutesByFullPath {
   '/api/public/branding': typeof ApiPublicBrandingRoute
   '/api/public/password-reset': typeof ApiPublicPasswordResetRoute
   '/api/public/vps-metrics': typeof ApiPublicVpsMetricsRoute
+  '/api/public/webhook': typeof ApiPublicWebhookRoute
   '/admin/': typeof AuthenticatedAdminIndexRoute
   '/invoices/': typeof AuthenticatedInvoicesIndexRoute
   '/services/': typeof AuthenticatedServicesIndexRoute
@@ -435,6 +442,7 @@ export interface FileRoutesByTo {
   '/api/public/branding': typeof ApiPublicBrandingRoute
   '/api/public/password-reset': typeof ApiPublicPasswordResetRoute
   '/api/public/vps-metrics': typeof ApiPublicVpsMetricsRoute
+  '/api/public/webhook': typeof ApiPublicWebhookRoute
   '/admin': typeof AuthenticatedAdminIndexRoute
   '/invoices': typeof AuthenticatedInvoicesIndexRoute
   '/services': typeof AuthenticatedServicesIndexRoute
@@ -490,6 +498,7 @@ export interface FileRoutesById {
   '/api/public/branding': typeof ApiPublicBrandingRoute
   '/api/public/password-reset': typeof ApiPublicPasswordResetRoute
   '/api/public/vps-metrics': typeof ApiPublicVpsMetricsRoute
+  '/api/public/webhook': typeof ApiPublicWebhookRoute
   '/_authenticated/admin/': typeof AuthenticatedAdminIndexRoute
   '/_authenticated/invoices/': typeof AuthenticatedInvoicesIndexRoute
   '/_authenticated/services/': typeof AuthenticatedServicesIndexRoute
@@ -545,6 +554,7 @@ export interface FileRouteTypes {
     | '/api/public/branding'
     | '/api/public/password-reset'
     | '/api/public/vps-metrics'
+    | '/api/public/webhook'
     | '/admin/'
     | '/invoices/'
     | '/services/'
@@ -593,6 +603,7 @@ export interface FileRouteTypes {
     | '/api/public/branding'
     | '/api/public/password-reset'
     | '/api/public/vps-metrics'
+    | '/api/public/webhook'
     | '/admin'
     | '/invoices'
     | '/services'
@@ -647,6 +658,7 @@ export interface FileRouteTypes {
     | '/api/public/branding'
     | '/api/public/password-reset'
     | '/api/public/vps-metrics'
+    | '/api/public/webhook'
     | '/_authenticated/admin/'
     | '/_authenticated/invoices/'
     | '/_authenticated/services/'
@@ -675,6 +687,7 @@ export interface RootRouteChildren {
   ApiPublicBrandingRoute: typeof ApiPublicBrandingRoute
   ApiPublicPasswordResetRoute: typeof ApiPublicPasswordResetRoute
   ApiPublicVpsMetricsRoute: typeof ApiPublicVpsMetricsRoute
+  ApiPublicWebhookRoute: typeof ApiPublicWebhookRoute
   ApiPublicCronMaintenanceRoute: typeof ApiPublicCronMaintenanceRoute
   ApiPublicScriptsInstallAgentRoute: typeof ApiPublicScriptsInstallAgentRoute
   ApiPublicScriptsUninstallAgentRoute: typeof ApiPublicScriptsUninstallAgentRoute
@@ -962,6 +975,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicVpsMetricsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/webhook': {
+      id: '/api/public/webhook'
+      path: '/api/public/webhook'
+      fullPath: '/api/public/webhook'
+      preLoaderRoute: typeof ApiPublicWebhookRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/_authenticated/admin/clients/': {
       id: '/_authenticated/admin/clients/'
       path: '/'
@@ -1207,6 +1227,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicBrandingRoute: ApiPublicBrandingRoute,
   ApiPublicPasswordResetRoute: ApiPublicPasswordResetRoute,
   ApiPublicVpsMetricsRoute: ApiPublicVpsMetricsRoute,
+  ApiPublicWebhookRoute: ApiPublicWebhookRoute,
   ApiPublicCronMaintenanceRoute: ApiPublicCronMaintenanceRoute,
   ApiPublicScriptsInstallAgentRoute: ApiPublicScriptsInstallAgentRoute,
   ApiPublicScriptsUninstallAgentRoute: ApiPublicScriptsUninstallAgentRoute,
