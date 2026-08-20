@@ -182,9 +182,19 @@ function AuthPage() {
           </div>
         ) : (
           <>
-            <h1 className="text-center text-3xl font-semibold leading-tight">
-              <span className="text-brand">Eqsam.</span>
-            </h1>
+            <div className="flex justify-center mb-6">
+              {branding.logo_url ? (
+                <img
+                  src={branding.logo_url}
+                  alt={branding.app_name}
+                  className="h-12 w-auto max-w-[200px] object-contain"
+                />
+              ) : (
+                <h1 className="text-center text-3xl font-semibold leading-tight">
+                  <span className="text-brand">{branding.app_name}.</span>
+                </h1>
+              )}
+            </div>
             <p className="mt-3 text-center text-sm text-muted-foreground">
               O seu Data Center de serviços Cloud
             </p>
