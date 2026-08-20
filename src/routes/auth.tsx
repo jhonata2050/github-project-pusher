@@ -55,6 +55,7 @@ function AuthPage() {
   const navigate = useNavigate();
   const { redirect } = Route.useSearch();
   const { user, loading: authLoading } = useAuth();
+  const branding = useBranding();
   const { isStaff, isLoading: staffLoading } = useIsStaff();
   const [mode, setMode] = useState<"signin" | "signup">("signin");
   const [email, setEmail] = useState("");
