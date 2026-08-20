@@ -197,6 +197,7 @@ function ClientDetailPage() {
       product_id: formData.get("product_id") as string || null,
       next_due_date: formData.get("next_due_date") as string || null,
       status: formData.get("status") as any || null,
+      block_directadmin: formData.get("block_directadmin_service") === 'true',
     });
   };
 
@@ -331,29 +332,6 @@ function ClientDetailPage() {
                       </SelectContent>
                     </Select>
                     <input type="hidden" id="status_hidden" name="status" defaultValue={client.status} />
-                  </div>
-                  <div className="col-span-full border-t pt-4">
-                    <div className="flex items-center justify-between p-4 rounded-2xl bg-destructive/5 border border-destructive/10 mb-4">
-                      <div className="space-y-0.5">
-                        <Label htmlFor="block_directadmin" className="text-base font-semibold text-destructive flex items-center gap-2">
-                          <ShieldAlert className="size-4" /> Bloquear Acesso ao DirectAdmin
-                        </Label>
-                        <p className="text-sm text-muted-foreground">
-                          Impede o cliente de acessar o painel de controle, mas mantém o site e e-mails ativos.
-                        </p>
-                      </div>
-                      <Switch 
-                        id="block_directadmin" 
-                        name="block_directadmin" 
-                        defaultChecked={(client as any).block_directadmin || false} 
-                        disabled={!isEditing}
-                        onCheckedChange={(checked) => {
-                          const el = document.getElementById('block_directadmin_hidden') as HTMLInputElement;
-                          if (el) el.value = checked ? 'true' : 'false';
-                        }}
-                      />
-                      <input type="hidden" id="block_directadmin_hidden" name="block_directadmin" defaultValue={(client as any).block_directadmin ? 'true' : 'false'} />
-                    </div>
                   </div>
 
                   <div className="col-span-full border-t pt-4">
@@ -766,6 +744,26 @@ function ClientDetailPage() {
                   </SelectContent>
                 </Select>
               </div>
+              <div className="col-span-full border-t pt-4">
+                <div className="flex items-center justify-between p-4 rounded-2xl bg-destructive/5 border border-destructive/10 mb-4">
+                  <div className="space-y-0.5">
+                    <Label htmlFor="block_directadmin_service" className="text-base font-semibold text-destructive flex items-center gap-2">
+                      <ShieldAlert className="size-4" /> Bloquear Acesso
+                    </Label>
+                    <p className="text-xs text-muted-foreground">
+                      Impede o acesso ao painel deste serviço específico.
+                    </p>
+                  </div>
+                  <Switch 
+                    id="block_directadmin_service" 
+                    defaultChecked={editingService.block_directadmin || false} 
+                    onCheckedChange={(checked) => {
+                      const el = document.getElementById('block_directadmin_service_hidden') as HTMLInputElement;
+                      if (el) el.value = checked ? 'true' : 'false';
+                    }}
+                  />
+                  <input type="hidden" id="block_directadmin_service_hidden" name="block_directadmin_service" defaultValue={editingService.block_directadmin ? 'true' : 'false'} />
+                </div>
               <DialogFooter className="pt-4">
                 <Button 
                   type="submit" 
