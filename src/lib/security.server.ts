@@ -78,14 +78,50 @@ export async function validateDASSORequest(
     }
   }
 
-  // 5. Final validation: Check if user exists on the remote DirectAdmin server
-  const { checkDAUserExists } = await import("./directadmin.server");
-  const remoteExists = await checkDAUserExists(serverId, cleanUsername);
+  // 5. Final validation: Check if user exists AND verify their type
+  const { data: server } = await supabaseAdmin.from("servers").select("*").eq("id", serverId).single();
+  if (!server) throw new Error("Servidor não encontrado.");
+
+  // Import dynamic module safely
+  const directAdminModule = await import("./directadmin.server");
   
-  if (!remoteExists) {
-    console.error(`[Security-Alert] SSO validation failed: User ${cleanUsername} does not exist on DA server ${serverId}`);
+  // Use callDA (exported) to verify the user configuration remotely
+  const result = await (directAdminModule as any).callDA({
+    hostname: server.hostname,
+    apiUser: server.api_user ?? "",
+    apiToken: server.api_token ?? "",
+    command: 'CMD_API_SHOW_USER_CONFIG',
+    params: { user: cleanUsername }
+  });
+
+  if (!result || result.error === '1' || !result.usertype) {
+    console.error(`[Security-Alert] SSO validation failed: User ${cleanUsername} does not exist or access denied on DA server ${serverId}`);
     await logSecurityEvent(userId, "non_existent_da_user_sso_attempt", { username: cleanUsername, serverId });
-    throw new Error("Erro de Segurança: O usuário do painel não existe no servidor. Por favor, contate o suporte.");
+    throw new Error("Erro de Segurança: O usuário do painel não existe no servidor ou o acesso foi negado.");
+  }
+
+  // CRITICAL: Block any SSO if the remote user is not a standard 'user'
+  if (result.usertype !== 'user' && !isAdmin) {
+    console.error(`[Security-CRITICAL] ESCALATION DETECTED: User ${userId} attempted to login to ${cleanUsername} which has level ${result.usertype}`);
+    
+    const { createSystemLog } = await import("./system-logs.server");
+    await createSystemLog({
+      category: 'security',
+      level: 'critical',
+      message: `TENTATIVA DE ESCALONAMENTO: Usuário tentou acessar conta com nível ${result.usertype} via SSO.`,
+      actorId: userId,
+      metadata: { username: cleanUsername, serverId, remoteType: result.usertype }
+    });
+
+    try {
+      const { notifyAdminWhatsApp } = await import("./whatsapp.server");
+      await notifyAdminWhatsApp(
+        `🚨 *ALERTA CRÍTICO DE ESCALONAMENTO*\n\nTentativa de acesso administrativo via SSO bloqueada!\n\n*Usuário Lovable:* ${userId}\n*Usuário DA:* ${cleanUsername}\n*Nível Remoto:* ${result.usertype}\n\nO sistema impediu a sessão automaticamente.`,
+        "security_critical"
+      );
+    } catch (e) {}
+
+    throw new Error("Acesso negado: Falha crítica de segurança. Nível de permissão incompatível.");
   }
 
   return { isAdmin: !!isAdmin, targetUsername: cleanUsername };
@@ -108,4 +144,3 @@ export async function logSecurityEvent(userId: string, action: string, metadata:
     console.error("Failed to log security event:", e);
   }
 }
-
