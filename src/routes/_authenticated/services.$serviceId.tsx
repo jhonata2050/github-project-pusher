@@ -44,7 +44,7 @@ function ServiceManagementPage() {
   });
 
   const handleSSO = async (command?: string) => {
-    if (service.block_directadmin) {
+    if (service && (service as any).block_directadmin) {
       toast.error("Seu acesso ao painel de controle foi temporariamente bloqueado para este serviço. Por favor, entre em contato com o suporte.");
       return;
     }
