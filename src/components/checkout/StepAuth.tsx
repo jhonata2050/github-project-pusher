@@ -41,6 +41,7 @@ export function StepAuth({ onComplete }: any) {
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
   const [phone, setPhone] = useState("");
+  const [countryCode, setCountryCode] = useState("BR");
   const [loading, setLoading] = useState(false);
   const [emailChecked, setEmailChecked] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
@@ -61,13 +62,29 @@ export function StepAuth({ onComplete }: any) {
     }
   };
 
-  // Pre-fill country code based on browser locale
+  // Pre-fill country based on browser locale
   useState(() => {
-    const locale = navigator.language;
-    if (locale.includes("BR")) setPhone("+55 ");
-    else if (locale.includes("US")) setPhone("+1 ");
-    else if (locale.includes("PT")) setPhone("+351 ");
+    const locale = navigator.language.toUpperCase();
+    const found = countries.find(c => locale.includes(c.code));
+    if (found) setCountryCode(found.code);
   });
+
+  const selectedCountry = countries.find(c => c.code === countryCode);
+
+  const formatPhone = (val: string) => {
+    // Se o valor já começa com +, mantemos
+    if (val.startsWith('+')) return val;
+    // Se não começa com +, adicionamos o DDI do país selecionado
+    if (selectedCountry && val.length > 0) {
+      return `${selectedCountry.ddi}${val}`;
+    }
+    return val;
+  };
+
+  const getPhoneForSubmit = () => {
+    if (phone.startsWith('+')) return phone;
+    return selectedCountry ? `${selectedCountry.ddi}${phone.replace(/\D/g, '')}` : phone;
+  };
 
   if (user) return (
     <div className="p-12 text-center space-y-4">
@@ -91,7 +108,13 @@ export function StepAuth({ onComplete }: any) {
         const { data, error } = await supabase.auth.signUp({
           email,
           password,
-          options: { data: { full_name: fullName, phone: phone } }
+          options: { 
+            data: { 
+              full_name: fullName, 
+              phone: getPhoneForSubmit(),
+              country: countryCode 
+            } 
+          }
         });
         if (error) throw error;
         if (!data.session) {
@@ -143,19 +166,31 @@ export function StepAuth({ onComplete }: any) {
           />
         </div>
         {mode === "signup" && (
-          <div className="space-y-2">
-            <Label>WhatsApp / Celular</Label>
-            <div className="relative">
-              <Input 
-                value={phone} 
-                onChange={(e) => setPhone(e.target.value)} 
-                required 
-                placeholder="+55 (00) 00000-0000"
-                className="h-12 rounded-xl pl-10" 
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label>País</Label>
+              <CountrySelector 
+                value={countryCode} 
+                onChange={setCountryCode} 
+                className="h-12 rounded-xl"
               />
-              <Globe className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
             </div>
-            <p className="text-[10px] text-muted-foreground">Inclua o código do país (ex: +55)</p>
+            <div className="space-y-2">
+              <Label>WhatsApp / Celular</Label>
+              <div className="relative">
+                <Input 
+                  value={phone} 
+                  onChange={(e) => setPhone(e.target.value)} 
+                  required 
+                  placeholder="(00) 00000-0000"
+                  className="h-12 rounded-xl pl-12" 
+                />
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm font-bold text-muted-foreground bg-muted/50 px-1.5 py-0.5 rounded">
+                  {selectedCountry?.ddi}
+                </span>
+              </div>
+              <p className="text-[10px] text-muted-foreground italic">O código do país é adicionado automaticamente.</p>
+            </div>
           </div>
         )}
         <div className="space-y-2">
