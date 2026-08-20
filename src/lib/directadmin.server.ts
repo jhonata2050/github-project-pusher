@@ -1,4 +1,5 @@
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import { Buffer } from "buffer";
 
 /**
  * DirectAdmin API integration helper.
@@ -62,7 +63,7 @@ async function callDA({ hostname, apiUser, apiToken, command, method = 'GET', pa
   const searchParams = new URLSearchParams();
   Object.entries(params).forEach(([key, val]) => searchParams.append(key, val));
   
-  const authHeader = `Basic ${Buffer.from(`${apiUser}:${apiToken}`).toString('base64')}`;
+  const authHeader = `Basic ${Buffer.from(`${apiUser.trim()}:${apiToken.trim()}`).toString('base64')}`;
   
   try {
     if (method === 'GET') searchParams.set('json', 'yes');
