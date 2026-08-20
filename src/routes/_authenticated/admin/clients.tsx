@@ -220,7 +220,7 @@ export function ClientsPage() {
                   </TableHead>
                   <TableHead>Cliente</TableHead>
                   <TableHead className="hidden md:table-cell">E-mail</TableHead>
-                  <TableHead className="hidden sm:table-cell">Documento</TableHead>
+                  <TableHead className="hidden sm:table-cell">E-mail</TableHead>
                   <TableHead className="hidden lg:table-cell">Telefone</TableHead>
                   <TableHead>Situação</TableHead>
                   <TableHead className="text-right">Ações</TableHead>
@@ -251,7 +251,7 @@ export function ClientsPage() {
                       )}
                     </TableCell>
                     <TableCell className="hidden text-muted-foreground md:table-cell">{client.email ?? "—"}</TableCell>
-                    <TableCell className="hidden text-muted-foreground sm:table-cell">{client.tax_id ?? "—"}</TableCell>
+                    <TableCell className="hidden text-muted-foreground sm:table-cell">{client.email ?? "—"}</TableCell>
                     <TableCell className="hidden text-muted-foreground lg:table-cell">{client.phone ?? "—"}</TableCell>
                     <TableCell>
                       <Badge variant={client.status === "active" ? "default" : "secondary"}>
