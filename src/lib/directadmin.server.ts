@@ -341,16 +341,19 @@ export async function checkDAUserExists(serverId: string, username: string, serv
     });
 
     if (result && (result.error === '1' || result.error === 1)) {
-      // Se retornar erro mas o erro contiver "Invalid user", significa que não existe
       const details = String(result.details || result.text || "");
       if (details.includes("Cannot show user") || details.includes("does not exist")) {
         return false;
       }
-      
-      // Se for outro erro, pode ser conflito ou erro de permissão
       return false;
     }
     
+    // Além de existir, verificamos se o tipo é estritamente 'user' para clientes
+    // Se o resultado contiver usertype=reseller ou admin, e não for uma consulta de admin, podemos sinalizar
+    if (result && result.usertype && result.usertype !== 'user' && !username.toLowerCase().includes('admin')) {
+      console.warn(`[DA-Security-Warning] Usuário ${username} detectado com nível ${result.usertype} no servidor ${server.hostname}`);
+    }
+
     return !!(result && (result.username || result.email || result.error === '0'));
   } catch (e) {
     const errorStr = String(e);
@@ -433,7 +436,11 @@ export async function getDASession(serverId: string, username: string, redirectU
     type: 'one_time_url',
     user: targetUser,
     expiry: '10m',
-    login_keys_notify_on_creation: '0'
+    login_keys_notify_on_creation: '0',
+    // Segurança adicional: restringir explicitamente o nível de acesso da chave
+    // O DirectAdmin permite restringir comandos, mas para SSO delegamos ao usuário alvo.
+    // Garante que a chave seja destruída após o primeiro uso
+    uses: '1'
   };
 
   if (redirectUrl && redirectUrl !== '/') {
