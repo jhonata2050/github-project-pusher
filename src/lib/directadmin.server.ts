@@ -180,7 +180,7 @@ export async function createDAAccount(serverId: string, details: {
 
   if (error || !server) throw new Error("Servidor não encontrado");
 
-  const password = generateStrongPassword(128);
+  const password = generateStrongPassword(24); // Reduzido de 128 para 24 para compatibilidade com DA
 
   return await callDA({
     hostname: server.hostname,
