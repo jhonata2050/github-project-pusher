@@ -51,7 +51,10 @@ export async function updateBrandingImplementation(
   data: any,
   context: { supabase: SupabaseClient<Database>; userId: string; claims: any },
 ) {
-  const { data: isAdmin, error: roleError } = await context.supabase.rpc("has_role", {
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  
+  // SECURITY: ALWAYS re-verify role directly from DB using privileged client
+  const { data: isAdmin, error: roleError } = await supabaseAdmin.rpc("has_role", {
     _user_id: context.userId,
     _role: "admin",
   });
@@ -62,9 +65,10 @@ export async function updateBrandingImplementation(
   }
 
   if (!isAdmin) {
-    console.warn(`[Branding] Acesso negado para usuário ${context.userId}`);
+    console.warn(`[Security-Violation] Acesso negado para usuário ${context.userId} tentando atualizar branding`);
     throw new Error("Acesso restrito a administradores.");
   }
+
 
   const { error } = await context.supabase.from("system_settings").upsert({
     key: "branding",
@@ -103,8 +107,10 @@ export async function updateClientProfileImplementation(
   data: any,
   context: { supabase: SupabaseClient<Database>; userId: string },
 ) {
-  // SECURITY: Check if admin
-  const { data: isAdmin } = await context.supabase.rpc("has_role", {
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
+  // SECURITY: ALWAYS re-verify role directly from DB using privileged client
+  const { data: isAdmin } = await supabaseAdmin.rpc("has_role", {
     _user_id: context.userId,
     _role: "admin",
   });
@@ -112,6 +118,7 @@ export async function updateClientProfileImplementation(
   if (!isAdmin) {
     throw new Error("Acesso negado. Apenas administradores podem atualizar perfis de terceiros.");
   }
+
 
   const { id, ...updates } = data;
 
@@ -133,8 +140,10 @@ export async function bulkDeleteClientsImplementation(
   clientIds: string[],
   context: { supabase: SupabaseClient<Database>; userId: string },
 ) {
-  // 1. Verificar se quem está deletando é admin
-  const { data: isAdmin, error: roleError } = await context.supabase.rpc("has_role", {
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
+  // SECURITY: ALWAYS re-verify role directly from DB using privileged client
+  const { data: isAdmin, error: roleError } = await supabaseAdmin.rpc("has_role", {
     _user_id: context.userId,
     _role: "admin",
   });
@@ -142,6 +151,7 @@ export async function bulkDeleteClientsImplementation(
   if (roleError || !isAdmin) {
     throw new Error("Acesso negado. Apenas administradores podem excluir clientes.");
   }
+
 
   // 2. Importar o cliente admin para poder deletar de auth.users
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
