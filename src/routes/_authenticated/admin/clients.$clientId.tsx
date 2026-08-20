@@ -739,11 +739,6 @@ function ClientDetailPage() {
                   </SelectContent>
                 </Select>
               </div>
-                  <option value="suspended">Suspenso</option>
-                  <option value="terminated">Terminado</option>
-                  <option value="cancelled">Cancelado</option>
-                </select>
-              </div>
               <DialogFooter className="pt-4">
                 <Button 
                   type="submit" 
