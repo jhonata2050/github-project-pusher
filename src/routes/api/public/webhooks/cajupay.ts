@@ -10,17 +10,19 @@ export const Route = createFileRoute('/api/public/webhooks/cajupay')({
         try {
           const payload = JSON.parse(body);
 
-          if (payload.status === 'PAID' || payload.event === 'payment.paid') {
-            const externalId = payload.id || payload.external_id;
+          if (payload.status === 'PAID' || payload.event === 'payment.paid' || payload.evento === 'pagamento.confirmado') {
+            const externalId = payload.id || payload.external_id || payload.transacao_id;
             
-            const { data: transaction } = await supabaseAdmin
-              .from('transactions')
-              .select('id, invoice_id, status')
-              .eq('gateway_reference', externalId)
-              .maybeSingle();
+            if (externalId) {
+              const { data: transaction } = await supabaseAdmin
+                .from('transactions')
+                .select('id, invoice_id, status')
+                .eq('gateway_reference', externalId.toString())
+                .maybeSingle();
 
-            if (transaction && transaction.status !== 'completed' && transaction.invoice_id) {
-              await handlePaymentSuccess(transaction.invoice_id, 'CajuPay', externalId);
+              if (transaction && transaction.status !== 'completed' && transaction.invoice_id) {
+                await handlePaymentSuccess(transaction.invoice_id, 'CajuPay', externalId.toString());
+              }
             }
           }
           

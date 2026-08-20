@@ -27,9 +27,11 @@ export const Route = createFileRoute('/api/public/webhooks/woovi')({
           const payload = JSON.parse(body);
 
           // Payload de teste ou evento específico da OpenPix
-          if (payload.event === 'OPENPIX:CHARGE_COMPLETED' || payload.event === 'teste_webhook') {
+          // Payload de teste ou evento específico da OpenPix
+          if (payload.event?.startsWith('OPENPIX:') || payload.event === 'teste_webhook' || payload.evento === 'teste_webhook') {
             // Se for apenas teste sem charge, retornamos OK
             if (!payload.charge && (payload.event === 'teste_webhook' || payload.evento === 'teste_webhook')) {
+              console.log('[Woovi Webhook] Evento de teste ignorado com sucesso.');
               return new Response('ok', { status: 200 });
             }
 
@@ -39,7 +41,7 @@ export const Route = createFileRoute('/api/public/webhooks/woovi')({
               const { data: transaction } = await supabaseAdmin
                 .from('transactions')
                 .select('id, invoice_id, status')
-                .eq('gateway_reference', chargeId) // Corrigido: buscar por gateway_reference
+                .eq('gateway_reference', chargeId)
                 .maybeSingle();
 
               if (transaction && transaction.status !== 'completed' && transaction.invoice_id) {
