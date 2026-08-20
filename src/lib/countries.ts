@@ -1,0 +1,16 @@
+export const countries = [
+  { code: 'BR', name: 'Brasil', ddi: '+55' },
+  { code: 'US', name: 'Estados Unidos', ddi: '+1' },
+  { code: 'PT', name: 'Portugal', ddi: '+351' },
+  { code: 'AR', name: 'Argentina', ddi: '+54' },
+  { code: 'CL', name: 'Chile', ddi: '+56' },
+  { code: 'CO', name: 'Colômbia', ddi: '+57' },
+  { code: 'ES', name: 'Espanha', ddi: '+34' },
+  { code: 'GB', name: 'Reino Unido', ddi: '+44' },
+  { code: 'DE', name: 'Alemanha', ddi: '+49' },
+  { code: 'FR', name: 'França', ddi: '+33' },
+  { code: 'IT', name: 'Itália', ddi: '+39' },
+  { code: 'CA', name: 'Canadá', ddi: '+1' },
+  { code: 'MX', name: 'México', ddi: '+52' },
+  { code: 'JP', name: 'Japão', ddi: '+81' },
+];

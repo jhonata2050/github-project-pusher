@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/hooks/use-auth";
+import { useAuth, useProfile } from "@/hooks/use-auth";
 import { createOrder, getInvoiceDetails } from "@/lib/finance.functions";
 import { initializePayment } from "@/lib/payments.functions";
 import { useServerFn } from "@tanstack/react-start";
@@ -84,6 +84,13 @@ function CheckoutPage() {
       if (chosen?.cycle) setBillingCycle(chosen.cycle);
     }
   }, [activePrices, billingCycle]);
+
+  const { data: profile } = useProfile();
+  useEffect(() => {
+    if (profile?.tax_id && !cpfCnpj) {
+      setCpfCnpj(profile.tax_id);
+    }
+  }, [profile, cpfCnpj]);
 
   const steps = useMemo(() => {
     const list = [];
@@ -302,7 +309,7 @@ function CheckoutPage() {
     if (stepName === "Domínio" && (!domain || !isDomainValid)) return true;
     if (stepName === "Configuração" && (!vpsConfig.hostname || !vpsConfig.os || !vpsConfig.location)) return true;
     if (stepName === "Conta" && !user) return true;
-    if (stepName === "Pagamento" && paymentMethod === "pix" && !cpfCnpj) return true;
+    if (stepName === "Pagamento" && !cpfCnpj) return true;
     return false;
   };
 

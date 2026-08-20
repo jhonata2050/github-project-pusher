@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { trackEvent } from "@/lib/analytics";
 import { useQueryClient } from "@tanstack/react-query";
+import { countries } from "@/lib/countries";
 
 export const Route = createFileRoute("/_authenticated/complete-profile")({
   component: CompleteProfilePage,
@@ -19,6 +20,13 @@ function CompleteProfilePage() {
   const queryClient = useQueryClient();
   const { user, loading: authLoading } = useAuth();
   const [phone, setPhone] = useState("");
+  const [tax_id, setTaxId] = useState("");
+  const [identificationType, setIdentificationType] = useState("cpf");
+  const [country, setCountry] = useState("BR");
+  const [addressLine, setAddressLine] = useState("");
+  const [city, setCity] = useState("");
+  const [state, setState] = useState("");
+  const [postalCode, setPostalCode] = useState("");
   const [leadSource, setLeadSource] = useState("");
   const [leadSourceOther, setLeadSourceOther] = useState("");
   const [busy, setBusy] = useState(false);
@@ -43,7 +51,7 @@ function CompleteProfilePage() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!phone || !leadSource || (leadSource === "Outro" && !leadSourceOther)) {
+    if (!phone || !tax_id || !country || !city || !addressLine || !leadSource || (leadSource === "Outro" && !leadSourceOther)) {
       toast.error("Por favor, preencha todos os campos obrigatórios.");
       return;
     }
@@ -54,6 +62,13 @@ function CompleteProfilePage() {
         .from("profiles")
         .update({
           phone: phone.trim(),
+          tax_id: tax_id.trim(),
+          identification_type: identificationType,
+          country: country,
+          address_line: addressLine.trim(),
+          city: city.trim(),
+          state: state.trim(),
+          postal_code: postalCode.trim(),
           lead_source: leadSource,
           lead_source_other: leadSource === "Outro" ? leadSourceOther : null,
           registration_completed: true,
@@ -87,15 +102,110 @@ function CompleteProfilePage() {
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="country">País</Label>
+                <select
+                  id="country"
+                  value={country}
+                  onChange={(e) => {
+                    setCountry(e.target.value);
+                    const selectedCountry = countries.find(c => c.code === e.target.value);
+                    if (selectedCountry && !phone.startsWith('+')) {
+                      setPhone(selectedCountry.ddi + " ");
+                    }
+                  }}
+                  className="flex h-12 w-full rounded-xl border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                  required
+                >
+                  {countries.map(c => (
+                    <option key={c.code} value={c.code}>{c.name}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="phone">Telefone / WhatsApp</Label>
+                <Input
+                  id="phone"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  placeholder="+55 (00) 00000-0000"
+                  className="h-12 rounded-xl"
+                  required
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="identificationType">Tipo de Documento</Label>
+                <select
+                  id="identificationType"
+                  value={identificationType}
+                  onChange={(e) => setIdentificationType(e.target.value)}
+                  className="flex h-12 w-full rounded-xl border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                  required
+                >
+                  <option value="cpf">CPF (Pessoa Física)</option>
+                  <option value="cnpj">CNPJ (Empresa)</option>
+                  <option value="tax_id">Tax ID (Internacional)</option>
+                  <option value="passport">Passaporte</option>
+                </select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="tax_id">Documento (ID)</Label>
+                <Input
+                  id="tax_id"
+                  value={tax_id}
+                  onChange={(e) => setTaxId(e.target.value)}
+                  placeholder={identificationType === 'cpf' ? "000.000.000-00" : "Número do documento"}
+                  className="h-12 rounded-xl"
+                  required
+                />
+              </div>
+            </div>
+
             <div className="space-y-2">
-              <Label htmlFor="phone">Telefone / WhatsApp</Label>
+              <Label htmlFor="addressLine">Endereço</Label>
               <Input
-                id="phone"
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-                placeholder="(00) 00000-0000"
+                id="addressLine"
+                value={addressLine}
+                onChange={(e) => setAddressLine(e.target.value)}
+                placeholder="Rua, número, complemento"
                 className="h-12 rounded-xl"
                 required
+              />
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="city">Cidade</Label>
+                <Input
+                  id="city"
+                  value={city}
+                  onChange={(e) => setCity(e.target.value)}
+                  className="h-12 rounded-xl"
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="state">Estado / Província</Label>
+                <Input
+                  id="state"
+                  value={state}
+                  onChange={(e) => setState(e.target.value)}
+                  className="h-12 rounded-xl"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="postalCode">CEP / Código Postal</Label>
+              <Input
+                id="postalCode"
+                value={postalCode}
+                onChange={(e) => setPostalCode(e.target.value)}
+                className="h-12 rounded-xl"
               />
             </div>
             

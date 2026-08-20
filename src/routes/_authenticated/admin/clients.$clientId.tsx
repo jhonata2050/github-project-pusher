@@ -114,7 +114,12 @@ function ClientDetailPage() {
 
   const updateProfile = useMutation({
     mutationFn: async (values: Record<string, string>) => {
-      return updateClientProfile({ data: { clientId, values } });
+      return updateClientProfile({ 
+        data: { 
+          id: clientId, 
+          ...values 
+        } 
+      });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["admin-client-dossier", clientId] });
@@ -264,9 +269,26 @@ function ClientDetailPage() {
                     <Label htmlFor="company_name">Empresa</Label>
                     <Input id="company_name" name="company_name" defaultValue={client.company_name || ""} disabled={!isEditing} className="rounded-xl h-11" />
                   </div>
-                  <div className="space-y-2 hidden">
-                    <Label htmlFor="tax_id">CPF/CNPJ</Label>
-                    <Input id="tax_id" name="tax_id" defaultValue={client.tax_id || ""} disabled={!isEditing} className="rounded-xl h-11" />
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="identification_type">Tipo de Documento</Label>
+                      <select 
+                        id="identification_type" 
+                        name="identification_type" 
+                        defaultValue={(client as any).identification_type || "cpf"} 
+                        disabled={!isEditing}
+                        className="flex h-11 w-full rounded-xl border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        <option value="cpf">CPF</option>
+                        <option value="cnpj">CNPJ</option>
+                        <option value="tax_id">Tax ID</option>
+                        <option value="passport">Passaporte</option>
+                      </select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="tax_id">Documento (ID)</Label>
+                      <Input id="tax_id" name="tax_id" defaultValue={client.tax_id || ""} disabled={!isEditing} className="rounded-xl h-11" />
+                    </div>
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="phone">Telefone</Label>
@@ -297,15 +319,36 @@ function ClientDetailPage() {
                     <Input id="address_line" name="address_line" defaultValue={client.address_line || ""} disabled={!isEditing} className="rounded-xl h-11" />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="city">Cidade</Label>
-                    <Input id="city" name="city" defaultValue={client.city || ""} disabled={!isEditing} className="rounded-xl h-11" />
+                    <Label htmlFor="address_line2">Complemento / Bairro</Label>
+                    <Input id="address_line2" name="address_line2" defaultValue={(client as any).address_line2 || ""} disabled={!isEditing} className="rounded-xl h-11" />
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="city">Cidade</Label>
+                      <Input id="city" name="city" defaultValue={client.city || ""} disabled={!isEditing} className="rounded-xl h-11" />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="state">Estado / Província</Label>
+                      <Input id="state" name="state" defaultValue={client.state || ""} disabled={!isEditing} className="rounded-xl h-11" />
+                    </div>
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="state">Estado</Label>
-                    <Input id="state" name="state" defaultValue={client.state || ""} disabled={!isEditing} className="rounded-xl h-11" />
+                    <Label htmlFor="country">País</Label>
+                    <select 
+                      id="country" 
+                      name="country" 
+                      defaultValue={(client as any).country || "BR"} 
+                      disabled={!isEditing}
+                      className="flex h-11 w-full rounded-xl border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      <option value="BR">Brasil</option>
+                      <option value="US">Estados Unidos</option>
+                      <option value="PT">Portugal</option>
+                      {/* Adicionar mais conforme necessário ou importar a lista completa */}
+                    </select>
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="postal_code">CEP</Label>
+                    <Label htmlFor="postal_code">CEP / Zip Code</Label>
                     <Input id="postal_code" name="postal_code" defaultValue={client.postal_code || ""} disabled={!isEditing} className="rounded-xl h-11" />
                   </div>
 
