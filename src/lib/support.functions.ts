@@ -484,7 +484,7 @@ export const getDASSOUrl = createServerFn({ method: "POST" })
     if (!isAdmin) {
       const { data: service } = await context.supabase
         .from("services")
-        .select("id, username, server_id, user_id, profiles(block_directadmin)")
+        .select("id, username, server_id, user_id, block_directadmin")
         .eq("user_id", context.userId)
         .eq("username", data.username)
         .eq("server_id", data.serverId)
@@ -494,9 +494,8 @@ export const getDASSOUrl = createServerFn({ method: "POST" })
         throw new Error("Acesso negado: Você não possui permissão para acessar este serviço.");
       }
 
-      // @ts-ignore
-      if (service.profiles?.block_directadmin) {
-        throw new Error("Seu acesso ao painel DirectAdmin foi bloqueado pelo administrador. Por favor, entre em contato com o suporte.");
+      if (service.block_directadmin) {
+        throw new Error("Seu acesso ao painel DirectAdmin foi bloqueado pelo administrador para este serviço específico. Por favor, entre em contato com o suporte.");
       }
     }
 
@@ -778,6 +777,7 @@ export const updateServiceDetails = createServerFn({ method: "POST" })
       product_id: z.string().uuid().nullable(),
       next_due_date: z.string().nullable(),
       status: z.enum(["active", "pending", "suspended", "terminated", "cancelled"]).nullable(),
+      block_directadmin: z.boolean().optional(),
     }).parse(data)
   )
   .handler(async ({ data: input, context }) => {
@@ -792,7 +792,8 @@ export const updateServiceDetails = createServerFn({ method: "POST" })
         server_id: input.server_id,
         product_id: input.product_id,
         next_due_date: input.next_due_date,
-        status: input.status ? (input.status as any) : null
+        status: input.status ? (input.status as any) : null,
+        block_directadmin: input.block_directadmin !== undefined ? input.block_directadmin : undefined
       })
       .eq("id", input.serviceId);
 
