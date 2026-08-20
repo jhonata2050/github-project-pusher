@@ -380,6 +380,13 @@ export async function checkDAUserExists(serverId: string, username: string, serv
           notes: "BLOQUEIO DE SEGURANÇA: Conflito de domínio detectado no servidor. Por favor, contate o suporte para resolução.",
           updated_at: new Date().toISOString()
         } as any).eq("id", serviceId);
+        
+        // Notificar via WhatsApp sobre o conflito
+        const { notifyAdminWhatsApp } = await import("./whatsapp.server");
+        await notifyAdminWhatsApp(
+          `⚠️ *CONFLITO DE SEGURANÇA (DA)*\n\n*Domínio:* ${username}\n*Servidor:* ${server.hostname}\n*Ação:* Serviço suspenso automaticamente para evitar acesso indevido.\n\nVerifique o painel de auditoria.`,
+          "security_conflict"
+        );
       }
       return false;
     }
