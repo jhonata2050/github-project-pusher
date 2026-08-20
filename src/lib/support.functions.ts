@@ -40,9 +40,12 @@ export const updateSystemSettings = createServerFn({ method: "POST" })
     if (!isAdmin) throw new Error("Unauthorized");
 
     for (const [key, value] of Object.entries(settings)) {
-      // Se o valor for uma string vazia, deletamos a chave para manter o banco limpo
-      // e permitir que o frontend mostre os placeholders corretamente.
-      if (value === "" || value === null || value === undefined) {
+      // Normalização: se o valor for apenas espaços, tratamos como vazio
+      const normalizedValue = typeof value === "string" ? value.trim() : value;
+
+      if (normalizedValue === "" || normalizedValue === null || normalizedValue === undefined) {
+        // Log para auditoria
+        console.log(`[SystemSettings] Deleting empty key: ${key}`);
         await supabaseAdmin
           .from("system_settings")
           .delete()
@@ -52,9 +55,12 @@ export const updateSystemSettings = createServerFn({ method: "POST" })
 
       const { error } = await supabaseAdmin
         .from("system_settings")
-        .upsert({ key, value }, { onConflict: 'key' });
+        .upsert({ key, value: normalizedValue }, { onConflict: 'key' });
       
-      if (error) throw new Error(`Error updating ${key}: ${error.message}`);
+      if (error) {
+        console.error(`[SystemSettings] Error updating ${key}:`, error);
+        throw new Error(`Error updating ${key}: ${error.message}`);
+      }
     }
 
     return { success: true };
