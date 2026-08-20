@@ -78,14 +78,15 @@ export async function validateDASSORequest(
     }
   }
 
-  // 5. Final validation: Check if user exists on the remote DirectAdmin server
-  const { checkDAUserExists, callDA } = await import("./directadmin.server");
-  
   // 5. Final validation: Check if user exists AND verify their type
   const { data: server } = await supabaseAdmin.from("servers").select("*").eq("id", serverId).single();
   if (!server) throw new Error("Servidor não encontrado.");
 
-  const result = await callDA({
+  // Import dynamic module safely
+  const directAdminModule = await import("./directadmin.server");
+  
+  // Use callDA (exported) to verify the user configuration remotely
+  const result = await (directAdminModule as any).callDA({
     hostname: server.hostname,
     apiUser: server.api_user ?? "",
     apiToken: server.api_token ?? "",
@@ -143,4 +144,3 @@ export async function logSecurityEvent(userId: string, action: string, metadata:
     console.error("Failed to log security event:", e);
   }
 }
-
