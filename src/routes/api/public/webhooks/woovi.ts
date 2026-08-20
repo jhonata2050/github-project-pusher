@@ -26,17 +26,25 @@ export const Route = createFileRoute('/api/public/webhooks/woovi')({
 
           const payload = JSON.parse(body);
 
-          if (payload.event === 'OPENPIX:CHARGE_COMPLETED') {
-            const chargeId = payload.charge.correlationID;
-            
-            const { data: transaction } = await supabaseAdmin
-              .from('transactions')
-              .select('id, invoice_id, status')
-              .eq('id', chargeId) // Woovi usa o ID da transação como correlationID por padrão no nosso sistema
-              .maybeSingle();
+          // Payload de teste ou evento específico da OpenPix
+          if (payload.event === 'OPENPIX:CHARGE_COMPLETED' || payload.event === 'teste_webhook') {
+            // Se for apenas teste sem charge, retornamos OK
+            if (!payload.charge && (payload.event === 'teste_webhook' || payload.evento === 'teste_webhook')) {
+              return new Response('ok', { status: 200 });
+            }
 
-            if (transaction && transaction.status !== 'completed' && transaction.invoice_id) {
-              await handlePaymentSuccess(transaction.invoice_id, 'Woovi/OpenPix', chargeId);
+            const chargeId = payload.charge?.correlationID || payload.charge?.identifier;
+            
+            if (chargeId) {
+              const { data: transaction } = await supabaseAdmin
+                .from('transactions')
+                .select('id, invoice_id, status')
+                .eq('gateway_reference', chargeId) // Corrigido: buscar por gateway_reference
+                .maybeSingle();
+
+              if (transaction && transaction.status !== 'completed' && transaction.invoice_id) {
+                await handlePaymentSuccess(transaction.invoice_id, 'Woovi/OpenPix', chargeId);
+              }
             }
           }
           
