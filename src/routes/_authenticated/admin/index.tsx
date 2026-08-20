@@ -132,8 +132,8 @@ function AdminDashboardPage() {
       s.username?.toLowerCase().includes(search) ||
       s.notes?.toLowerCase().includes(search) ||
       s.error_message?.toLowerCase().includes(search) ||
-      s.profiles?.user_id?.full_name?.toLowerCase().includes(search) ||
-      s.profiles?.user_id?.email?.toLowerCase().includes(search)
+      s.profiles?.full_name?.toLowerCase().includes(search) ||
+      s.profiles?.email?.toLowerCase().includes(search)
     );
   }) || [];
 
