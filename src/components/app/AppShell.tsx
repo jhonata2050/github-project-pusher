@@ -550,7 +550,7 @@ export function AppShell({
                   <p className="text-sm font-semibold text-sidebar-foreground">
                     {profile?.company_name ?? profile?.full_name ?? "Minha conta"}
                   </p>
-                  <p className="text-xs text-muted-foreground">{profile?.tax_id ?? "Sem CPF/CNPJ cadastrado"}</p>
+                  <p className="text-xs text-muted-foreground">{profile?.email}</p>
                 </>
               )}
             </div>

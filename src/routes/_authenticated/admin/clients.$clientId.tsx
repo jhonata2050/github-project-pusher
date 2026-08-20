@@ -264,7 +264,7 @@ function ClientDetailPage() {
                     <Label htmlFor="company_name">Empresa</Label>
                     <Input id="company_name" name="company_name" defaultValue={client.company_name || ""} disabled={!isEditing} className="rounded-xl h-11" />
                   </div>
-                  <div className="space-y-2">
+                  <div className="space-y-2 hidden">
                     <Label htmlFor="tax_id">CPF/CNPJ</Label>
                     <Input id="tax_id" name="tax_id" defaultValue={client.tax_id || ""} disabled={!isEditing} className="rounded-xl h-11" />
                   </div>
