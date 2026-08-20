@@ -9,10 +9,11 @@ export const Route = createFileRoute('/api/public/webhook')({
         return new Response('Webhook endpoint is active. Use POST for notifications.', { status: 200 });
       },
       POST: async ({ request }) => {
-        const body = await request.text();
+        let body = '';
         const headers = Object.fromEntries(request.headers.entries());
         
         try {
+          body = await request.text();
           console.log('[Generic Webhook] Payload recebido:', body);
           
           let payload: any = {};
@@ -31,21 +32,26 @@ export const Route = createFileRoute('/api/public/webhook')({
             metadata: { body: payload, headers, raw: body } as any
           });
 
+          // 0. Tratamento de Eventos de Teste (Padrão para vários gateways)
+          const isTestEvent = 
+            payload.evento === 'teste_webhook' || 
+            payload.event === 'teste_webhook' ||
+            payload.type === 'test_notification' ||
+            payload.action === 'test';
+
+          if (isTestEvent) {
+            console.log('[Generic Webhook] Evento de teste detectado e aceito.');
+            return new Response('OK', { status: 200 });
+          }
+
           // 1. Detecção e Processamento OpenPix/Woovi
           const isWoovi = payload.event?.startsWith('OPENPIX:') || 
-                          payload.evento === 'teste_webhook' || 
                           headers['x-openpix-signature'];
 
           if (isWoovi) {
-            // Se for apenas teste, ignoramos processamento de negócio
-            if (payload.event === 'teste_webhook' || payload.evento === 'teste_webhook') {
-              console.log('[Generic Webhook] Evento de teste Woovi ignorado.');
-              return new Response('OK', { status: 200 });
-            }
-
             const chargeId = payload.charge?.correlationID || payload.charge?.identifier;
             
-            if (chargeId) {
+            if (chargeId && payload.event === 'OPENPIX:CHARGE_COMPLETED') {
               const { handlePaymentSuccess } = await import('@/lib/finance.server');
               const { data: transaction } = await supabaseAdmin
                 .from('transactions')
@@ -59,25 +65,28 @@ export const Route = createFileRoute('/api/public/webhook')({
             }
           }
 
-          // 2. Detecção e Processamento Mercado Pago (se enviado para a URL genérica)
-          const isMercadoPago = headers['x-signature'] || new URL(request.url).searchParams.has('topic');
+          // 2. Detecção e Processamento Mercado Pago
+          const isMercadoPago = headers['x-signature'] || new URL(request.url).searchParams.has('topic') || payload.resource?.includes('mercadopago');
           if (isMercadoPago && !isWoovi) {
             const topic = new URL(request.url).searchParams.get('topic');
             const resourceId = new URL(request.url).searchParams.get('id') || payload.data?.id;
+            const action = payload.action || topic;
             
-            if (resourceId && (topic === 'payment' || payload.action?.startsWith('payment.'))) {
+            if (resourceId && (action === 'payment.created' || action === 'payment.updated' || topic === 'payment')) {
               const { handlePaymentSuccess } = await import('@/lib/finance.server');
               const { data: transaction } = await supabaseAdmin
                 .from('transactions')
                 .select('id, invoice_id, status')
-                .eq('gateway_reference', resourceId)
+                .eq('gateway_reference', resourceId.toString())
                 .maybeSingle();
 
               if (transaction && transaction.status !== 'completed' && transaction.invoice_id) {
-                await handlePaymentSuccess(transaction.invoice_id, 'Mercado Pago', resourceId);
+                await handlePaymentSuccess(transaction.invoice_id, 'Mercado Pago', resourceId.toString());
               }
             }
           }
+
+          // 3. Outros Gateways (Stripe, AbacatePay, etc. podem ser adicionados aqui se necessário)
 
           // Sempre retornar 200 para o gateway após registrar o recebimento
           return new Response('OK', { status: 200 });
@@ -90,7 +99,7 @@ export const Route = createFileRoute('/api/public/webhook')({
               action: 'generic_webhook.error',
               status: 'failure',
               description: `Erro crítico no processamento: ${err.message}`,
-              metadata: { error: err.message, body } as any
+              metadata: { error: err.message, body, headers } as any
             });
           } catch (e) {}
           
