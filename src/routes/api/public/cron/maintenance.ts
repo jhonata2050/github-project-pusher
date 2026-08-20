@@ -7,11 +7,13 @@ export const Route = createFileRoute('/api/public/cron/maintenance')({
     handlers: {
       GET: async ({ request }) => {
         const authHeader = request.headers.get('Authorization');
-        const cronSecret = process.env['CRON_SECRET'] || 'development_secret';
+        const cronSecret = process.env['CRON_SECRET'];
 
-        if (authHeader !== `Bearer ${cronSecret}`) {
+        // Fail closed: sem segredo configurado, o endpoint nunca executa
+        if (!cronSecret || authHeader !== `Bearer ${cronSecret}`) {
           return new Response('Unauthorized', { status: 401 });
         }
+
 
         const results = {
           suspensions: 0,
