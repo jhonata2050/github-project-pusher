@@ -143,7 +143,7 @@ function ProfilePage() {
       >
         {field("full_name", "Nome completo")}
         {field("company_name", "Empresa (opcional)")}
-        {field("tax_id", "CPF/CNPJ")}
+        {/* CPF/CNPJ removido da visualização conforme solicitado */}
         {field("phone", "Telefone")}
         {field("address_line", "Endereço")}
         {field("city", "Cidade")}
