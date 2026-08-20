@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useAuth, useIsStaff } from "@/hooks/use-auth";
+import { useBranding } from "@/hooks/use-branding";
 import { lovable } from "@/integrations/lovable/index";
 import { supabase } from "@/integrations/supabase/client";
 import { logPublicAuthEvent, logSessionEvent } from "@/lib/audit.functions";
