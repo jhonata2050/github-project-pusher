@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { Database, Mail, Shield, Activity, Search, Palette } from "lucide-react";
+import { Database, Mail, Shield, Activity, Search, Palette, Zap } from "lucide-react";
 import { useState } from "react";
 import { AppShell } from "@/components/app/AppShell";
 import { Pagination } from "@/components/app/Pagination";
@@ -34,7 +34,7 @@ export const Route = createFileRoute("/_authenticated/admin/logs")({
 });
 
 function LogsPage() {
-  const [activeTab, setActiveTab] = useState<"email" | "auth" | "data" | "system" | "all">("all");
+  const [activeTab, setActiveTab] = useState<"email" | "auth" | "data" | "system" | "webhook" | "branding" | "all">("all");
   const [page, setPage] = useState(1);
   const pageSize = 20;
 
@@ -84,6 +84,9 @@ function LogsPage() {
               <TabsTrigger value="email" className="rounded-xl flex gap-2">
                 <Mail className="size-4" /> E-mails
               </TabsTrigger>
+              <TabsTrigger value="webhook" className="rounded-xl flex gap-2">
+                <Zap className="size-4" /> Webhooks
+              </TabsTrigger>
               <TabsTrigger value="branding" className="rounded-xl flex gap-2">
                 <Palette className="size-4" /> Branding
               </TabsTrigger>
@@ -122,10 +125,18 @@ function LogsPage() {
                         <TableCell className="text-xs font-medium">{log.action}</TableCell>
                         <TableCell className="text-sm max-w-[320px] hidden md:table-cell">
                           <p>{log.description}</p>
-                          {(log.entityType || log.ipAddress) && (
-                            <p className="mt-1 text-xs text-muted-foreground">
+                          {(log.entityType || log.ipAddress || log.metadata) && (
+                            <div className="mt-1 flex flex-wrap gap-2 text-[10px] text-muted-foreground">
                               {[log.entityType, log.entityId, log.ipAddress].filter(Boolean).join(" · ")}
-                            </p>
+                              {log.metadata && (
+                                <details className="cursor-pointer">
+                                  <summary className="hover:text-foreground underline decoration-dotted">Ver Dados JSON</summary>
+                                  <pre className="mt-1 p-2 bg-secondary/50 rounded-lg overflow-x-auto max-w-[280px] text-[9px]">
+                                    {JSON.stringify(log.metadata, null, 2)}
+                                  </pre>
+                                </details>
+                              )}
+                            </div>
                           )}
                         </TableCell>
                         <TableCell>
