@@ -9,6 +9,8 @@ import { Check as CheckIcon, Info, Globe, AlertCircle, XCircle } from "lucide-re
 import { checkEmailExists } from "@/lib/checkout.functions";
 import { useServerFn } from "@tanstack/react-start";
 import { useProfile } from "@/hooks/use-auth";
+import { countries } from "@/lib/countries";
+import { CountrySelector } from "@/components/app/CountrySelector";
 
 function translateAuthError(message: string): string {
   if (!message) return "Ocorreu um erro. Tente novamente.";
