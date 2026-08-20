@@ -60,6 +60,7 @@ export const updateClientProfile = createServerFn({ method: "POST" })
         city: z.string().optional(),
         state: z.string().optional(),
         postal_code: z.string().optional(),
+        block_directadmin: z.boolean().optional(),
       })
       .parse(data),
   )
