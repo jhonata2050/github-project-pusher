@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { queryOptions, useMutation, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
+import { queryOptions, useMutation, useQueryClient, useSuspenseQuery, useQuery } from "@tanstack/react-query";
 import { 
   User, 
   Mail, 
@@ -247,6 +247,8 @@ function ClientDetailPage() {
               <TabsTrigger value="finance" className="rounded-xl flex gap-2"><CreditCard className="size-4" /> Financeiro</TabsTrigger>
               <TabsTrigger value="emails" className="rounded-xl flex gap-2"><Mail className="size-4" /> E-mails</TabsTrigger>
               <TabsTrigger value="tickets" className="rounded-xl flex gap-2"><LifeBuoy className="size-4" /> Tickets</TabsTrigger>
+              <TabsTrigger value="provisioning" className="rounded-xl flex gap-2"><History className="size-4" /> Provisionamento</TabsTrigger>
+
             </TabsList>
           </div>
 
@@ -671,7 +673,11 @@ function ClientDetailPage() {
               </CardContent>
             </Card>
           </TabsContent>
+          <TabsContent value="provisioning" className="mt-6">
+            <ProvisioningLogsTable clientId={clientId} />
+          </TabsContent>
         </Tabs>
+
       </div>
 
       <Dialog open={!!editingService} onOpenChange={(open) => !open && setEditingService(null)}>
@@ -804,4 +810,87 @@ function ClientDetailPage() {
     </AppShell>
   );
 }
+
+function ProvisioningLogsTable({ clientId, serviceId }: { clientId?: string, serviceId?: string }) {
+  const { data: logs, isLoading } = useQuery({
+    queryKey: ["provisioning-logs", clientId, serviceId],
+    queryFn: () => {
+      const { getProvisioningLogs } = require("@/lib/provisioning.functions");
+      return getProvisioningLogs({ data: { clientId, serviceId } });
+    }
+  });
+
+  if (isLoading) return <Skeleton className="h-40" />;
+
+  return (
+    <Card className="rounded-3xl border-none shadow-sm">
+      <CardHeader>
+        <CardTitle className="text-lg flex items-center gap-2">
+          <History className="size-5 text-brand" /> Auditoria de Provisionamento
+        </CardTitle>
+        <CardDescription>Histórico técnico de tentativas de ativação de serviços.</CardDescription>
+      </CardHeader>
+      <CardContent>
+        <div className="overflow-x-auto">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Data/Hora</TableHead>
+                <TableHead>Serviço</TableHead>
+                <TableHead>Tentativa</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>Erro</TableHead>
+                <TableHead className="text-right">Ações</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {logs && logs.length > 0 ? logs.map((log: any) => (
+                <TableRow key={log.id}>
+                  <TableCell className="text-xs whitespace-nowrap">
+                    {format(new Date(log.created_at), "dd/MM HH:mm:ss", { locale: ptBR })}
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex flex-col">
+                      <span className="text-xs font-bold">{log.services?.products?.name}</span>
+                      <span className="text-[10px] text-muted-foreground">{log.services?.domain || "Sem domínio"}</span>
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <Badge variant="outline" className="text-[10px]">#{log.attempt_number}</Badge>
+                  </TableCell>
+                  <TableCell>
+                    <Badge variant={log.status === 'success' ? 'default' : log.status === 'failure' ? 'destructive' : 'secondary'} className="text-[10px] uppercase">
+                      {log.status === 'success' ? 'Sucesso' : log.status === 'failure' ? 'Falha' : 'Pendente'}
+                    </Badge>
+                  </TableCell>
+                  <TableCell>
+                    <div className="max-w-[200px]">
+                      <p className="text-[10px] font-bold text-red-500 truncate" title={log.error_message}>{log.error_code || "—"}</p>
+                      <p className="text-[9px] text-muted-foreground line-clamp-1">{log.error_message || "—"}</p>
+                    </div>
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <Button variant="ghost" size="icon" className="size-7" onClick={() => {
+                      console.log("Metadata:", log.metadata);
+                      toast.info("Detalhes técnicos no console");
+                    }}>
+                      <Link2 className="size-3" />
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              )) : (
+                <TableRow>
+                  <TableCell colSpan={6} className="text-center py-12 text-muted-foreground text-xs">
+                    Nenhum registro de provisionamento encontrado.
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
 

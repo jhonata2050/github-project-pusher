@@ -593,6 +593,50 @@ export type Database = {
         }
         Relationships: []
       }
+      provisioning_logs: {
+        Row: {
+          attempt_number: number
+          created_at: string | null
+          error_code: string | null
+          error_message: string | null
+          id: string
+          metadata: Json | null
+          service_id: string
+          status: string
+          user_id: string
+        }
+        Insert: {
+          attempt_number?: number
+          created_at?: string | null
+          error_code?: string | null
+          error_message?: string | null
+          id?: string
+          metadata?: Json | null
+          service_id: string
+          status: string
+          user_id: string
+        }
+        Update: {
+          attempt_number?: number
+          created_at?: string | null
+          error_code?: string | null
+          error_message?: string | null
+          id?: string
+          metadata?: Json | null
+          service_id?: string
+          status?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "provisioning_logs_service_id_fkey"
+            columns: ["service_id"]
+            isOneToOne: false
+            referencedRelation: "services"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       servers: {
         Row: {
           api_token: string | null

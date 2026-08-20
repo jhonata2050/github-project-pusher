@@ -120,4 +120,22 @@ export const EMAIL_TEMPLATES = {
       </div>
     `,
   }),
+  provisioningError: (serviceName: string, domain: string, error: string) => ({
+    subject: `ALERTA: Falha no Provisionamento - ${serviceName}`,
+    html: (company: string) => `
+      <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #EF4444; border-radius: 20px;">
+        <h2 style="color: #EF4444;">Falha de SLA detectada!</h2>
+        <p>Ocorreu um erro ao tentar provisionar automaticamente o serviço:</p>
+        <div style="background: #FEF2F2; padding: 15px; border-radius: 12px; margin: 15px 0;">
+          <p style="margin: 0; font-weight: bold; color: #333;">${serviceName}</p>
+          <p style="margin: 5px 0 0 0; font-size: 14px; color: #666;">Domínio: ${domain}</p>
+        </div>
+        <p style="font-weight: bold; color: #EF4444;">Erro Técnico:</p>
+        <pre style="background: #F3F4F6; padding: 10px; border-radius: 8px; font-size: 12px; overflow-x: auto;">${error}</pre>
+        <p>Acesse o painel administrativo para resolver a pendência manualmente e evitar que o SLA seja excedido.</p>
+        <a href="https://eqsam.com/admin" style="display: inline-block; padding: 12px 25px; background: #3B82F6; color: #fff; text-decoration: none; border-radius: 12px; font-weight: bold; margin-top: 20px;">Ir para Dashboard Admin</a>
+      </div>
+    `,
+  }),
 };
+
