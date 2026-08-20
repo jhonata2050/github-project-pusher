@@ -252,11 +252,18 @@ export async function createPaymentSession(
 
     // ----------------------------------------------------------- Woovi/OpenPix
     case "woovi": {
+      const appId = (cfg["woovi_app_id"] || "").trim();
+      
+      // Validação extra de segurança para evitar 401 óbvios
+      if (!appId || appId.includes("placeholder") || appId.length < 5) {
+        throw new Error("Woovi: AppID não configurado ou inválido. Verifique em Admin > Financeiro.");
+      }
+
       const res = await fetch("https://api.woovi.com/api/openpix/v1/charge", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: cfg["woovi_app_id"] || "",
+          Authorization: appId,
         },
         body: JSON.stringify({
           correlationID: `invoice-${ref}`,
@@ -273,7 +280,8 @@ export async function createPaymentSession(
       const json: any = await res.json().catch(() => null);
       const charge = json?.charge;
       if (!res.ok || !charge) {
-        throw new Error(`Woovi: ${json?.error || res.status} - ${JSON.stringify(json)}`);
+        const errorMsg = json?.error || (res.status === 401 ? "AppID inválido ou não autorizado" : res.statusText);
+        throw new Error(`Woovi: ${errorMsg}`);
       }
       const transactionId = await recordTransaction({
         userId: ownerId,

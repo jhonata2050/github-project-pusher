@@ -170,14 +170,17 @@ function AdminFinanceSettingsPage() {
       system_webhook_url: formData.get("system_webhook_url")?.toString() || "",
     };
 
-    // Capturar campos de todos os gateways
+    // Capturar campos de todos os gateways e normalizar
     for (const gateway of GATEWAYS) {
       for (const field of gateway.fields) {
         const val = formData.get(field.key);
-        // Só incluímos se o campo existir no FormData para evitar deleções acidentais
-        // de campos que podem não ter sido renderizados por algum motivo
         if (val !== null) {
-          data[field.key] = val.toString();
+          let trimmedVal = val.toString().trim();
+          // Evitar salvar placeholders literais
+          if (trimmedVal.toLowerCase().includes("placeholder")) {
+            trimmedVal = "";
+          }
+          data[field.key] = trimmedVal;
         }
       }
     }

@@ -126,6 +126,8 @@ export function isGatewayConfigured(id: string, settings: Record<string, unknown
   if (!def || !settings) return false;
   return def.required.every((k) => {
     const v = settings[k];
-    return typeof v === "string" && v.trim().length > 0 && !v.includes("placeholder");
+    if (typeof v !== "string") return false;
+    const val = v.trim();
+    return val.length > 0 && !val.toLowerCase().includes("placeholder");
   });
 }
