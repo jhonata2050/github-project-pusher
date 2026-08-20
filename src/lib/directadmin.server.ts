@@ -188,6 +188,7 @@ export async function createDAAccount(serverId: string, details: {
     apiToken: server.api_token ?? "",
     command: 'CMD_API_ACCOUNT_USER',
     method: 'POST',
+
     params: {
       action: 'create',
       add: 'Submit',
