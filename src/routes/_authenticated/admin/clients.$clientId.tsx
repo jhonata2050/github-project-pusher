@@ -114,7 +114,12 @@ function ClientDetailPage() {
 
   const updateProfile = useMutation({
     mutationFn: async (values: Record<string, string>) => {
-      return updateClientProfile({ data: { clientId, values } });
+      return updateClientProfile({ 
+        data: { 
+          id: clientId, 
+          ...values 
+        } 
+      });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["admin-client-dossier", clientId] });
