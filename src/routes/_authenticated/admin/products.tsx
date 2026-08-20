@@ -264,7 +264,8 @@ function ProductsPage() {
                           className="size-6 h-6 w-6"
                           onClick={(e) => {
                             e.stopPropagation();
-                            const url = `${window.location.origin}/checkout/${product.id}?immediate=true&mode=signup`;
+                            const publicOrigin = "https://easy-push1231231sa1d131dscxsc.lovable.app";
+                            const url = `${publicOrigin}/checkout/${product.id}?immediate=true&mode=signup`;
                             navigator.clipboard.writeText(url);
                             toast.success("Link copiado!");
                           }}
@@ -369,7 +370,7 @@ function ProductsPage() {
                     <div className="flex-1 min-w-0">
                       <Label className="text-[10px] text-brand font-bold uppercase">Link do Plano</Label>
                       <p className="text-[10px] truncate text-muted-foreground">
-                        {`${window.location.origin.replace('http://', '').replace('https://', '')}/checkout/${editingProduct.id}...`}
+                        {`easy-push1231231sa1d131dscxsc.lovable.app/checkout/${editingProduct.id}...`}
                       </p>
                     </div>
                     <Button 
@@ -377,7 +378,8 @@ function ProductsPage() {
                       size="icon" 
                       className="size-8"
                       onClick={() => {
-                        const url = `${window.location.origin}/checkout/${editingProduct.id}?immediate=true&mode=signup`;
+                        const publicOrigin = "https://easy-push1231231sa1d131dscxsc.lovable.app";
+                        const url = `${publicOrigin}/checkout/${editingProduct.id}?immediate=true&mode=signup`;
                         navigator.clipboard.writeText(url);
                         toast.success("Link copiado!");
                       }}
