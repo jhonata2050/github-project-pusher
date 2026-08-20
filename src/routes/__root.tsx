@@ -157,7 +157,6 @@ function RootComponent() {
       <AuthProvider>
         {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
         <div className="min-h-screen">
-          <Preloader />
           <Outlet />
         </div>
 
