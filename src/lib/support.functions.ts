@@ -484,7 +484,7 @@ export const getDASSOUrl = createServerFn({ method: "POST" })
     if (!isAdmin) {
       const { data: service } = await context.supabase
         .from("services")
-        .select("id, username, server_id")
+        .select("id, username, server_id, user_id, profiles(block_directadmin)")
         .eq("user_id", context.userId)
         .eq("username", data.username)
         .eq("server_id", data.serverId)
@@ -492,6 +492,11 @@ export const getDASSOUrl = createServerFn({ method: "POST" })
 
       if (!service) {
         throw new Error("Acesso negado: Você não possui permissão para acessar este serviço.");
+      }
+
+      // @ts-ignore
+      if (service.profiles?.block_directadmin) {
+        throw new Error("Seu acesso ao painel DirectAdmin foi bloqueado pelo administrador. Por favor, entre em contato com o suporte.");
       }
     }
 
