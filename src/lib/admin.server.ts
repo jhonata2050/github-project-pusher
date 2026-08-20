@@ -152,9 +152,8 @@ export async function bulkDeleteClientsImplementation(
     throw new Error("Acesso negado. Apenas administradores podem excluir clientes.");
   }
 
+  // 2. O cliente admin já foi importado acima para verificação de segurança.
 
-  // 2. Importar o cliente admin para poder deletar de auth.users
-  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
   let deletedCount = 0;
   let failuresCount = 0;
