@@ -184,7 +184,7 @@ export function StepAuth({ onComplete }: any) {
                   value={phone} 
                   onChange={(e) => setPhone(e.target.value)} 
                   required 
-                  placeholder="(00) 00000-0000"
+                  placeholder="Número (Ex: 11988887777)"
                   className="h-12 rounded-xl pl-12" 
                 />
                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm font-bold text-muted-foreground bg-muted/50 px-1.5 py-0.5 rounded">
