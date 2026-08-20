@@ -18,12 +18,12 @@ export function useBranding() {
     staleTime: 1000 * 60 * 60, // 1 hora
   });
 
-  const settings: BrandingSettings = branding || {
-    logo_url: null,
-    app_name: "Eqsam",
-    primary_color: "oklch(0.88 0.19 128)",
-    brand_color: "oklch(0.72 0.19 148)",
-    favicon_url: null,
+  const settings: BrandingSettings = {
+    logo_url: branding?.logo_url ?? null,
+    app_name: branding?.app_name ?? "Eqsam",
+    primary_color: branding?.primary_color ?? "oklch(0.88 0.19 128)",
+    brand_color: branding?.brand_color ?? "oklch(0.72 0.19 148)",
+    favicon_url: branding?.favicon_url ?? null,
   };
 
   useEffect(() => {
