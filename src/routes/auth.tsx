@@ -177,7 +177,7 @@ function AuthPage() {
               className="h-10 w-auto max-w-[180px] object-contain"
             />
           ) : (
-            <span className="text-2xl font-bold text-brand">{branding.app_name}.</span>
+            <span className="text-2xl font-bold text-brand">{branding.app_name}</span>
           )}
         </div>
         {checkEmail ? (
