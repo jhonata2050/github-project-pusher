@@ -78,6 +78,16 @@ export async function validateDASSORequest(
     }
   }
 
+  // 5. Final validation: Check if user exists on the remote DirectAdmin server
+  const { checkDAUserExists } = await import("./directadmin.server");
+  const remoteExists = await checkDAUserExists(serverId, cleanUsername);
+  
+  if (!remoteExists) {
+    console.error(`[Security-Alert] SSO validation failed: User ${cleanUsername} does not exist on DA server ${serverId}`);
+    await logSecurityEvent(userId, "non_existent_da_user_sso_attempt", { username: cleanUsername, serverId });
+    throw new Error("Erro de Segurança: O usuário do painel não existe no servidor. Por favor, contate o suporte.");
+  }
+
   return { isAdmin: !!isAdmin, targetUsername: cleanUsername };
 }
 

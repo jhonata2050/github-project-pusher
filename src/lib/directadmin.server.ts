@@ -322,6 +322,35 @@ function parseDirectAdminLoginUrl(response: any, serverHostname: string): string
   throw new Error(`O DirectAdmin não retornou uma URL válida. Resposta recebida: ${JSON.stringify(response)}`);
 }
 
+export async function checkDAUserExists(serverId: string, username: string): Promise<boolean> {
+  const { data: server, error } = await supabaseAdmin
+    .from("servers")
+    .select("*")
+    .eq("id", serverId)
+    .single();
+
+  if (error || !server) return false;
+
+  try {
+    const result = await callDA({
+      hostname: server.hostname,
+      apiUser: server.api_user ?? "",
+      apiToken: server.api_token ?? "",
+      command: 'CMD_API_SHOW_USER_CONFIG',
+      params: { user: username.trim() }
+    });
+
+    // Se o usuário não existe, o DA costuma retornar error=1 ou similar
+    if (result && (result.error === '1' || result.error === 1)) return false;
+    
+    // Se retornou dados do usuário, ele existe
+    return !!(result && (result.username || result.email));
+  } catch (e) {
+    console.error(`[DA-Security] Erro ao verificar existência do usuário ${username}:`, e);
+    return false;
+  }
+}
+
 export async function getDASession(serverId: string, username: string, redirectUrl?: string) {
   const { data: server, error } = await supabaseAdmin
     .from("servers")
@@ -334,7 +363,6 @@ export async function getDASession(serverId: string, username: string, redirectU
   const targetUser = username.trim();
   
   // SECURITY: Hard-restrict system usernames to prevent accidental admin escalation
-  // Includes 'eqsa7232' which is the detected API user for the server.
   const restrictedUsernames = ["admin", "root", "superuser", "da_admin", "eqsa7232", "reseller"];
   if (restrictedUsernames.includes(targetUser.toLowerCase())) {
     console.error(`[Security-DA] Attempt to login via SSO to restricted user: ${targetUser}`);
@@ -345,19 +373,21 @@ export async function getDASession(serverId: string, username: string, redirectU
     throw new Error('Usuário do serviço inválido para acesso ao DirectAdmin.');
   }
 
+  // CRITICAL: Pre-verify user existence on the remote server
+  const exists = await checkDAUserExists(serverId, targetUser);
+  if (!exists) {
+    console.error(`[Security-Alert] SSO failed: User ${targetUser} does not exist on server ${server.hostname}`);
+    throw new Error(`Falha de provisionamento: O usuário ${targetUser} não foi encontrado no servidor. Por favor, entre em contato com o suporte.`);
+  }
 
-  // SECURITY: Ensure that the session being created is for a regular user account.
-  // We use the delegated admin token to call CMD_API_LOGIN_KEYS, but we strictly
-  // define 'user' as the target user. 
-  // We also force 'type=one_time_url' which expires quickly.
   const delegatedApiUser = server.api_user;
   console.log(`[DA-SSO] Generating delegated session for ${targetUser} on ${server.hostname}`);
 
   const params: Record<string, string> = {
     action: 'create',
     type: 'one_time_url',
-    user: targetUser, // CRITICAL: Explicitly target the customer username
-    expiry: '10m',    // Reduced from 60m to 10m for tighter security
+    user: targetUser,
+    expiry: '10m',
     login_keys_notify_on_creation: '0'
   };
 
@@ -374,10 +404,12 @@ export async function getDASession(serverId: string, username: string, redirectU
     params
   });
 
+  if (result && (result.error === '1' || result.error === 1)) {
+    const errorMsg = result.details || result.text || "Erro desconhecido na API do DirectAdmin";
+    throw new Error(`Erro ao gerar acesso SSO: ${errorMsg}`);
+  }
 
-  // Log only the existence of a result for security
   console.log("DirectAdmin SSO API call completed.");
-
   return parseDirectAdminLoginUrl(result, server.hostname);
 }
 
