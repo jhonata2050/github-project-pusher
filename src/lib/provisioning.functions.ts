@@ -10,8 +10,7 @@ export const getProvisioningLogs = createServerFn({ method: "GET" })
       .from("provisioning_logs")
       .select(`
         *,
-        services(id, domain, products(name)),
-        profiles:user_id(full_name, email)
+        services(id, domain, products(name))
       `)
       .order("created_at", { ascending: false });
 
