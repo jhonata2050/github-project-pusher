@@ -7,9 +7,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { getSystemSettings, updateSystemSettings } from "@/lib/support.functions";
-import { Save, Gift, Wallet, ExternalLink, Server, CheckCircle2, AlertCircle } from "lucide-react";
+import { Save, Gift, Wallet, ExternalLink, Server, CheckCircle2, AlertCircle, Link, Bell, Layers, Zap, Copy } from "lucide-react";
 import { toast } from "sonner";
 import { GATEWAYS, METHOD_LABELS, isGatewayConfigured, type GatewayDef } from "@/lib/gateways";
 import { testGatewayConnection } from "@/lib/gateway-validation.functions";
@@ -161,6 +162,7 @@ function AdminFinanceSettingsPage() {
       gateway_priority_credit_card: formData.get("gateway_priority_credit_card") || "",
       gateway_priority_boleto: formData.get("gateway_priority_boleto") || "",
       payment_gateway_fallback_enabled: formData.get("payment_gateway_fallback_enabled") === "on",
+      system_webhook_url: formData.get("system_webhook_url") || "",
     };
     for (const gateway of GATEWAYS) {
       for (const field of gateway.fields) {
@@ -172,107 +174,182 @@ function AdminFinanceSettingsPage() {
 
   if (isLoading) return <div className="h-96 flex items-center justify-center">Carregando...</div>;
 
+  const defaultWebhook = typeof window !== 'undefined' ? `${window.location.origin}/api/public/webhook` : '';
+
+  const copyToClipboard = (text: string) => {
+    navigator.clipboard.writeText(text);
+    toast.success("Link copiado!");
+  };
+
   return (
     <AppShell area="admin" breadcrumb={<span>Sistema / Financeiro e Gateways</span>}>
       <div className="space-y-8 max-w-5xl mx-auto">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight text-foreground">Configurações Financeiras</h1>
-          <p className="text-muted-foreground mt-2">
-            Cada gateway usa exatamente as credenciais exigidas pela sua documentação oficial (muitos exigem par de chaves).
-          </p>
+        <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight text-foreground">Configurações Financeiras</h1>
+            <p className="text-muted-foreground mt-2">
+              Gerencie automação, gateways de pagamento e notificações do sistema.
+            </p>
+          </div>
         </div>
 
         <form onSubmit={handleSave} className="space-y-6">
-          <Card className="rounded-3xl border-none shadow-sm">
-            <CardHeader>
-              <div className="flex items-center gap-3">
-                <Gift className="h-5 w-5 text-brand" />
-                <CardTitle>Automação de Faturamento</CardTitle>
+          <Tabs defaultValue="geral" className="w-full">
+            <TabsList className="grid w-full grid-cols-3 rounded-2xl h-12 p-1 bg-secondary/50">
+              <TabsTrigger value="geral" className="rounded-xl gap-2">
+                <Layers className="size-4" /> Geral
+              </TabsTrigger>
+              <TabsTrigger value="gateways" className="rounded-xl gap-2">
+                <Wallet className="size-4" /> Gateways
+              </TabsTrigger>
+              <TabsTrigger value="prioridades" className="rounded-xl gap-2">
+                <Zap className="size-4" /> Prioridades
+              </TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="geral" className="space-y-6 mt-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <Card className="rounded-3xl border-none shadow-sm">
+                  <CardHeader>
+                    <div className="flex items-center gap-3">
+                      <Gift className="h-5 w-5 text-brand" />
+                      <CardTitle className="text-lg">Automação de Faturamento</CardTitle>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="flex items-center justify-between py-2 border-b border-muted">
+                      <div className="min-w-0">
+                        <p className="font-medium text-sm">Suspensão Automática</p>
+                        <p className="text-[11px] text-muted-foreground">Suspender serviços com faturas vencidas há mais de 3 dias.</p>
+                      </div>
+                      <Switch name="auto_suspend" defaultChecked={settings?.["auto_suspend"] === true} />
+                    </div>
+                    <div className="flex items-center justify-between py-2">
+                      <div className="min-w-0">
+                        <p className="font-medium text-sm">Fallback Automático</p>
+                        <p className="text-[11px] text-muted-foreground">Tentar próximo gateway da lista caso o principal falhe.</p>
+                      </div>
+                      <Switch name="payment_gateway_fallback_enabled" defaultChecked={settings?.["payment_gateway_fallback_enabled"] !== false} />
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card className="rounded-3xl border-none shadow-sm">
+                  <CardHeader>
+                    <div className="flex items-center gap-3">
+                      <Bell className="h-5 w-5 text-brand" />
+                      <CardTitle className="text-lg">Notificações e Webhooks</CardTitle>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="space-y-2">
+                      <Label className="text-sm">Link de Webhook do Sistema</Label>
+                      <div className="flex gap-2">
+                        <Input 
+                          name="system_webhook_url" 
+                          placeholder="https://sua-url.com/api/public/webhook" 
+                          defaultValue={settings?.["system_webhook_url"] || defaultWebhook} 
+                          className="rounded-xl text-xs" 
+                        />
+                        <Button 
+                          type="button" 
+                          variant="outline" 
+                          size="icon" 
+                          className="rounded-xl shrink-0"
+                          onClick={() => copyToClipboard(settings?.["system_webhook_url"] || defaultWebhook)}
+                        >
+                          <Copy className="size-4" />
+                        </Button>
+                      </div>
+                      <p className="text-[10px] text-muted-foreground">
+                        Vital para receber notificações de pagamentos dos gateways.
+                      </p>
+                    </div>
+                  </CardContent>
+                </Card>
               </div>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex items-center justify-between py-2 border-b border-muted">
-                <div className="min-w-0">
-                  <p className="font-medium">Suspensão Automática</p>
-                  <p className="text-xs text-muted-foreground">Suspender serviços com faturas vencidas há mais de 3 dias.</p>
-                </div>
-                <Switch name="auto_suspend" defaultChecked={settings?.["auto_suspend"] === true} />
+            </TabsContent>
+
+            <TabsContent value="gateways" className="mt-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {GATEWAYS.filter(g => g.id !== 'contabo').map((gateway) => (
+                  <GatewayCard key={gateway.id} gateway={gateway} settings={settings} />
+                ))}
               </div>
-              <div className="flex items-center justify-between py-2 border-b border-muted">
-                <div className="min-w-0">
-                  <p className="font-medium">Fallback Automático</p>
-                  <p className="text-xs text-muted-foreground">Tentar próximo gateway da lista caso o principal falhe.</p>
-                </div>
-                <Switch name="payment_gateway_fallback_enabled" defaultChecked={settings?.["payment_gateway_fallback_enabled"] !== false} />
-              </div>
+            </TabsContent>
 
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div className="space-y-2">
-                  <Label>Prioridade PIX</Label>
-                  <Input 
-                    name="gateway_priority_pix" 
-                    placeholder="ex: woovi,cajupay" 
-                    defaultValue={settings?.["gateway_priority_pix"] || ""} 
-                    className="rounded-xl font-mono text-sm" 
-                  />
-                  <p className="text-[10px] text-muted-foreground">
-                    IDs: {GATEWAYS.filter(g => g.methods.includes('pix')).map(g => g.id).join(", ")}
-                  </p>
-                </div>
+            <TabsContent value="prioridades" className="mt-6">
+              <Card className="rounded-3xl border-none shadow-sm">
+                <CardHeader>
+                  <div className="flex items-center gap-3">
+                    <Zap className="h-5 w-5 text-brand" />
+                    <CardTitle className="text-lg">Configurações de Prioridade</CardTitle>
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div className="space-y-2">
+                      <Label className="text-sm">Prioridade PIX</Label>
+                      <Input 
+                        name="gateway_priority_pix" 
+                        placeholder="ex: woovi,cajupay" 
+                        defaultValue={settings?.["gateway_priority_pix"] || ""} 
+                        className="rounded-xl font-mono text-xs" 
+                      />
+                      <p className="text-[10px] text-muted-foreground">
+                        IDs: {GATEWAYS.filter(g => g.methods.includes('pix')).map(g => g.id).join(", ")}
+                      </p>
+                    </div>
 
-                <div className="space-y-2">
-                  <Label>Prioridade CARTÃO</Label>
-                  <Input 
-                    name="gateway_priority_credit_card" 
-                    placeholder="ex: stripe,mercadopago" 
-                    defaultValue={settings?.["gateway_priority_credit_card"] || ""} 
-                    className="rounded-xl font-mono text-sm" 
-                  />
-                  <p className="text-[10px] text-muted-foreground">
-                    IDs: {GATEWAYS.filter(g => g.methods.includes('credit_card')).map(g => g.id).join(", ")}
-                  </p>
-                </div>
+                    <div className="space-y-2">
+                      <Label className="text-sm">Prioridade CARTÃO</Label>
+                      <Input 
+                        name="gateway_priority_credit_card" 
+                        placeholder="ex: stripe,mercadopago" 
+                        defaultValue={settings?.["gateway_priority_credit_card"] || ""} 
+                        className="rounded-xl font-mono text-xs" 
+                      />
+                      <p className="text-[10px] text-muted-foreground">
+                        IDs: {GATEWAYS.filter(g => g.methods.includes('credit_card')).map(g => g.id).join(", ")}
+                      </p>
+                    </div>
 
-                <div className="space-y-2">
-                  <Label>Prioridade BOLETO</Label>
-                  <Input 
-                    name="gateway_priority_boleto" 
-                    placeholder="ex: paghiper,mercadopago" 
-                    defaultValue={settings?.["gateway_priority_boleto"] || ""} 
-                    className="rounded-xl font-mono text-sm" 
-                  />
-                  <p className="text-[10px] text-muted-foreground">
-                    IDs: {GATEWAYS.filter(g => g.methods.includes('boleto')).map(g => g.id).join(", ")}
-                  </p>
-                </div>
-              </div>
+                    <div className="space-y-2">
+                      <Label className="text-sm">Prioridade BOLETO</Label>
+                      <Input 
+                        name="gateway_priority_boleto" 
+                        placeholder="ex: paghiper,mercadopago" 
+                        defaultValue={settings?.["gateway_priority_boleto"] || ""} 
+                        className="rounded-xl font-mono text-xs" 
+                      />
+                      <p className="text-[10px] text-muted-foreground">
+                        IDs: {GATEWAYS.filter(g => g.methods.includes('boleto')).map(g => g.id).join(", ")}
+                      </p>
+                    </div>
+                  </div>
 
-              <div className="space-y-2 pt-2">
-                <Label>Prioridade Global (Fallback Geral)</Label>
-                <Input 
-                  name="payment_gateway_priority" 
-                  placeholder="ex: abacatepay,cajupay,mercadopago" 
-                  defaultValue={settings?.["payment_gateway_priority"] || ""} 
-                  className="rounded-xl font-mono text-sm" 
-                />
-                <p className="text-[10px] text-muted-foreground">
-                  Usado se a prioridade específica do método estiver vazia.
-                </p>
-              </div>
-            </CardContent>
-          </Card>
+                  <div className="space-y-2 pt-4 border-t border-muted">
+                    <Label className="text-sm">Prioridade Global (Fallback Geral)</Label>
+                    <Input 
+                      name="payment_gateway_priority" 
+                      placeholder="ex: abacatepay,cajupay,mercadopago" 
+                      defaultValue={settings?.["payment_gateway_priority"] || ""} 
+                      className="rounded-xl font-mono text-xs" 
+                    />
+                    <p className="text-[10px] text-muted-foreground">
+                      Usado se a prioridade específica do método estiver vazia. Ordem de preferência para fallback.
+                    </p>
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+          </Tabs>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {GATEWAYS.filter(g => g.id !== 'contabo').map((gateway) => (
-              <GatewayCard key={gateway.id} gateway={gateway} settings={settings} />
-            ))}
-          </div>
-
-          <div className="flex justify-end gap-4">
+          <div className="flex justify-end pt-4">
             <Button
               type="submit"
               disabled={updateSettingsMutation.isPending}
-              className="bg-brand text-brand-foreground hover:bg-brand/90 rounded-2xl px-12 font-bold shadow-lg shadow-brand/20"
+              className="bg-brand text-brand-foreground hover:bg-brand/90 rounded-2xl px-12 font-bold shadow-lg shadow-brand/20 h-11"
             >
               <Save className="mr-2 h-4 w-4" />
               {updateSettingsMutation.isPending ? "Salvando..." : "Salvar Configurações"}
