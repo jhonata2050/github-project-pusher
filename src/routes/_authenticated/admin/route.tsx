@@ -1,4 +1,4 @@
-import { createFileRoute, Outlet, useNavigate, useRouterState } from "@tanstack/react-router";
+import { createFileRoute, Outlet, useNavigate, useRouterState, redirect } from "@tanstack/react-router";
 import { ShieldAlert } from "lucide-react";
 import { useEffect } from "react";
 import { Button } from "@/components/ui/button";
@@ -6,11 +6,33 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useIsStaff, useRoles } from "@/hooks/use-auth";
 import { useBranding } from "@/hooks/use-branding";
 import { logSessionEvent } from "@/lib/audit.functions";
-
+import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/_authenticated/admin")({
+  beforeLoad: async ({ context }) => {
+    // Redundant security check on navigation (Client-Side because ssr: false in parent)
+    const user = (context as any).user;
+    if (!user) throw redirect({ to: '/auth' });
+
+    const { data: isAdmin, error } = await supabase.rpc('has_role', {
+      _user_id: user.id,
+      _role: 'admin'
+    });
+    
+    if (error || !isAdmin) {
+      console.error('[Security] Admin area access denied for user:', user.id);
+      throw redirect({
+        to: '/dashboard',
+        search: {
+          error: 'Unauthorized access attempt logged'
+        }
+      });
+    }
+  },
   component: AdminLayout,
 });
+
+
 
 function AdminLayout() {
   const branding = useBranding();
