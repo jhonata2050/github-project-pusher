@@ -102,7 +102,7 @@ function ClientDashboardPage() {
             <Button asChild variant="outline" className="rounded-xl">
               <Link to="/vps">
                 <Monitor className="mr-2 size-4" />
-                EQSAM CLOUD
+                Servidores VPS
               </Link>
             </Button>
           </div>
