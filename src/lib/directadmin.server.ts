@@ -322,7 +322,7 @@ function parseDirectAdminLoginUrl(response: any, serverHostname: string): string
   throw new Error(`O DirectAdmin não retornou uma URL válida. Resposta recebida: ${JSON.stringify(response)}`);
 }
 
-export async function checkDAUserExists(serverId: string, username: string): Promise<boolean> {
+export async function checkDAUserExists(serverId: string, username: string, serviceId?: string): Promise<boolean> {
   const { data: server, error } = await supabaseAdmin
     .from("servers")
     .select("*")
@@ -340,17 +340,50 @@ export async function checkDAUserExists(serverId: string, username: string): Pro
       params: { user: username.trim() }
     });
 
-    // Se o DA retornar um erro 500 ou objeto de erro, o callDA já lança exceção ou retorna o erro.
-    // O DA retorna "error=0" em sucesso.
-    if (result && (result.error === '1' || result.error === 1)) return false;
+    if (result && (result.error === '1' || result.error === 1)) {
+      // Se retornar erro mas o erro contiver "Invalid user", significa que não existe
+      const details = String(result.details || result.text || "");
+      if (details.includes("Cannot show user") || details.includes("does not exist")) {
+        return false;
+      }
+      
+      // Se for outro erro, pode ser conflito ou erro de permissão
+      return false;
+    }
     
     return !!(result && (result.username || result.email || result.error === '0'));
   } catch (e) {
-    // Se o erro for 500 com "You don't have control over that user", significa que o usuário não existe para este token
     const errorStr = String(e);
+    
+    // Conflitos ou falta de permissão
     if (errorStr.includes("You don't have control over that user") || errorStr.includes("Cannot show user")) {
+      // Se caímos aqui, o usuário existe mas não pertence a este token API (CONFLITO DE DOMÍNIO/USUÁRIO)
+      if (serviceId) {
+        console.error(`[DA-Security-Conflict] Usuário ${username} já existe em outro revendedor no servidor ${server.hostname}`);
+        
+        const { createSystemLog } = await import("./system-logs.server");
+        const { data: service } = await supabaseAdmin.from("services").select("user_id").eq("id", serviceId).single();
+        
+        await createSystemLog({
+          category: 'directadmin',
+          level: 'critical',
+          message: `CONFLITO DE DOMÍNIO: O usuário/domínio ${username} já existe no servidor ${server.hostname} sob outro controle.`,
+          serviceId,
+          actorId: service?.user_id,
+          metadata: { serverId, username, serverHostname: server.hostname, error: errorStr }
+        });
+
+        // Bloqueio imediato do serviço
+        await supabaseAdmin.from("services").update({
+          block_directadmin: true,
+          status: 'suspended',
+          notes: "BLOQUEIO DE SEGURANÇA: Conflito de domínio detectado no servidor. Por favor, contate o suporte para resolução.",
+          updated_at: new Date().toISOString()
+        } as any).eq("id", serviceId);
+      }
       return false;
     }
+    
     console.error(`[DA-Security] Erro ao verificar existência do usuário ${username}:`, e);
     return false;
   }
