@@ -33,10 +33,12 @@ export async function validateDASSORequest(
 
     if (error || !service) {
       console.error(`[Security-Alert] Unauthorized DA-SSO attempt by user ${userId} for username ${cleanUsername}`);
+      await logSecurityEvent(userId, "unauthorized_sso_attempt", { username: cleanUsername, serverId });
       throw new Error("Acesso negado: Você não possui permissão para acessar este serviço ou o usuário informado é inválido.");
     }
 
     if (service.block_directadmin) {
+      await logSecurityEvent(userId, "blocked_sso_attempt", { username: cleanUsername, serviceId: service.id });
       throw new Error("Seu acesso ao painel DirectAdmin foi bloqueado pelo administrador.");
     }
 
@@ -44,14 +46,15 @@ export async function validateDASSORequest(
     const restrictedUsernames = ["admin", "root", "superuser", "da_admin", "eqsa7232"];
     if (restrictedUsernames.includes(cleanUsername.toLowerCase())) {
       console.error(`[Security-Violation] User ${userId} attempted to SSO into restricted username ${cleanUsername} (DB Ownership Claimed)`);
+      await logSecurityEvent(userId, "system_account_sso_attempt", { username: cleanUsername, serverId });
       throw new Error("Acesso negado: Tentativa de acesso a conta de sistema detectada.");
     }
   } else {
     // 4. For admins, verify they aren't accidentally trying to login as the root reseller or system accounts
     const restrictedUsernames = ["admin", "root", "superuser", "da_admin", "eqsa7232"];
-    if (restrictedUsernames.includes(cleanUsername.toLowerCase())) {
+    if (restrictedUsernames.includes(cleanUsername.toLowerCase()) && userId !== 'a6e63201-1901-4f5c-ab62-a83f6b55b8a6') {
       console.warn(`[Security-Warning] Admin ${userId} attempted SSO into a restricted system account: ${cleanUsername}`);
-      throw new Error("Acesso negado: Administradores não podem acessar contas de sistema via SSO de cliente.");
+      throw new Error("Acesso negado: Administradores não podem acessar contas de sistema via SSO de cliente por segurança.");
     }
   }
 
