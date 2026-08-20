@@ -19,12 +19,12 @@ export const getSystemLogs = createServerFn({ method: "GET" })
     });
 
     let query = context.supabase
-      .from("system_logs")
-      .select(\`
+      .from("system_logs" as any)
+      .select(`
         *,
         profiles:actor_id(full_name, email),
         services:service_id(domain, products(name))
-      \`)
+      `)
       .order("created_at", { ascending: false })
       .limit(data.limit);
 
