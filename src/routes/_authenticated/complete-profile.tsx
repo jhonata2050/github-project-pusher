@@ -16,6 +16,7 @@ export const Route = createFileRoute("/_authenticated/complete-profile")({
 
 function CompleteProfilePage() {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const { user, loading: authLoading } = useAuth();
   const [phone, setPhone] = useState("");
   const [leadSource, setLeadSource] = useState("");
@@ -62,6 +63,10 @@ function CompleteProfilePage() {
       if (error) throw error;
 
       trackEvent("sign_up", { method: "oauth_complete", lead_source: leadSource });
+      
+      // Invalida o cache do perfil e aguarda a sincronização antes de navegar
+      await queryClient.invalidateQueries({ queryKey: ["profile", user!.id] });
+      
       toast.success("Cadastro finalizado com sucesso!");
       navigate({ to: "/dashboard" });
     } catch (error: any) {
