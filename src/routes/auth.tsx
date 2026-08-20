@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { z } from "zod";
 import { trackEvent } from "@/lib/analytics";
+import { countries } from "@/lib/countries";
 
 
 import { Button } from "@/components/ui/button";
@@ -50,6 +51,18 @@ const passwordSchema = z
   .regex(/[^A-Za-z0-9]/, "Deve conter pelo menos um caractere especial")
   .max(72, "A senha deve ter no máximo 72 caracteres");
 
+const signupSchema = z.object({
+  fullName: z.string().trim().min(2, "Informe seu nome").max(120),
+  phone: z.string().trim().min(5, "Telefone inválido").max(20),
+  tax_id: z.string().trim().min(5, "Documento de identificação é obrigatório").max(30),
+  identification_type: z.string().min(1, "Selecione o tipo de identificação"),
+  country: z.string().min(2, "Selecione o país"),
+  email: emailSchema,
+  password: passwordSchema,
+  leadSource: z.string().min(1, "Selecione como nos conheceu"),
+  leadSourceOther: z.string().optional(),
+});
+
 
 function AuthPage() {
   const navigate = useNavigate();
@@ -62,6 +75,9 @@ function AuthPage() {
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
   const [phone, setPhone] = useState("");
+  const [tax_id, setTaxId] = useState("");
+  const [identificationType, setIdentificationType] = useState("cpf");
+  const [country, setCountry] = useState("BR");
   const [leadSource, setLeadSource] = useState("");
   const [leadSourceOther, setLeadSourceOther] = useState("");
   const [busy, setBusy] = useState(false);
@@ -107,15 +123,34 @@ function AuthPage() {
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const parsedEmail = emailSchema.safeParse(email);
-    if (!parsedEmail.success) {
-      toast.error(parsedEmail.error.issues[0]!.message);
-      return;
-    }
-    const parsedPassword = passwordSchema.safeParse(password);
-    if (!parsedPassword.success) {
-      toast.error(parsedPassword.error.issues[0]!.message);
-      return;
+    
+    if (mode === "signup") {
+      const result = signupSchema.safeParse({
+        fullName,
+        phone,
+        tax_id,
+        identification_type: identificationType,
+        country,
+        email,
+        password,
+        leadSource,
+        leadSourceOther: leadSource === "Outro" ? leadSourceOther : undefined,
+      });
+      if (!result.success) {
+        toast.error(result.error.issues[0]!.message);
+        return;
+      }
+    } else {
+      const parsedEmail = emailSchema.safeParse(email);
+      if (!parsedEmail.success) {
+        toast.error(parsedEmail.error.issues[0]!.message);
+        return;
+      }
+      const parsedPassword = passwordSchema.safeParse(password);
+      if (!parsedPassword.success) {
+        toast.error(parsedPassword.error.issues[0]!.message);
+        return;
+      }
     }
 
     setBusy(true);
@@ -149,15 +184,15 @@ function AuthPage() {
         // O useEffect acima cuidará do redirecionamento após a sessão ser injetada
       } else {
         const { error } = await supabase.auth.signInWithPassword({
-          email: parsedEmail.data,
-          password: parsedPassword.data,
+          email: email.trim(),
+          password,
         });
         if (error) throw error;
       }
     } catch (error) {
       void logPublicAuthEvent({ data: {
         action: mode === "signup" ? "signup.failed" : "login.failed",
-        email: parsedEmail.data,
+        email: email.trim(),
         description: mode === "signup" ? "Falha ao criar conta" : "Tentativa de acesso recusada",
       }});
       toast.error(error instanceof Error ? error.message : "Não foi possível continuar.");
@@ -228,16 +263,68 @@ function AuthPage() {
                 </div>
               )}
               {mode === "signup" && (
-                <div className="space-y-2">
-                  <Label htmlFor="phone">Telefone / WhatsApp</Label>
-                  <Input
-                    id="phone"
-                    value={phone}
-                    onChange={(e) => setPhone(e.target.value)}
-                    placeholder="(00) 00000-0000"
-                    className="h-12 rounded-xl"
-                    required
-                  />
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="country">País</Label>
+                    <select
+                      id="country"
+                      value={country}
+                      onChange={(e) => {
+                        setCountry(e.target.value);
+                        const selectedCountry = countries.find(c => c.code === e.target.value);
+                        if (selectedCountry && !phone.startsWith('+')) {
+                          setPhone(selectedCountry.ddi + " ");
+                        }
+                      }}
+                      className="flex h-12 w-full rounded-xl border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                      required
+                    >
+                      {countries.map(c => (
+                        <option key={c.code} value={c.code}>{c.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="phone">Telefone / WhatsApp</Label>
+                    <Input
+                      id="phone"
+                      value={phone}
+                      onChange={(e) => setPhone(e.target.value)}
+                      placeholder="+55 (00) 00000-0000"
+                      className="h-12 rounded-xl"
+                      required
+                    />
+                  </div>
+                </div>
+              )}
+              {mode === "signup" && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="identificationType">Tipo de Documento</Label>
+                    <select
+                      id="identificationType"
+                      value={identificationType}
+                      onChange={(e) => setIdentificationType(e.target.value)}
+                      className="flex h-12 w-full rounded-xl border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                      required
+                    >
+                      <option value="cpf">CPF (Pessoa Física)</option>
+                      <option value="cnpj">CNPJ (Empresa)</option>
+                      <option value="tax_id">Tax ID (Internacional)</option>
+                      <option value="passport">Passaporte</option>
+                    </select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="tax_id">Documento (ID)</Label>
+                    <Input
+                      id="tax_id"
+                      value={tax_id}
+                      onChange={(e) => setTaxId(e.target.value)}
+                      placeholder={identificationType === 'cpf' ? "000.000.000-00" : "Número do documento"}
+                      className="h-12 rounded-xl"
+                      required
+                    />
+                  </div>
                 </div>
               )}
               {mode === "signup" && (
