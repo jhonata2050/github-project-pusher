@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useAuth, useProfile } from "@/hooks/use-auth";
 import { supabase } from "@/integrations/supabase/client";
+import { countries } from "@/lib/countries";
 
 export const Route = createFileRoute("/_authenticated/profile")({
   head: () => ({
@@ -65,8 +66,11 @@ function ProfilePage() {
       full_name: profile.full_name ?? "",
       company_name: profile.company_name ?? "",
       tax_id: profile.tax_id ?? "",
+      identification_type: (profile as any).identification_type ?? "cpf",
+      country: (profile as any).country ?? "BR",
       phone: profile.phone ?? "",
       address_line: profile.address_line ?? "",
+      address_line2: (profile as any).address_line2 ?? "",
       city: profile.city ?? "",
       state: profile.state ?? "",
       postal_code: profile.postal_code ?? "",
@@ -81,10 +85,13 @@ function ProfilePage() {
         .update({
           full_name: parsed.full_name,
           company_name: parsed.company_name || null,
-          tax_id: parsed.tax_id || null,
-          phone: parsed.phone || null,
-          address_line: parsed.address_line || null,
-          city: parsed.city || null,
+          tax_id: parsed.tax_id,
+          identification_type: parsed.identification_type,
+          country: parsed.country,
+          phone: parsed.phone,
+          address_line: parsed.address_line,
+          address_line2: parsed.address_line2 || null,
+          city: parsed.city,
           state: parsed.state || null,
           postal_code: parsed.postal_code || null,
         })
@@ -143,12 +150,43 @@ function ProfilePage() {
       >
         {field("full_name", "Nome completo")}
         {field("company_name", "Empresa (opcional)")}
-        {/* CPF/CNPJ removido da visualização conforme solicitado */}
+        
+        <div className="space-y-2">
+          <Label htmlFor="identification_type">Tipo de Documento</Label>
+          <select
+            id="identification_type"
+            value={form.identification_type}
+            onChange={(e) => setForm((prev) => ({ ...prev, identification_type: e.target.value }))}
+            className="flex h-11 w-full rounded-xl border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            <option value="cpf">CPF (Pessoa Física)</option>
+            <option value="cnpj">CNPJ (Empresa)</option>
+            <option value="tax_id">Tax ID (Internacional)</option>
+            <option value="passport">Passaporte</option>
+          </select>
+        </div>
+        {field("tax_id", "Documento (ID)")}
+
+        <div className="space-y-2">
+          <Label htmlFor="country">País</Label>
+          <select
+            id="country"
+            value={form.country}
+            onChange={(e) => setForm((prev) => ({ ...prev, country: e.target.value }))}
+            className="flex h-11 w-full rounded-xl border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {countries.map(c => (
+              <option key={c.code} value={c.code}>{c.name}</option>
+            ))}
+          </select>
+        </div>
         {field("phone", "Telefone")}
-        {field("address_line", "Endereço")}
+
+        {field("address_line", "Endereço (Rua, nº)")}
+        {field("address_line2", "Complemento (opcional)")}
         {field("city", "Cidade")}
-        {field("state", "Estado")}
-        {field("postal_code", "CEP")}
+        {field("state", "Estado / Província")}
+        {field("postal_code", "CEP / Código Postal")}
         <div className="md:col-span-2">
           <Button type="submit" disabled={save.isPending || isLoading} className="h-11 rounded-xl">
             Salvar alterações
