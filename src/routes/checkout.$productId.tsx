@@ -197,7 +197,14 @@ function CheckoutPage() {
 
   useEffect(() => {
     if (!user && !product.isLoading) {
-      navigate({ to: "/auth", search: { redirect: `/checkout/${productId}` } as any });
+      const searchParams = new URLSearchParams(window.location.search);
+      const isImmediate = searchParams.get("immediate") === "true";
+      navigate({ 
+        to: "/auth", 
+        search: { 
+          redirect: `/checkout/${productId}${isImmediate ? '?immediate=true' : ''}` 
+        } as any 
+      });
     }
   }, [user, product.isLoading, productId, navigate]);
 
