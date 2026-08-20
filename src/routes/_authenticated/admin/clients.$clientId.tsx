@@ -20,6 +20,7 @@ import {
   Edit2,
   ExternalLink,
   Link2,
+  ShieldAlert,
 } from "lucide-react";
 
 import { useState } from "react";
@@ -61,6 +62,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
 
 export const Route = createFileRoute("/_authenticated/admin/clients/$clientId")({
   head: ({ params }) => ({
