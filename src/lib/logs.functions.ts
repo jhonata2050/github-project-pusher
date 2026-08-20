@@ -6,7 +6,7 @@ export const getSystemLogs = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .inputValidator((data: unknown) => 
     z.object({
-      type: z.enum(["email", "auth", "data", "system", "branding", "all"]).default("all"),
+      type: z.enum(["email", "auth", "data", "system", "branding", "webhook", "all"]).default("all"),
       limit: z.number().int().min(1).max(100).default(20),
       offset: z.number().int().min(0).default(0)
     }).parse(data)
@@ -53,12 +53,13 @@ export const getSystemLogs = createServerFn({ method: "GET" })
 
     let query = context.supabase
       .from("audit_logs")
-      .select("id, category, action, status, actor_email, entity_type, entity_id, description, ip_address, created_at", { count: "estimated" });
+      .select("id, category, action, status, actor_email, entity_type, entity_id, description, ip_address, created_at, metadata", { count: "estimated" });
 
     if (data.type === "auth") query = query.eq("category", "auth");
     if (data.type === "data") query = query.eq("category", "data");
     if (data.type === "system") query = query.in("category", ["system", "security"]);
     if (data.type === "branding") query = query.eq("category", "branding");
+    if (data.type === "webhook") query = query.eq("category", "webhook");
 
     const { data: logs, count, error } = await query
       .order("created_at", { ascending: false })
@@ -79,6 +80,7 @@ export const getSystemLogs = createServerFn({ method: "GET" })
         entityId: log.entity_id,
         ipAddress: typeof log.ip_address === "string" ? log.ip_address : null,
         profileName: null,
+        metadata: log.metadata,
       })),
       count: count ?? 0,
     };
