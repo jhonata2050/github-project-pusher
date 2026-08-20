@@ -46,9 +46,12 @@ export function CountrySelector({ value, onChange, disabled, className }: Countr
           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0 rounded-xl overflow-hidden shadow-xl border-border/40" align="start">
+      <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0 rounded-xl overflow-hidden shadow-xl border-border/40" align="start" side="bottom" sideOffset={4}>
         <Command className="rounded-xl">
-          <CommandInput placeholder="Procurar país..." className="h-10 border-none focus:ring-0" />
+          <div className="flex items-center border-b px-3">
+            <Search className="mr-2 h-4 w-4 shrink-0 opacity-50" />
+            <CommandInput placeholder="Procurar país..." className="h-10 border-none focus:ring-0 w-full" />
+          </div>
           <CommandList className="max-h-[300px]">
             <CommandEmpty>Nenhum país encontrado.</CommandEmpty>
             <CommandGroup>
@@ -60,16 +63,18 @@ export function CountrySelector({ value, onChange, disabled, className }: Countr
                     onChange(country.code);
                     setOpen(false);
                   }}
-                  className="cursor-pointer py-3 px-4 aria-selected:bg-accent"
+                  className="cursor-pointer py-3 px-4 aria-selected:bg-accent flex items-center group"
                 >
-                  <Check
-                    className={cn(
-                      "mr-2 h-4 w-4",
-                      value === country.code ? "opacity-100" : "opacity-0"
-                    )}
-                  />
-                  {country.name}
-                  <span className="ml-auto text-[10px] text-muted-foreground font-mono">
+                  <div className="flex items-center flex-1 mr-4 overflow-hidden">
+                    <Check
+                      className={cn(
+                        "mr-3 h-4 w-4 shrink-0",
+                        value === country.code ? "opacity-100" : "opacity-0"
+                      )}
+                    />
+                    <span className="truncate">{country.name}</span>
+                  </div>
+                  <span className="shrink-0 text-[11px] font-bold text-muted-foreground group-aria-selected:text-foreground transition-colors bg-muted/50 px-1.5 py-0.5 rounded">
                     {country.ddi}
                   </span>
                 </CommandItem>
