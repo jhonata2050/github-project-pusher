@@ -29,7 +29,7 @@ export async function fetchClientDossier(
       .limit(RECENT_LIMIT),
     supabase
       .from("services")
-      .select("id, status, domain, username, billing_cycle, next_due_date, server_id, product_id, auto_renew, created_at, products(name), servers(hostname)")
+      .select("id, status, domain, username, billing_cycle, next_due_date, server_id, product_id, auto_renew, created_at, block_directadmin, products(name), servers(hostname)")
       .eq("user_id", clientId)
       .order("created_at", { ascending: false })
       .limit(RECENT_LIMIT),
