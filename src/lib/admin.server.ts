@@ -38,12 +38,12 @@ export async function getBrandingImplementation() {
   if (!data) return DEFAULT_BRANDING;
   
   // Garantir que os dados lidos do banco preencham os campos faltantes com o padrão
-  const value = data.value as unknown as BrandingSettings;
+  const value = (data.value as unknown as BrandingSettings) || {};
   return { 
     ...DEFAULT_BRANDING, 
     ...value,
-    // Garante que logo_url null (ou ausente) não sobrescreva a inicial se houver erro na lógica do componente
-    logo_url: value.logo_url || null 
+    // Garante que o logo_url do banco seja preservado se existir
+    logo_url: value.logo_url !== undefined ? value.logo_url : DEFAULT_BRANDING.logo_url
   };
 }
 
