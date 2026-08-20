@@ -526,10 +526,13 @@ export type Database = {
           email: string | null
           full_name: string | null
           id: string
+          lead_source: string | null
+          lead_source_other: string | null
           notes: string | null
           phone: string | null
           postal_code: string | null
           postcode: string | null
+          registration_completed: boolean | null
           state: string | null
           status: string
           tax_id: string | null
@@ -546,10 +549,13 @@ export type Database = {
           email?: string | null
           full_name?: string | null
           id: string
+          lead_source?: string | null
+          lead_source_other?: string | null
           notes?: string | null
           phone?: string | null
           postal_code?: string | null
           postcode?: string | null
+          registration_completed?: boolean | null
           state?: string | null
           status?: string
           tax_id?: string | null
@@ -566,10 +572,13 @@ export type Database = {
           email?: string | null
           full_name?: string | null
           id?: string
+          lead_source?: string | null
+          lead_source_other?: string | null
           notes?: string | null
           phone?: string | null
           postal_code?: string | null
           postcode?: string | null
+          registration_completed?: boolean | null
           state?: string | null
           status?: string
           tax_id?: string | null
