@@ -86,22 +86,18 @@ async function handleProvisioningFailure(serviceId: string, userId: string, erro
       .eq("key", "support_email")
       .maybeSingle();
     
-    const adminEmail = adminEmailSetting?.value?.toString() || "admin@eqsam.com";
+    const adminEmail = (adminEmailSetting?.value as string)?.replace(/"/g, '') || "admin@eqsam.com";
+    
+    // Importar dinamicamente para evitar ciclos de importação
+    const { EMAIL_TEMPLATES } = await import("./emails.server");
+    const template = EMAIL_TEMPLATES.provisioningError(productName, service?.domain || "sem domínio", error);
 
     await sendEmail({
       to: adminEmail,
-      subject: `🚨 Falha de Provisionamento: ${productName}`,
-      html: `
-        <div style="font-family: sans-serif; padding: 20px; border: 1px solid #fee2e2; border-radius: 12px;">
-          <h2 style="color: #dc2626;">Falha no Provisionamento Automático</h2>
-          <p><strong>Serviço:</strong> ${productName} (#${serviceId})</p>
-          <p><strong>Cliente:</strong> ${profile?.full_name} (${profile?.email})</p>
-          <p><strong>Erro Detectado:</strong> ${error}</p>
-          <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;" />
-          <p style="font-size: 14px; color: #666;">Por favor, acesse o painel administrativo para resolver a pendência manualmente.</p>
-        </div>
-      `,
+      subject: template.subject,
+      html: template.html("Eqsam Cloud"),
       templateName: "provisioning_failure_admin"
     });
   }
 }
+
