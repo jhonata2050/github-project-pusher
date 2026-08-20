@@ -1,5 +1,4 @@
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
-import { notifyAdminWhatsApp } from "./whatsapp.server";
 
 /**
  * Validates a DirectAdmin SSO request and checks for administrative privilege escalation.
@@ -9,18 +8,19 @@ export async function validateDASSORequest(
   username: string,
   serverId: string
 ): Promise<{ isAdmin: boolean; targetUsername: string }> {
-  // 1. Check if the requesting user is a system admin
-  const { data: isAdmin } = await supabaseAdmin.rpc("has_role", {
+  // SECURITY: ALWAYS re-verify role directly from DB, ignoring JWT claims which might be stale/tampered
+  const { data: isAdmin, error: roleError } = await supabaseAdmin.rpc("has_role", {
     _user_id: userId,
     _role: "admin",
   });
 
+  if (roleError) {
+    console.error("[SSO-Security] Error checking roles:", roleError);
+    throw new Error("Erro interno de segurança ao validar permissões.");
+  }
+
   const cleanUsername = username.trim();
 
-  // SECURITY: ALWAYS verify ownership for non-admins.
-  // CRITICAL: We also check the 'profiles' table to ensure the user doesn't have a legacy role that bypasses RLS
-  // but isn't a system admin.
-  
   if (!isAdmin) {
     // 2. For regular users, verify they OWN the service with this username on this server
     const { data: service, error } = await supabaseAdmin
@@ -43,6 +43,7 @@ export async function validateDASSORequest(
     }
 
     // 3. Additional check: ensure the target username isn't a system one even if database says they own it (tamper check)
+    // We strictly block any SSO into system accounts for non-admins.
     const restrictedUsernames = ["admin", "root", "superuser", "da_admin", "eqsa7232"];
     if (restrictedUsernames.includes(cleanUsername.toLowerCase())) {
       console.error(`[Security-Violation] User ${userId} attempted to SSO into restricted username ${cleanUsername} (DB Ownership Claimed)`);
@@ -52,6 +53,9 @@ export async function validateDASSORequest(
   } else {
     // 4. For admins, verify they aren't accidentally trying to login as the root reseller or system accounts
     const restrictedUsernames = ["admin", "root", "superuser", "da_admin", "eqsa7232"];
+    
+    // We allow the main developer/admin ID to bypass for maintenance if needed, 
+    // but block general admin escalation into the core reseller account.
     if (restrictedUsernames.includes(cleanUsername.toLowerCase()) && userId !== 'a6e63201-1901-4f5c-ab62-a83f6b55b8a6') {
       console.warn(`[Security-Warning] Admin ${userId} attempted SSO into a restricted system account: ${cleanUsername}`);
       throw new Error("Acesso negado: Administradores não podem acessar contas de sistema via SSO de cliente por segurança.");
@@ -65,11 +69,17 @@ export async function validateDASSORequest(
  * Logs a sensitive security event.
  */
 export async function logSecurityEvent(userId: string, action: string, metadata: any) {
-  await supabaseAdmin.from("audit_logs").insert({
-    user_id: userId,
-    category: "security",
-    action,
-    status: "warning",
-    metadata,
-  });
+  try {
+    await supabaseAdmin.from("audit_logs").insert({
+      actor_id: userId,
+      category: "security",
+      action,
+      status: "warning",
+      description: `Evento de segurança detectado: ${action}`,
+      metadata,
+    });
+  } catch (e) {
+    console.error("Failed to log security event:", e);
+  }
 }
+
