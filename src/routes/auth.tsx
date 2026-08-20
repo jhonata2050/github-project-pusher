@@ -27,7 +27,8 @@ export const Route = createFileRoute("/auth")({
   validateSearch: (search: Record<string, unknown>) => {
     return {
       redirect: (search['redirect'] as string) || undefined,
-    } as { redirect?: string };
+      mode: (search['mode'] as string) || undefined,
+    } as { redirect?: string; mode?: string };
   },
   head: () => ({
     meta: [
@@ -74,11 +75,17 @@ const signupSchema = z.object({
 
 function AuthPage() {
   const navigate = useNavigate();
-  const { redirect } = Route.useSearch();
+  const { redirect, mode: searchMode } = Route.useSearch();
   const { user, loading: authLoading } = useAuth();
   const branding = useBranding();
   const { isStaff, isLoading: staffLoading } = useIsStaff();
-  const [mode, setMode] = useState<"signin" | "signup">("signin");
+  
+  // Se estiver vindo de um link de checkout ou com mode=signup, abrir no cadastro
+  const initialMode = (searchMode === "signup" || redirect?.includes("/checkout/")) 
+    ? "signup" 
+    : "signin";
+    
+  const [mode, setMode] = useState<"signin" | "signup">(initialMode);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
