@@ -36,6 +36,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { CountrySelector } from "@/components/app/CountrySelector";
+import { countries } from "@/lib/countries";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
 import { getClientDossier } from "@/lib/client-dossier.functions";
@@ -279,9 +281,9 @@ function ClientDetailPage() {
                         disabled={!isEditing}
                         className="flex h-11 w-full rounded-xl border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                       >
-                        <option value="cpf">CPF</option>
-                        <option value="cnpj">CNPJ</option>
-                        <option value="tax_id">Tax ID</option>
+                        <option value="cpf">CPF (Pessoa Física)</option>
+                        <option value="cnpj">CNPJ (Empresa)</option>
+                        <option value="tax_id">Tax ID (Internacional)</option>
                         <option value="passport">Passaporte</option>
                       </select>
                     </div>
@@ -334,18 +336,17 @@ function ClientDetailPage() {
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="country">País</Label>
-                    <select 
-                      id="country" 
-                      name="country" 
-                      defaultValue={(client as any).country || "BR"} 
+                    <CountrySelector
+                      value={(client as any).country || "BR"}
+                      onChange={(val) => {
+                        // Forçamos a atualização do campo no form se houver um ref ou lidar via handleSubmit
+                        const el = document.getElementById('country_hidden') as HTMLInputElement;
+                        if (el) el.value = val;
+                      }}
                       disabled={!isEditing}
-                      className="flex h-11 w-full rounded-xl border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                    >
-                      <option value="BR">Brasil</option>
-                      <option value="US">Estados Unidos</option>
-                      <option value="PT">Portugal</option>
-                      {/* Adicionar mais conforme necessário ou importar a lista completa */}
-                    </select>
+                      className="h-11"
+                    />
+                    <input type="hidden" id="country_hidden" name="country" defaultValue={(client as any).country || "BR"} />
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="postal_code">CEP / Zip Code</Label>

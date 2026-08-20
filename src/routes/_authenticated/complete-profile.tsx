@@ -6,6 +6,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { CountrySelector } from "@/components/app/CountrySelector";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { trackEvent } from "@/lib/analytics";
 import { useQueryClient } from "@tanstack/react-query";
@@ -105,23 +106,16 @@ function CompleteProfilePage() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="country">País</Label>
-                <select
-                  id="country"
+                <CountrySelector
                   value={country}
-                  onChange={(e) => {
-                    setCountry(e.target.value);
-                    const selectedCountry = countries.find(c => c.code === e.target.value);
+                  onChange={(val) => {
+                    setCountry(val);
+                    const selectedCountry = countries.find(c => c.code === val);
                     if (selectedCountry && !phone.startsWith('+')) {
                       setPhone(selectedCountry.ddi + " ");
                     }
                   }}
-                  className="flex h-12 w-full rounded-xl border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                  required
-                >
-                  {countries.map(c => (
-                    <option key={c.code} value={c.code}>{c.name}</option>
-                  ))}
-                </select>
+                />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="phone">Telefone / WhatsApp</Label>
