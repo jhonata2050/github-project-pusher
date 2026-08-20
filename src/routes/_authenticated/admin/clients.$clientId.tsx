@@ -660,17 +660,20 @@ function ClientDetailPage() {
             <form onSubmit={handleUpdateService} className="space-y-4 py-4">
               <div className="grid gap-2">
                 <Label htmlFor="product_id">Produto / Plano</Label>
-                <select 
-                  id="product_id" 
+                <Select 
                   name="product_id" 
                   defaultValue={editingService.product_id || ""}
-                  className="flex h-11 w-full rounded-xl border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                 >
-                  <option value="">Selecione um produto</option>
-                  {allProducts?.map((p: any) => (
-                    <option key={p.id} value={p.id}>{p.name}</option>
-                  ))}
-                </select>
+                  <SelectTrigger id="product_id" className="h-11 rounded-xl border-input bg-background shadow-sm">
+                    <SelectValue placeholder="Selecione um produto" />
+                  </SelectTrigger>
+                  <SelectContent className="rounded-xl border-border/40 shadow-xl">
+                    <SelectItem value="none">Selecione um produto</SelectItem>
+                    {allProducts?.map((p: any) => (
+                      <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
               <div className="grid gap-2">
                 <Label htmlFor="username">Usuário do Servidor (SSO)</Label>
@@ -704,28 +707,38 @@ function ClientDetailPage() {
               </div>
               <div className="grid gap-2">
                 <Label htmlFor="server_id">Servidor Vinculado</Label>
-                <select 
-                  id="server_id" 
+                <Select 
                   name="server_id" 
                   defaultValue={editingService.server_id || ""}
-                  className="flex h-11 w-full rounded-xl border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                 >
-                  <option value="">Nenhum</option>
-                  {servers?.map((sv) => (
-                    <option key={sv.id} value={sv.id}>{sv.hostname}</option>
-                  ))}
-                </select>
+                  <SelectTrigger id="server_id" className="h-11 rounded-xl border-input bg-background shadow-sm">
+                    <SelectValue placeholder="Nenhum" />
+                  </SelectTrigger>
+                  <SelectContent className="rounded-xl border-border/40 shadow-xl">
+                    <SelectItem value="none">Nenhum</SelectItem>
+                    {servers?.map((sv) => (
+                      <SelectItem key={sv.id} value={sv.id}>{sv.hostname}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
               <div className="grid gap-2">
                 <Label htmlFor="status">Status</Label>
-                <select 
-                  id="status" 
+                <Select 
                   name="status" 
                   defaultValue={editingService.status}
-                  className="flex h-11 w-full rounded-xl border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                 >
-                  <option value="active">Ativo</option>
-                  <option value="pending">Pendente</option>
+                  <SelectTrigger id="status" className="h-11 rounded-xl border-input bg-background shadow-sm">
+                    <SelectValue placeholder="Selecione o status" />
+                  </SelectTrigger>
+                  <SelectContent className="rounded-xl border-border/40 shadow-xl">
+                    <SelectItem value="active">Ativo</SelectItem>
+                    <SelectItem value="pending">Pendente</SelectItem>
+                    <SelectItem value="suspended">Suspenso</SelectItem>
+                    <SelectItem value="terminated">Terminado</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
                   <option value="suspended">Suspenso</option>
                   <option value="terminated">Terminado</option>
                   <option value="cancelled">Cancelado</option>
