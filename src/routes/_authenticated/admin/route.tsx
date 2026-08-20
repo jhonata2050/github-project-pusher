@@ -45,16 +45,20 @@ function AdminLayout() {
 
   if (!isStaff) {
     return (
-      <div className="flex min-h-screen items-center justify-center px-4 text-center">
-        <div className="max-w-sm">
-          <ShieldAlert className="mx-auto size-8 text-muted-foreground" />
-          <h1 className="mt-3 text-lg font-semibold">Área restrita</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Esta área é exclusiva da administração da plataforma. Seu acesso não autorizado foi registrado.
+      <div className="flex min-h-screen items-center justify-center px-4 text-center bg-background">
+        <div className="max-w-sm p-8 rounded-3xl border-2 border-destructive/20 bg-destructive/5 animate-in fade-in zoom-in duration-300">
+          <ShieldAlert className="mx-auto size-12 text-destructive animate-pulse" />
+          <h1 className="mt-6 text-2xl font-bold tracking-tight text-foreground">Acesso Negado</h1>
+          <p className="mt-2 text-sm text-muted-foreground leading-relaxed">
+            Esta área é exclusiva para administradores da **Eqsam Cloud**. 
+            Sua tentativa de acesso não autorizado foi registrado para auditoria de segurança.
           </p>
 
-          <Button onClick={() => navigate({ to: "/dashboard" })} className="mt-4 rounded-xl">
-            Voltar para o Painel
+          <Button 
+            onClick={() => navigate({ to: "/dashboard" })} 
+            className="mt-8 w-full rounded-2xl h-12 font-medium bg-foreground text-background hover:bg-foreground/90 transition-all"
+          >
+            Voltar para o Painel Seguro
           </Button>
         </div>
       </div>
