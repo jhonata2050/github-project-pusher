@@ -1,6 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router';
 import { supabaseAdmin } from '@/integrations/supabase/client.server';
-import { processProvisioning } from '@/lib/finance.server';
+import { handlePaymentSuccess } from '@/lib/finance.server';
 import { verifyHmacSignature } from '@/lib/webhook-utils.server';
 
 export const Route = createFileRoute('/api/public/webhooks/woovi')({
@@ -8,22 +8,22 @@ export const Route = createFileRoute('/api/public/webhooks/woovi')({
     handlers: {
       POST: async ({ request }) => {
         const body = await request.text();
-        const signature = request.headers.get('x-openpix-signature'); // Assumindo padrão Woovi/OpenPix
+        const signature = request.headers.get('x-openpix-signature');
         
-        const { data: setting } = await supabaseAdmin
-          .from('system_settings')
-          .select('value')
-          .eq('key', 'woovi_webhook_secret')
-          .maybeSingle();
-
-        const webhookSecret = setting?.value as string;
-
-        if (webhookSecret && !verifyHmacSignature(body, signature, webhookSecret)) {
-          console.error('[Woovi Webhook] Assinatura inválida');
-          return new Response('Invalid signature', { status: 401 });
-        }
-
         try {
+          const { data: setting } = await supabaseAdmin
+            .from('system_settings')
+            .select('value')
+            .eq('key', 'woovi_webhook_secret')
+            .maybeSingle();
+
+          const webhookSecret = setting?.value as string;
+
+          if (webhookSecret && !verifyHmacSignature(body, signature, webhookSecret)) {
+            console.error('[Woovi Webhook] Assinatura inválida');
+            return new Response('Invalid signature', { status: 401 });
+          }
+
           const payload = JSON.parse(body);
 
           if (payload.event === 'OPENPIX:CHARGE_COMPLETED') {
@@ -31,26 +31,26 @@ export const Route = createFileRoute('/api/public/webhooks/woovi')({
             
             const { data: transaction } = await supabaseAdmin
               .from('transactions')
-              .select('*, invoices(*)')
-              .eq('id', chargeId)
-              .single();
+              .select('id, invoice_id, status')
+              .eq('id', chargeId) // Woovi usa o ID da transação como correlationID por padrão no nosso sistema
+              .maybeSingle();
 
-            if (transaction && transaction.status !== 'completed') {
-              await supabaseAdmin.from('transactions').update({ status: 'completed' }).eq('id', transaction.id);
-              const { data: invoice } = await supabaseAdmin
-                .from('invoices')
-                .update({ status: 'paid', paid_at: new Date().toISOString() })
-                .eq('id', transaction.invoice_id!)
-                .select().single();
-              
-              if (invoice) await processProvisioning(invoice.id);
+            if (transaction && transaction.status !== 'completed' && transaction.invoice_id) {
+              await handlePaymentSuccess(transaction.invoice_id, 'Woovi/OpenPix', chargeId);
             }
           }
           
-          return new Response('ok');
+          return new Response('ok', { status: 200 });
         } catch (err: any) {
           console.error('[Woovi Webhook] Erro:', err.message);
-          return new Response('error', { status: 400 });
+          await supabaseAdmin.from('audit_logs').insert({
+            category: 'webhook',
+            action: 'woovi.error',
+            status: 'failure',
+            description: `Erro no processamento Woovi: ${err.message}`,
+            metadata: { error: err.message, body } as any
+          });
+          return new Response('ok', { status: 200 });
         }
       }
     }
