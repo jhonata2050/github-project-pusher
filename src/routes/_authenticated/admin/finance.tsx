@@ -224,8 +224,8 @@ function AdminFinanceSettingsPage() {
               </TabsTrigger>
             </TabsList>
 
-            <TabsContent value="geral" className="space-y-6 mt-6" forceMount={true}>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 data-[state=inactive]:hidden">
+            <TabsContent value="geral" className="space-y-6 mt-6 data-[state=inactive]:hidden" forceMount={true}>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <Card className="rounded-3xl border-none shadow-sm">
                   <CardHeader>
                     <div className="flex items-center gap-3">
@@ -292,16 +292,16 @@ function AdminFinanceSettingsPage() {
               </div>
             </TabsContent>
 
-            <TabsContent value="gateways" className="mt-6" forceMount={true}>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 data-[state=inactive]:hidden">
+            <TabsContent value="gateways" className="mt-6 data-[state=inactive]:hidden" forceMount={true}>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {GATEWAYS.filter(g => g.id !== 'contabo').map((gateway) => (
                   <GatewayCard key={gateway.id} gateway={gateway} settings={settings} />
                 ))}
               </div>
             </TabsContent>
 
-            <TabsContent value="prioridades" className="mt-6" forceMount={true}>
-              <Card className="rounded-3xl border-none shadow-sm data-[state=inactive]:hidden">
+            <TabsContent value="prioridades" className="mt-6 data-[state=inactive]:hidden" forceMount={true}>
+              <Card className="rounded-3xl border-none shadow-sm">
                 <CardHeader>
                   <div className="flex items-center gap-3">
                     <Zap className="h-5 w-5 text-brand" />
