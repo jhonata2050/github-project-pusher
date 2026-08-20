@@ -180,15 +180,20 @@ export function AppShell({
 }) {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const navigate = useNavigate();
-  const { isStaff } = useIsStaff();
+  const { isStaff, isLoading: isStaffLoading } = useIsStaff();
   const { user, impersonatedClientId, setImpersonatedClientId } = useAuth();
-  const { data: profile } = useProfile();
+  const { data: profile, isLoading: isProfileLoading } = useProfile();
 
   useEffect(() => {
-    if (user && profile && !(profile as any).registration_completed && pathname !== "/complete-profile" && !pathname.startsWith("/auth")) {
+    // Só redireciona se não for staff, não estiver carregando o perfil/staff,
+    // o perfil explicitamente não estiver completo e não estivermos nas rotas permitidas.
+    const isAuthRoute = pathname.startsWith("/auth") || pathname === "/complete-profile";
+    const needsCompletion = user && !isStaff && !isProfileLoading && !isStaffLoading && profile && !(profile as any).registration_completed;
+
+    if (needsCompletion && !isAuthRoute) {
       void navigate({ to: "/complete-profile" });
     }
-  }, [user, profile, pathname, navigate]);
+  }, [user, profile, pathname, navigate, isStaff, isProfileLoading, isStaffLoading]);
 
   const brandingData = useBranding();
   const isAdminArea = area ? area === "admin" : (user ? (isStaff && pathname.startsWith("/admin")) : false);
