@@ -1,6 +1,6 @@
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { getRequest } from "@tanstack/react-start/server";
-import { ALL_GATEWAY_SETTING_KEYS, gatewayById, type PaymentMethod } from "./gateways";
+import { ALL_GATEWAY_SETTING_KEYS, gatewayById, type PaymentMethod, GATEWAYS } from "./gateways";
 import { getCajuPayCredentials, getCajuPayHeaders, readCajuPayError } from "./cajupay.server";
 
 type PaymentResult = {
@@ -459,10 +459,19 @@ export async function createPaymentSessionWithFallback(
     priorityStr = (settings["payment_gateway_priority"] as string) || "";
   }
 
-  const priorityList = priorityStr
+  let priorityList = priorityStr
     .split(",")
     .map((s) => s.trim())
     .filter(Boolean);
+
+  // Se a lista de prioridade ainda estiver vazia, tenta encontrar qualquer gateway configurado para o método
+  if (priorityList.length === 0) {
+    console.log(`[Payment] Nenhuma prioridade definida para ${data.method}. Buscando gateways compatíveis.`);
+    priorityList = GATEWAYS
+      .filter(g => g.methods.includes(data.method))
+      .map(g => g.id);
+  }
+
 
   const isFallbackEnabled = settings["payment_gateway_fallback_enabled"] !== false; // Padrão true se não existir
 
