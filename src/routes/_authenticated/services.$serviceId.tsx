@@ -131,9 +131,10 @@ function ServiceManagementPage() {
           {service?.status && (
             <Badge className={cn(
               "ml-auto rounded-full px-4 py-1",
+              service.block_directadmin ? 'bg-destructive text-destructive-foreground' : 
               service.status === 'active' ? 'bg-success/20 text-success' : 'bg-warning/20 text-warning'
             )}>
-              {service.status === 'active' ? 'Ativo' : service.status}
+              {service.block_directadmin ? 'Bloqueado' : service.status === 'active' ? 'Ativo' : service.status}
             </Badge>
           )}
         </div>
