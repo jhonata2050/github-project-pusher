@@ -318,6 +318,7 @@ function ClientDetailPage() {
                         defaultValue={client.phone || ""} 
                         disabled={!isEditing} 
                         className="rounded-xl h-11 pl-12" 
+                        placeholder="Número (Ex: 11988887777)"
                       />
                       <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[10px] font-bold text-muted-foreground bg-muted/50 px-1 py-0.5 rounded">
                         {countries.find(c => c.code === ((client as any).country || "BR"))?.ddi}

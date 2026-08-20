@@ -198,7 +198,7 @@ function ProfilePage() {
             <Input
               id="phone"
               value={form.phone ?? ""}
-              placeholder="(00) 00000-0000"
+              placeholder="Número (Ex: 11988887777)"
               onChange={(e) => setForm((prev) => ({ ...prev, phone: e.target.value }))}
               className="h-11 rounded-xl pl-12"
             />
