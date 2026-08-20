@@ -169,6 +169,17 @@ function AuthPage() {
   return (
     <div className="lime-backdrop flex min-h-screen items-center justify-center px-4 py-12">
       <div className="w-full max-w-md rounded-3xl border border-border bg-card p-8 shadow-[var(--shadow-card)]">
+        <div className="flex justify-center mb-8">
+          {branding.logo_url ? (
+            <img
+              src={branding.logo_url}
+              alt={branding.app_name}
+              className="h-10 w-auto max-w-[180px] object-contain"
+            />
+          ) : (
+            <span className="text-2xl font-bold text-brand">{branding.app_name}.</span>
+          )}
+        </div>
         {checkEmail ? (
           <div className="space-y-4 text-center">
             <h1 className="text-2xl font-semibold">Confirme seu e-mail</h1>
