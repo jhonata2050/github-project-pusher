@@ -44,6 +44,12 @@ function ServiceManagementPage() {
   });
 
   const handleSSO = async (command?: string) => {
+    // @ts-ignore
+    if (service?.profiles?.block_directadmin) {
+      toast.error("Seu acesso ao painel de controle foi temporariamente bloqueado pelo administrador. Por favor, entre em contato com o suporte.");
+      return;
+    }
+
     // @ts-ignore - Supabase relations can be tricky with types
     if (!service?.server_id || !service?.username) {
       toast.error("O usuário ou servidor ainda não foi vinculado a este serviço. Verifique a importação.");
