@@ -716,8 +716,8 @@ function ClientDetailPage() {
       <Dialog open={!!editingService} onOpenChange={(open) => !open && setEditingService(null)}>
         <DialogContent className="rounded-3xl border-none shadow-2xl max-w-md">
           <DialogHeader>
-            <DialogTitle className="text-2xl font-bold">Gerenciar Serviço</DialogTitle>
-            <DialogDescription>
+            <DialogTitle className="text-xl font-bold">Gerenciar Serviço</DialogTitle>
+            <DialogDescription className="text-xs">
               Ajuste manualmente os detalhes técnicos para sincronização com o servidor.
             </DialogDescription>
           </DialogHeader>
