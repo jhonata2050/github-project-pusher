@@ -160,7 +160,7 @@ export async function callDA({ hostname, apiUser, apiToken, command, method = 'G
 
         throw new Error(
           `Falha na autenticação (401): O DirectAdmin não reconheceu as credenciais. ` +
-          `Certifique-se de que o "Usuário API" está no formato "USUARIO|NOME_DA_CHAVE" (ex: admin|EqsamKey) ` +
+          `Certifique-se de que o "Usuário API" está no formato interno "USUARIO|NOME_DA_CHAVE" (ex: admin|EqsamKey) ` +
           `e que o "Token API" é o valor (Key Value) gerado.${ipGuidance}${extraInfo}`
         );
       }
