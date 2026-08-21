@@ -240,14 +240,14 @@ export async function processProvisioning(invoiceId: string) {
           domain,
           email: profile?.email || "user@example.com",
           package: product.directadmin_package
-        });
+        }) as any;
 
         // Validar se o DA retornou erro no corpo (mesmo com status 200)
-        const resObj = result as Record<string, any>;
-        if (resObj && (resObj['error'] === '1' || resObj['error'] === 1)) {
-          throw new Error(String(resObj['details'] || resObj['text'] || "O servidor DirectAdmin recusou a criação da conta."));
+        if (result && (result['error'] === '1' || result['error'] === 1)) {
+          throw new Error(String(result['details'] || result['text'] || "O servidor DirectAdmin recusou a criação da conta."));
         }
 
+        // REGRA WHMCS: Senha do DirectAdmin é salva no serviço, separada da senha do Lovable
         await supabaseAdmin
           .from("services")
           .update({
@@ -255,8 +255,9 @@ export async function processProvisioning(invoiceId: string) {
             username,
             server_id: server.id,
             domain,
+            password: result.daPassword || null, // Armazena a senha gerada
             next_due_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
-            notes: "Provisionado automaticamente via DirectAdmin"
+            notes: "Provisionado automaticamente via DirectAdmin (Senha gerada e isolada)"
           } as any)
           .eq("id", service.id);
 
