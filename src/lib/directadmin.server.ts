@@ -601,88 +601,26 @@ export async function getDASession(serverId: string, username: string, redirectU
     .eq("id", serverId)
     .single();
 
-  if (error || !server) throw new Error("Servidor não encontrado");
+  if (error || !server) throw new Error("DA_INVALID_SERVER");
 
   const targetUser = username.trim();
+  const timestamp = Date.now();
   
-  // 5. VALIDAR O USERNAME (Rigoroso)
-  const restrictedUsernames = ["admin", "root", "superuser", "da_admin", "reseller", "support", "system", "operator", "manager"];
+  // 5. VALIDAÇÕES PRIVILEGIADAS
+  const restrictedUsernames = ["admin", "root", "superuser", "da_admin", "eqsa7232", "reseller", "support", "system", "operator", "manager"];
   if (restrictedUsernames.includes(targetUser.toLowerCase())) {
     console.error(`[Security-DA] Attempt to login via SSO to restricted user: ${targetUser}`);
-    throw new Error('Acesso negado: Não é permitido login via SSO em contas administrativas do sistema.');
-  }
-
-  if (!targetUser || targetUser.length < 3 || targetUser.includes('|') || targetUser.includes(':') || targetUser.includes(' ') || /[^a-zA-Z0-9_-]/.test(targetUser)) {
-    throw new Error('Usuário do serviço inválido ou formato malicioso detectado.');
-  }
-
-  // 4. VALIDAR TARGET USER ANTES DA EXECUÇÃO
-  const exists = await checkDAUserExists(serverId, targetUser, undefined);
-  if (!exists) {
-    console.error(`[Security-Alert] SSO failed: User ${targetUser} does not exist on server ${server.hostname}`);
-    throw new Error(`Acesso Negado: O usuário ${targetUser} não foi encontrado no servidor.`);
+    throw new Error('DA_DIRECTADMIN_BLOCKED');
   }
 
   const { createSystemLog } = await import("./system-logs.server");
 
-  // NOVA ESTRATÉGIA: endpoint moderno /api/login/url (mesmo usado pelo 'da login-url').
-  // Este endpoint exige JSON puro (não aceita form-encoded/json=yes), por isso
-  // a requisição é feita diretamente aqui em vez de usar callDA.
-  console.log(`[DA-SSO] Solicitando One-Time URL para ${targetUser} em ${server.hostname}`);
-
-  const apiUserRaw = (server.api_user ?? "").trim();
-  const daUsername = apiUserRaw.includes('|') ? (apiUserRaw.split('|')[0] ?? '').trim() : apiUserRaw;
-  const daPassword = (server.api_token ?? "").trim();
-
-  const hostParts = server.hostname.replace(/^https?:\/\//, '').split(':');
-  const cleanHost = hostParts[0];
-  const daPort = hostParts[1] || '2222';
-  const loginUrlEndpoint = `https://${cleanHost}:${daPort}/api/login/url`;
+  // 1 & 2. REMOVER FLUXO INCORRETO E USAR FLUXO OFICIAL VALIDADO
+  // O fluxo POST /api/login/url com JSON foi removido conforme instrução.
+  console.log(`[DA-SSO] Gerando One-Time URL para ${targetUser} via CMD_API_LOGIN_KEYS`);
 
   let result: any;
-  let usedStrategy: 'api/login/url' | 'CMD_API_LOGIN_KEYS' = 'api/login/url';
-  let modernAvailable = true;
-
   try {
-    const response = await fetch(loginUrlEndpoint, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Basic ${Buffer.from(`${daUsername}:${daPassword}`).toString('base64')}`,
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-      },
-      body: JSON.stringify({ user: targetUser, ttl: 600, redirect: redirectUrl || '/' }),
-      signal: AbortSignal.timeout(30_000),
-      redirect: 'manual',
-    });
-
-    const text = await response.text();
-
-    if (response.status === 404 || response.status === 405 || (response.status >= 300 && response.status < 400)) {
-      // Servidor antigo: endpoint moderno não existe
-      modernAvailable = false;
-    } else if (!response.ok) {
-      throw new Error(`O DirectAdmin recusou a geração do acesso (Erro ${response.status}: ${text.slice(0, 120)})`);
-    } else {
-      try {
-        result = JSON.parse(text);
-      } catch {
-        result = text.trim();
-      }
-    }
-  } catch (e: any) {
-    if (e?.name === 'TimeoutError' || e?.name === 'AbortError') {
-      throw new Error(`O servidor DirectAdmin (${server.hostname}) não respondeu ao gerar o acesso seguro.`);
-    }
-    // Falha de rede/TLS no endpoint moderno: tentar fluxo legado
-    modernAvailable = false;
-  }
-
-  // FALLBACK LEGADO: one-time URL via CMD_API_LOGIN_KEYS (usado pelo módulo oficial do WHMCS)
-  if (!modernAvailable) {
-    usedStrategy = 'CMD_API_LOGIN_KEYS';
-    console.warn(`[DA-SSO] /api/login/url indisponível em ${server.hostname}. Usando CMD_API_LOGIN_KEYS.`);
-
     result = await callDA({
       hostname: server.hostname,
       apiUser: server.api_user ?? "",
@@ -692,53 +630,71 @@ export async function getDASession(serverId: string, username: string, redirectU
       params: {
         action: 'create',
         type: 'one_time_url',
-        keyname: `sso_${targetUser}_${Date.now()}`,
-        key: '',
-        key2: '',
+        user: targetUser,
+        keyname: `sso_${timestamp}`,
         never_expires: 'no',
         expiry: '10m',
         max_uses: '1',
         clear_key: 'yes',
-        user: targetUser,
-        login_as: targetUser,
-        redirect: redirectUrl || '/',
-        'select_allow0': 'ALL',
+        json: 'yes'
       },
     });
+  } catch (e: any) {
+    const errorMsg = e.message || '';
+    if (errorMsg.includes('401')) throw new Error('DA_AUTHENTICATION_ERROR');
+    if (errorMsg.includes('IP') || errorMsg.includes('whitelist')) throw new Error('DA_LOGIN_KEY_IP_NOT_ALLOWED');
+    if (errorMsg.includes('permission') || errorMsg.includes('perm')) throw new Error('DA_PERMISSION_ERROR');
+    throw new Error('DA_LOGIN_URL_CREATION_ERROR');
   }
-  // 8. LOGS (Apenas metadados, nunca a URL)
+
+  // 6 & 7. RESPOSTA ESPERADA E VALIDAÇÃO DA URL
+  if (!result || typeof result !== 'object') {
+    throw new Error('DA_INVALID_RESPONSE');
+  }
+
+  const loginUrl = result.result;
+  
+  if (!loginUrl || typeof loginUrl !== 'string') {
+    throw new Error('DA_INVALID_LOGIN_URL');
+  }
+
+  // Validação da URL gerada
+  try {
+    const parsedUrl = new URL(loginUrl);
+    if (parsedUrl.protocol !== 'https:') throw new Error('DA_INVALID_LOGIN_URL');
+    if (!parsedUrl.searchParams.has('key')) throw new Error('DA_INVALID_LOGIN_URL');
+    
+    // Validar hostname (opcionalmente)
+    const hostParts = server.hostname.replace(/^https?:\/\//, '').split(':');
+    const cleanServerHost = hostParts[0];
+    if (!parsedUrl.hostname.includes(cleanServerHost!)) {
+      throw new Error('DA_INVALID_LOGIN_URL');
+    }
+  } catch (e) {
+    throw new Error('DA_INVALID_LOGIN_URL');
+  }
+
+  // 8. LOGS SEGUROS (Sem registrar o key)
   await createSystemLog({
     category: 'directadmin',
     level: 'info',
-    message: `SSO gerado via ${usedStrategy} para '${targetUser}'`,
+    message: `SSO gerado para '${targetUser}'`,
     metadata: { 
       targetUser, 
       serverId, 
-      strategy: usedStrategy,
       timestamp: new Date().toISOString(),
-      provider: 'DirectAdmin'
+      success: true
     }
   }).catch(e => console.error(e));
 
-
-  // 11. VALIDAÇÃO DE IDENTIDADE ESTRITA (Arquitetura WHMCS)
-  // O SSO deve retornar uma URL que autentica o usuário do cliente, nunca o admin.
-  const finalUrl = parseDirectAdminLoginUrl(result, server.hostname);
-  
-  if (!finalUrl) {
-    throw new Error("Falha ao gerar URL de acesso seguro: O servidor DirectAdmin não retornou uma URL válida.");
-  }
-
-  // 12. BLOQUEIO PROATIVO DE IDENTIDADE ADMINISTRATIVA
-  // Se o servidor retornar uma URL que contenha o username do administrador do sistema, 
-  // e o alvo não for o próprio administrador, bloqueamos por segurança.
+  // 12. BLOQUEIO PROATIVO DE IDENTIDADE ADMINISTRATIVA (REFORÇADO)
   const apiAdmin = (server.api_user || '').split('|')[0] || '';
-  if (apiAdmin && finalUrl.toLowerCase().includes(apiAdmin.toLowerCase()) && targetUser.toLowerCase() !== apiAdmin.toLowerCase()) {
-     console.error(`[SSO-Security-Violation] Admin Leak Detected! Target=${targetUser}, Admin=${apiAdmin}, URL=${finalUrl}`);
-     throw new Error("Erro de Segurança: O servidor DirectAdmin tentou gerar uma sessão administrativa em vez de uma sessão de cliente. O acesso foi bloqueado para sua proteção.");
+  if (apiAdmin && loginUrl.toLowerCase().includes(`user=${apiAdmin.toLowerCase()}`) && targetUser.toLowerCase() !== apiAdmin.toLowerCase()) {
+     console.error(`[SSO-Security-Violation] Admin Leak Detected in URL! Target=${targetUser}, Admin=${apiAdmin}`);
+     throw new Error("DA_DIRECTADMIN_BLOCKED");
   }
 
-  return finalUrl;
+  return loginUrl;
 }
 
 

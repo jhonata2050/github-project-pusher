@@ -85,9 +85,14 @@ function ServiceManagementPage() {
       loading: 'Gerando acesso seguro ao painel...',
       success: 'Redirecionando para o DirectAdmin...',
       error: (err) => {
-        if (err.message.includes("não permite SSO delegado")) {
-          return "SSO não disponível neste servidor.";
-        }
+        const errorMsg = err.message || '';
+        if (errorMsg.includes("DA_AUTHENTICATION_ERROR")) return "Erro de autenticação com o servidor.";
+        if (errorMsg.includes("DA_LOGIN_KEY_IP_NOT_ALLOWED")) return "IP não autorizado no servidor.";
+        if (errorMsg.includes("DA_PERMISSION_ERROR")) return "A chave API não tem permissão para esta ação.";
+        if (errorMsg.includes("DA_DIRECTADMIN_BLOCKED")) return "Acesso negado: Conta administrativa.";
+        if (errorMsg.includes("DA_SERVICE_NOT_ACTIVE")) return "Serviço não está ativo.";
+        if (errorMsg.includes("DA_INVALID_TARGET_USER")) return "Usuário não encontrado no servidor.";
+        
         return `Erro ao acessar painel: ${err.message}`;
       }
     });

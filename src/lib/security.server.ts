@@ -49,13 +49,13 @@ export async function validateDASSORequest(
 
     if (service.status === 'suspended') {
       await logSecurityEvent(userId, "suspended_service_sso_attempt", { username: cleanUsername, serviceId: service.id });
-      throw new Error("Seu serviço está suspenso. O acesso ao painel DirectAdmin não é permitido.");
+      throw new Error("DA_SERVICE_NOT_ACTIVE");
     }
 
 
     if (service.block_directadmin) {
       await logSecurityEvent(userId, "blocked_sso_attempt", { username: cleanUsername, serviceId: service.id });
-      throw new Error("Seu acesso ao painel DirectAdmin foi bloqueado pelo administrador.");
+      throw new Error("DA_DIRECTADMIN_BLOCKED");
     }
 
     // 3. Additional check: ensure the target username isn't a system one
@@ -64,7 +64,7 @@ export async function validateDASSORequest(
     if (restrictedUsernames.includes(cleanUsername.toLowerCase())) {
       console.error(`[Security-Violation] User ${userId} attempted to SSO into restricted username ${cleanUsername}`);
       await logSecurityEvent(userId, "system_account_sso_attempt", { username: cleanUsername, serverId });
-      throw new Error("Acesso negado: Tentativa de acesso a conta de sistema detectada.");
+      throw new Error("DA_DIRECTADMIN_BLOCKED");
     }
   } else {
     // 4. For admins, verify they aren't accidentally trying to login as the root reseller or system accounts
@@ -74,7 +74,7 @@ export async function validateDASSORequest(
     // but block general admin escalation into the core reseller account.
     if (restrictedUsernames.includes(cleanUsername.toLowerCase()) && userId !== 'a6e63201-1901-4f5c-ab62-a83f6b55b8a6') {
       console.warn(`[Security-Warning] Admin ${userId} attempted SSO into a restricted system account: ${cleanUsername}`);
-      throw new Error("Acesso negado: Administradores não podem acessar contas de sistema via SSO de cliente por segurança.");
+      throw new Error("DA_DIRECTADMIN_BLOCKED");
     }
   }
 
@@ -97,7 +97,7 @@ export async function validateDASSORequest(
   if (!result || result.error === '1' || !result.usertype) {
     console.error(`[Security-Alert] SSO validation failed: User ${cleanUsername} does not exist or access denied on DA server ${serverId}`);
     await logSecurityEvent(userId, "non_existent_da_user_sso_attempt", { username: cleanUsername, serverId });
-    throw new Error("Erro de Segurança: O usuário do painel não existe no servidor ou o acesso foi negado.");
+    throw new Error("DA_INVALID_TARGET_USER");
   }
 
   // CRITICAL: Block any SSO if the remote user is not a standard 'user'
@@ -122,13 +122,13 @@ export async function validateDASSORequest(
       );
     } catch (e) {}
 
-    throw new Error("Acesso negado: Falha crítica de segurança. Nível de permissão incompatível.");
+    throw new Error("DA_DIRECTADMIN_BLOCKED");
   }
 
   // SECURITY: Even for Admins, we block SSO into the main reseller account unless it's the master dev
   // This satisfies point 11 of the request (if providerAccount.isAdmin === true: bloquear login)
   if (result.usertype !== 'user' && userId !== 'a6e63201-1901-4f5c-ab62-a83f6b55b8a6') {
-     throw new Error("Erro de Segurança: O provedor DirectAdmin identificou que esta conta possui nível administrativo. O acesso via SSO é bloqueado para proteger a integridade do servidor.");
+     throw new Error("DA_DIRECTADMIN_BLOCKED");
   }
 
   return { isAdmin: !!isAdmin, targetUsername: cleanUsername };
