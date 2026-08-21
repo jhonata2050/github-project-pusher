@@ -715,7 +715,7 @@ export const createProduct = createServerFn({ method: "POST" })
 
     if (prodError) throw new Error(prodError.message);
 
-    const pricesToInsert = input.prices.map(p => ({
+    const pricesToInsert = input.prices.map((p: any) => ({
       product_id: product.id,
       cycle: p.cycle,
       price: p.price,
@@ -782,7 +782,7 @@ export const updateProduct = createServerFn({ method: "POST" })
       .delete()
       .eq("product_id", input.id);
 
-    const pricesToInsert = input.prices.map(p => ({
+    const pricesToInsert = input.prices.map((p: any) => ({
       product_id: input.id,
       cycle: p.cycle,
       price: p.price,
@@ -811,6 +811,7 @@ export const updateServiceDetails = createServerFn({ method: "POST" })
       status: z.enum(["active", "pending", "suspended", "terminated", "cancelled"]).nullable(),
       block_directadmin: z.boolean().optional(),
       password: z.string().nullable().optional(),
+      vps_instance_id: z.string().uuid().nullable().optional(),
     }).parse(data)
   )
   .handler(async ({ data: input, context }) => {
@@ -830,8 +831,25 @@ export const updateServiceDetails = createServerFn({ method: "POST" })
         password: input.password !== undefined ? input.password : undefined
       })
       .eq("id", input.serviceId);
-
+      
     if (error) throw new Error(`Erro ao atualizar serviço: ${error.message}`);
+
+    // Se houver vinculação de VPS, atualizar a tabela vps_instances
+    if (input.vps_instance_id !== undefined) {
+      // Primeiro, desvincular qualquer VPS anterior deste serviço
+      await supabaseAdmin
+        .from("vps_instances")
+        .update({ service_id: null })
+        .eq("service_id", input.serviceId);
+
+      // Depois, vincular a nova, se for fornecido um ID
+      if (input.vps_instance_id) {
+        await supabaseAdmin
+          .from("vps_instances")
+          .update({ service_id: input.serviceId })
+          .eq("id", input.vps_instance_id);
+      }
+    }
 
     // Se o serviço foi ativado manualmente agora, disparar provisionamento
     if (input.status === "active") {

@@ -320,6 +320,8 @@ function ProductsPage() {
                     <SelectContent className="rounded-xl border-none shadow-xl">
                       <SelectItem value="hosting">Hospedagem (DirectAdmin)</SelectItem>
                       <SelectItem value="vps">VPS (Contabo)</SelectItem>
+                      <SelectItem value="domain">Domínio</SelectItem>
+                      <SelectItem value="other">Outros / Adicionais</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
