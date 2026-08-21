@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import type { Database } from "@/integrations/supabase/types";
 
 export const testWhatsApp = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
@@ -344,12 +345,12 @@ export const getServers = createServerFn({ method: "GET" })
       throw new Error("Acesso negado: Apenas administradores podem listar servidores.");
     }
 
-    const { data, error } = await context.supabase
+    const { data, error } = await supabaseAdmin
       .from("servers")
       .select("*");
 
     if (error) throw new Error(error.message);
-    return data;
+    return (data ?? []) as Database["public"]["Tables"]["servers"]["Row"][];
   });
 
 export const createServerDA = createServerFn({ method: "POST" })
