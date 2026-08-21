@@ -371,28 +371,31 @@ export async function createDAAccount(serverId: string, details: {
 
   if (error || !server) throw new Error("Servidor não encontrado");
 
-  const password = generateStrongPassword(24); // Reduzido de 128 para 24 para compatibilidade com DA
+  // REGRA WHMCS: Senha do DirectAdmin é gerada e separada da senha do cliente no sistema
+  const daPassword = generateStrongPassword(24);
 
-  return await callDA({
+  const result = await callDA({
     hostname: server.hostname,
     apiUser: server.api_user ?? "",
     apiToken: server.api_token ?? "",
     command: 'CMD_API_ACCOUNT_USER',
     method: 'POST',
-
     params: {
       action: 'create',
       add: 'Submit',
       username: details.username,
       email: details.email,
-      passwd: password,
-      passwd2: password,
+      passwd: daPassword,
+      passwd2: daPassword,
       domain: details.domain,
       package: details.package,
       ip: server.ip_address || '',
       notify: 'no'
     }
   });
+
+  // Retornamos a senha gerada para que o chamador possa salvar na tabela 'services'
+  return { ...result, daPassword };
 }
 
 export async function suspendDAAccount(serverId: string, username: string) {

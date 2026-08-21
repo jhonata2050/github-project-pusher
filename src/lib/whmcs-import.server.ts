@@ -318,7 +318,7 @@ async function importServices(rows: Record<string, string>[], stats: ImportStats
       const productId = await resolveProductId(productName || "Plano Importado");
       if (!productId) throw new Error("não foi possível resolver o produto");
 
-      const cycleRaw = pick(row, ["billingcycle", "billingcycle", "ciclo", "billing_cycle"]).toLowerCase();
+      const cycleRaw = pick(row, ["billingcycle", "ciclo", "billing_cycle"]).toLowerCase();
       const cycle = CYCLE_MAP[cycleRaw] ?? "monthly";
       
       const statusRaw = pick(row, ["status", "domainstatus", "state", "service_status"]).toLowerCase();
@@ -326,8 +326,9 @@ async function importServices(rows: Record<string, string>[], stats: ImportStats
 
       const domain = pick(row, ["domain", "dominio", "host", "hostname"]);
       const username = pick(row, ["username", "usuario", "login", "user", "username"]);
-      const serverId = pick(row, ["server", "server_id", "serverid", "id_servidor"]);
-      const nextDue = toDate(pick(row, ["nextduedate", "nextduedate", "vencimento", "nextdue"]));
+      const nextDue = toDate(pick(row, ["nextduedate", "vencimento", "nextdue"]));
+      // Senha do serviço no WHMCS (não deve sobrescrever a senha do perfil Lovable)
+      const servicePassword = pick(row, ["password", "senha", "passwd"]);
 
       const { error } = await (supabaseAdmin.from("services") as any).upsert({
         user_id: userId,
@@ -335,6 +336,7 @@ async function importServices(rows: Record<string, string>[], stats: ImportStats
         whmcs_id: serviceWhmcsId || null,
         domain: domain || null,
         username: username || null,
+        password: servicePassword || null, // Armazenado no serviço para o DirectAdmin
         server_id: null,
         billing_cycle: cycle as any,
         status: status as any,
