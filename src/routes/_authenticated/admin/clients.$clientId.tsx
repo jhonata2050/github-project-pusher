@@ -248,7 +248,7 @@ function ClientDetailPage() {
               <LogIn className="size-4" /> 
               {isImpersonating ? "Acessando..." : "Acessar como Cliente"}
             </Button>
-            <Badge className="h-10 px-4 text-sm" variant={client.status === "active" ? "default" : "secondary"}>
+            <Badge className="h-9 px-3 text-xs" variant={client.status === "active" ? "default" : "secondary"}>
               {client.status === "active" ? "Ativo" : "Inativo"}
             </Badge>
           </div>
