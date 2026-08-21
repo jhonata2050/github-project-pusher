@@ -188,12 +188,24 @@ export async function callDA({ hostname, apiUser, apiToken, command, method = 'G
   }
 }
 
-function normalizePackageList(result: unknown): string[] {
-  if (Array.isArray(result)) return result.filter((item): item is string => typeof item === 'string');
-  if (!result || typeof result !== 'object' || !('list' in result)) return [];
-  const list = result.list;
-  if (Array.isArray(list)) return list.filter((item): item is string => typeof item === 'string');
-  return typeof list === 'string' ? [list] : [];
+function normalizePackageList(result: any): string[] {
+  if (Array.isArray(result)) return result.filter((item: any): item is string => typeof item === 'string');
+  if (!result || typeof result !== 'object') return [];
+  
+  // DirectAdmin results for CMD_API_PACKAGES_USER often return a list in the root
+  // or under 'list' or as numbered keys select0, select1...
+  if ('list' in result && Array.isArray(result.list)) {
+    return result.list.filter((item: any): item is string => typeof item === 'string');
+  }
+  
+  const packages: string[] = [];
+  Object.entries(result).forEach(([key, val]) => {
+    if (key.startsWith('select') || key === 'list') {
+      if (typeof val === 'string' && val.length > 0) packages.push(val);
+    }
+  });
+
+  return packages;
 }
 
 export async function getDAPackages(serverId: string) {
