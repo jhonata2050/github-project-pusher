@@ -36,7 +36,7 @@ export const getMyVPSInstances = createServerFn({ method: "GET" })
         ...i,
         service: service ?? null,
       };
-    }).filter(i => i.service !== null); // Apenas instâncias de serviços que pertencem ao usuário
+    }).filter((i: any) => i.service !== null); // Apenas instâncias de serviços que pertencem ao usuário
   });
 
 export const contaboAction = createServerFn({ method: "POST" })

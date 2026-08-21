@@ -529,14 +529,17 @@ export const getServiceServerDetails = createServerFn({ method: "GET" })
       _role: "admin",
     });
 
-    const { data: service, error } = await context.supabase
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: service, error } = await supabaseAdmin
       .from("services")
       .select(`
         *,
         products (
           name,
           product_type
-        )
+        ),
+        servers(hostname, ip_address, sso_supported),
+        vps_instances(id, external_id, ip_address, status)
       `)
       .eq("id", serviceId)
       .maybeSingle();
