@@ -724,8 +724,8 @@ function ClientDetailPage() {
             </DialogDescription>
           </DialogHeader>
           {editingService && (
-            <form onSubmit={handleUpdateService} className="space-y-4 py-4">
-              <div className="grid gap-2">
+            <form onSubmit={handleUpdateService} className="grid grid-cols-1 sm:grid-cols-2 gap-4 py-4">
+              <div className="grid gap-2 sm:col-span-2">
                 <Label htmlFor="product_id">Produto / Plano</Label>
                 <Select 
                   name="product_id" 
