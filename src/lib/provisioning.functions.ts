@@ -4,7 +4,12 @@ import { z } from "zod";
 
 export const getProvisioningLogs = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((data) => z.object({ serviceId: z.string().optional(), clientId: z.string().optional() }).parse(data))
+  .inputValidator((data: any) => 
+    z.object({ 
+      serviceId: z.string().optional(), 
+      clientId: z.string().optional() 
+    }).parse(data)
+  )
   .handler(async ({ data, context }) => {
     let query = context.supabase
       .from("provisioning_logs")
@@ -25,3 +30,12 @@ export const getProvisioningLogs = createServerFn({ method: "GET" })
     if (error) throw error;
     return logs;
   });
+
+export const getClientProvisioningAudit = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: any) => z.object({ clientId: z.string().uuid() }).parse(data))
+  .handler(async ({ data, context }) => {
+    const { getClientProvisioningAudit: getAudit } = await import("./provisioning.server");
+    return getAudit(context.supabase, context.userId, data.clientId);
+  });
+
