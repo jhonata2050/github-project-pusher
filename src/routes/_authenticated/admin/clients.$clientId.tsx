@@ -294,7 +294,7 @@ function ClientDetailPage() {
                   </Button>
                 )}
               </CardHeader>
-              <CardContent>
+              <CardContent className="pb-6">
                 <form 
                   onSubmit={handleSubmit} 
                   className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-4"
