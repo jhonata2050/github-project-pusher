@@ -483,7 +483,7 @@ function ClientDetailPage() {
                                 </div>
                               </div>
                             </TableCell>
-                            <TableCell className="text-muted-foreground">
+                            <TableCell className="text-muted-foreground text-xs">
                               {s.domain || "—"}
                             </TableCell>
                             <TableCell className="hidden sm:table-cell">
