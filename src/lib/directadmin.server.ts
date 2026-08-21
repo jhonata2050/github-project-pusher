@@ -703,27 +703,20 @@ export async function getDASession(serverId: string, username: string, redirectU
       },
     });
   }
-
-
-  // BLOQUEIO ESTRITO: Não fazer fallback para CMD_API_LOGIN_KEYS para clientes
-  // Este fluxo comprovadamente autentica o revendedor em vez do cliente em muitas configurações.
-
-
-  const resObj = (typeof result === 'object' && result !== null ? result : {}) as Record<string, any>;
-
-  
   // 8. LOGS (Apenas metadados, nunca a URL)
   await createSystemLog({
     category: 'directadmin',
     level: 'info',
-    message: `SSO Gerado via Nova Estratégia (login-url) para '${targetUser}'`,
+    message: `SSO gerado via ${usedStrategy} para '${targetUser}'`,
     metadata: { 
       targetUser, 
       serverId, 
+      strategy: usedStrategy,
       timestamp: new Date().toISOString(),
       provider: 'DirectAdmin'
     }
   }).catch(e => console.error(e));
+
 
   // 11. REMOVER O FLUXO ANTIGO / VALIDAÇÃO DE IDENTIDADE ESTRITA
   const finalUrl = parseDirectAdminLoginUrl(result, server.hostname);
