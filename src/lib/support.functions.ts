@@ -826,7 +826,8 @@ export const updateServiceDetails = createServerFn({ method: "POST" })
         product_id: input.product_id,
         next_due_date: input.next_due_date,
         status: input.status ? (input.status as any) : null,
-        block_directadmin: input.block_directadmin !== undefined ? input.block_directadmin : undefined
+        block_directadmin: input.block_directadmin !== undefined ? input.block_directadmin : undefined,
+        password: input.password !== undefined ? input.password : undefined
       })
       .eq("id", input.serviceId);
 
