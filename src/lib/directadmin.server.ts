@@ -75,14 +75,18 @@ export async function callDA({ hostname, apiUser, apiToken, command, method = 'G
     );
   }
 
-  // Limpa o hostname e garante o uso da porta 2222
-  const cleanHostname = hostname.replace(/^https?:\/\//, '').split(':')[0];
-  const url = `https://${cleanHostname}:2222/${command}`;
+  // Limpa o hostname e preserva a porta se especificada, caso contrário usa 2222
+  const hostParts = hostname.replace(/^https?:\/\//, '').split(':');
+  const cleanHostname = hostParts[0];
+  const port = hostParts[1] || '2222';
+  const url = `https://${cleanHostname}:${port}/${command}`;
+
   
   const searchParams = new URLSearchParams();
   Object.entries(params).forEach(([key, val]) => searchParams.append(key, val));
   
-  const authHeader = `Basic ${Buffer.from(`${apiUser.trim()}:${apiToken.trim()}`).toString('base64')}`;
+  const authString = `${apiUser.trim()}:${apiToken.trim()}`;
+  const authHeader = `Basic ${Buffer.from(authString).toString('base64')}`;
   
   try {
     if (method === 'GET') searchParams.set('json', 'yes');
@@ -91,10 +95,11 @@ export async function callDA({ hostname, apiUser, apiToken, command, method = 'G
       method,
       headers: {
         'Authorization': authHeader,
+        'X-DirectAdmin-Login-Key': Buffer.from(authString).toString('base64'), // Redundância para alguns firewalls/proxies
         'Content-Type': 'application/x-www-form-urlencoded',
         'Accept': 'application/json, text/plain',
-        'User-Agent': 'Mozilla/5.0 (compatible; Eqsam/1.0; +https://eqsam.com)',
       },
+
       body: method === 'POST' ? searchParams.toString() : null,
       signal: AbortSignal.timeout(60_000), // Aumentado para 60s para maior resiliência
       redirect: 'manual',
@@ -122,18 +127,29 @@ export async function callDA({ hostname, apiUser, apiToken, command, method = 'G
         );
       }
       if (response.status === 401) {
-        const reportedClientIp = errorText.match(/"client_ip"\s*:\s*"([^"]+)"/)?.[1];
+        const reportedClientIp = errorText.match(/"client_ip"\s*:\s*"([^"]+)"/)?.[1] || 
+                               errorText.match(/client_ip=([^&]+)/)?.[1];
+        
+        console.log(`[DirectAdmin-401] Host: ${hostname}, API User: ${apiUser}, IP: ${reportedClientIp}, Body: ${errorText}`);
+
         const ipGuidance = reportedClientIp === '127.0.0.1'
           ? ` O servidor informou client_ip 127.0.0.1. Isso ocorre quando o DirectAdmin está atrás de proxy: remova a restrição de IP da Login Key ou inclua 127.0.0.1 nos IPs permitidos.`
           : reportedClientIp
             ? ` O DirectAdmin identificou o IP ${reportedClientIp}; ele PRECISA estar permitido na Login Key (Whitelist de IP).`
             : ` Certifique-se de que o IP 34.91.200.163 está permitido na Login Key.`;
+        
+        let extraInfo = "";
+        if (errorText.includes("Invalid login") || errorText.includes("Authentication failed")) {
+          extraInfo = " O DirectAdmin rejeitou o par Usuário|Chave e Token. Verifique se não há espaços extras e se a chave não expirou.";
+        }
+
         throw new Error(
           `Falha na autenticação (401): O DirectAdmin não reconheceu as credenciais. ` +
           `Certifique-se de que o "Usuário API" está no formato "USUARIO|NOME_DA_CHAVE" (ex: admin|EqsamKey) ` +
-          `e que o "Token API" é o valor (Key Value) gerado.${ipGuidance}`
+          `e que o "Token API" é o valor (Key Value) gerado.${ipGuidance}${extraInfo}`
         );
       }
+
       throw new Error(`DirectAdmin API Error (${response.status}): ${errorText}`);
     }
 
