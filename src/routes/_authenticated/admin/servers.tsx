@@ -356,7 +356,8 @@ function AdminServersPage() {
                 </DialogFooter>
               </form>
             </DialogContent>
-          </Dialog>
+            </Dialog>
+          </div>
         </div>
 
         {isLoading ? (
