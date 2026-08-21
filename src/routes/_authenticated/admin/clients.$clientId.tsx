@@ -772,13 +772,13 @@ function ClientDetailPage() {
                 />
               </div>
               <div className="grid gap-2">
-                <Label htmlFor="next_due_date">Data de Vencimento</Label>
+                <Label htmlFor="next_due_date" className="text-xs">Data de Vencimento</Label>
                 <Input 
                   type="date"
                   id="next_due_date" 
                   name="next_due_date" 
                   defaultValue={editingService.next_due_date ? editingService.next_due_date.split('T')[0] : ""} 
-                  className="rounded-xl h-11" 
+                  className="rounded-xl h-9 text-xs" 
                 />
               </div>
               <div className="grid gap-2">
