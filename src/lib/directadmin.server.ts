@@ -551,32 +551,61 @@ export async function getDASession(serverId: string, username: string, redirectU
 
   const { createSystemLog } = await import("./system-logs.server");
 
-  // NOVA ESTRATÉGIA: Alternativa B - Endpoint Interno Controlado (Proxy para 'da login-url')
-  // Como não podemos executar binários locais via exec() no worker, 
-  // e o CMD_API_LOGIN_KEYS falhou na delegação, usaremos o endpoint moderno do DA 
-  // que teoricamente suporta delegação quando bem configurado, ou um proxy seguro.
-  
-  // Nota: O usuário solicitou 'da login-url'. Se o servidor DA tiver um proxy 
-  // para isso, ou se usarmos a API moderna que o 'da login-url' usa internamente.
-  
+  // NOVA ESTRATÉGIA: endpoint moderno /api/login/url (mesmo usado pelo 'da login-url').
+  // Este endpoint exige JSON puro (não aceita form-encoded/json=yes), por isso
+  // a requisição é feita diretamente aqui em vez de usar callDA.
   console.log(`[DA-SSO] Solicitando One-Time URL para ${targetUser} em ${server.hostname}`);
 
-  // O comando 'da login-url' no backend do DA usa internamente a API /api/login/url
-  // Tentaremos o endpoint moderno que substitui o CMD_API_LOGIN_KEYS para delegação
-  const result = await callDA({
-    hostname: server.hostname,
-    apiUser: server.api_user ?? "",
-    apiToken: server.api_token ?? "",
-    command: 'api/login/url',
-    method: 'POST',
-    params: {
-      user: targetUser,
-      expiry: '600', // 10 minutes
-      // O 'da login-url' gera tokens que o DA valida como sendo do usuário alvo
-    }
-  });
+  const apiUserRaw = (server.api_user ?? "").trim();
+  const daUsername = apiUserRaw.includes('|') ? (apiUserRaw.split('|')[0] ?? '').trim() : apiUserRaw;
+  const daPassword = (server.api_token ?? "").trim();
 
-  const resObj = (result ?? {}) as Record<string, any>;
+  const hostParts = server.hostname.replace(/^https?:\/\//, '').split(':');
+  const cleanHost = hostParts[0];
+  const daPort = hostParts[1] || '2222';
+  const loginUrlEndpoint = `https://${cleanHost}:${daPort}/api/login/url`;
+
+  let result: any;
+  try {
+    const response = await fetch(loginUrlEndpoint, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Basic ${Buffer.from(`${daUsername}:${daPassword}`).toString('base64')}`,
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+      },
+      body: JSON.stringify({ user: targetUser, ttl: 600, redirect: redirectUrl || '/' }),
+      signal: AbortSignal.timeout(30_000),
+      redirect: 'manual',
+    });
+
+    const text = await response.text();
+
+    if (response.status === 404 || (response.status >= 300 && response.status < 400)) {
+      throw new Error(
+        `Este servidor DirectAdmin não expõe o endpoint moderno /api/login/url (necessário para SSO seguro). ` +
+        `Atualize o DirectAdmin e habilite a permissão LKM_CREATE_URL na Login Key.`
+      );
+    }
+
+    if (!response.ok) {
+      throw new Error(`DirectAdmin respondeu ${response.status} ao gerar o acesso: ${text.slice(0, 200)}`);
+    }
+
+    try {
+      result = JSON.parse(text);
+    } catch {
+      result = text.trim();
+    }
+  } catch (e: any) {
+    if (e?.name === 'TimeoutError' || e?.name === 'AbortError') {
+      throw new Error(`O servidor DirectAdmin (${server.hostname}) não respondeu ao gerar o acesso seguro.`);
+    }
+    throw e;
+  }
+
+  const resObj = (typeof result === 'object' && result !== null ? result : {}) as Record<string, any>;
+
   
   // 8. LOGS (Apenas metadados, nunca a URL)
   await createSystemLog({
