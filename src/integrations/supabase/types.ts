@@ -767,6 +767,47 @@ export type Database = {
           },
         ]
       }
+      system_logs: {
+        Row: {
+          actor_id: string | null
+          category: string
+          created_at: string
+          id: string
+          level: string
+          message: string
+          metadata: Json
+          service_id: string | null
+        }
+        Insert: {
+          actor_id?: string | null
+          category: string
+          created_at?: string
+          id?: string
+          level?: string
+          message: string
+          metadata?: Json
+          service_id?: string | null
+        }
+        Update: {
+          actor_id?: string | null
+          category?: string
+          created_at?: string
+          id?: string
+          level?: string
+          message?: string
+          metadata?: Json
+          service_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "system_logs_service_id_fkey"
+            columns: ["service_id"]
+            isOneToOne: false
+            referencedRelation: "services"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       system_settings: {
         Row: {
           key: string
