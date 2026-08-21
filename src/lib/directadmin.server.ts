@@ -637,6 +637,9 @@ export async function getDASession(serverId: string, username: string, redirectU
   const loginUrlEndpoint = `https://${cleanHost}:${daPort}/api/login/url`;
 
   let result: any;
+  let usedStrategy: 'api/login/url' | 'CMD_API_LOGIN_KEYS' = 'api/login/url';
+  let modernAvailable = true;
+
   try {
     const response = await fetch(loginUrlEndpoint, {
       method: 'POST',
@@ -653,9 +656,10 @@ export async function getDASession(serverId: string, username: string, redirectU
     const text = await response.text();
 
     if (response.status === 404 || response.status === 405 || (response.status >= 300 && response.status < 400)) {
-      throw new Error(`O provedor DirectAdmin não permite SSO delegado para usuários desta revenda. (Endpoint moderno /api/login/url indisponível)`);
+      // Servidor antigo: endpoint moderno não existe
+      modernAvailable = false;
     } else if (!response.ok) {
-      throw new Error(`O provedor DirectAdmin não permite SSO delegado para usuários desta revenda. (Erro ${response.status}: ${text.slice(0, 100)})`);
+      throw new Error(`O DirectAdmin recusou a geração do acesso (Erro ${response.status}: ${text.slice(0, 120)})`);
     } else {
       try {
         result = JSON.parse(text);
@@ -667,8 +671,39 @@ export async function getDASession(serverId: string, username: string, redirectU
     if (e?.name === 'TimeoutError' || e?.name === 'AbortError') {
       throw new Error(`O servidor DirectAdmin (${server.hostname}) não respondeu ao gerar o acesso seguro.`);
     }
-    throw e;
+    // Falha de rede/TLS no endpoint moderno: tentar fluxo legado
+    modernAvailable = false;
   }
+
+  // FALLBACK LEGADO: one-time URL via CMD_API_LOGIN_KEYS (usado pelo módulo oficial do WHMCS)
+  if (!modernAvailable) {
+    usedStrategy = 'CMD_API_LOGIN_KEYS';
+    console.warn(`[DA-SSO] /api/login/url indisponível em ${server.hostname}. Usando CMD_API_LOGIN_KEYS.`);
+
+    result = await callDA({
+      hostname: server.hostname,
+      apiUser: server.api_user ?? "",
+      apiToken: server.api_token ?? "",
+      command: 'CMD_API_LOGIN_KEYS',
+      method: 'POST',
+      params: {
+        action: 'create',
+        type: 'one_time_url',
+        keyname: `sso_${targetUser}_${Date.now()}`,
+        key: '',
+        key2: '',
+        never_expires: 'no',
+        expiry: '10m',
+        max_uses: '1',
+        clear_key: 'yes',
+        user: targetUser,
+        login_as: targetUser,
+        redirect: redirectUrl || '/',
+        'select_allow0': 'ALL',
+      },
+    });
+  }
+
 
   // BLOQUEIO ESTRITO: Não fazer fallback para CMD_API_LOGIN_KEYS para clientes
   // Este fluxo comprovadamente autentica o revendedor em vez do cliente em muitas configurações.
