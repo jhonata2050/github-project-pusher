@@ -6,16 +6,19 @@ export async function getHostingProvider(serverId: string): Promise<HostingProvi
   
   const { data: server, error } = await supabaseAdmin
     .from("servers")
-    .select("type")
+    .select("id, server_type")
     .eq("id", serverId)
-    .single();
+    .maybeSingle();
 
-  if (error || !server) {
+  if (error) {
+    throw new Error(`Erro ao buscar servidor: ${error.message}`);
+  }
+  if (!server) {
     throw new Error("Servidor não encontrado ao instanciar provedor.");
   }
 
   // Por padrão, se não especificado, tratamos como DirectAdmin para compatibilidade
-  const serverType = server.type || 'directadmin';
+  const serverType = server.server_type || 'directadmin';
 
   switch (serverType.toLowerCase()) {
     case 'directadmin':
