@@ -566,6 +566,7 @@ export async function getDASession(serverId: string, username: string, redirectU
   const loginUrlEndpoint = `https://${cleanHost}:${daPort}/api/login/url`;
 
   let result: any;
+  let needsLegacyFallback = false;
   try {
     const response = await fetch(loginUrlEndpoint, {
       method: 'POST',
@@ -581,28 +582,50 @@ export async function getDASession(serverId: string, username: string, redirectU
 
     const text = await response.text();
 
-    if (response.status === 404 || (response.status >= 300 && response.status < 400)) {
-      throw new Error(
-        `Este servidor DirectAdmin não expõe o endpoint moderno /api/login/url (necessário para SSO seguro). ` +
-        `Atualize o DirectAdmin e habilite a permissão LKM_CREATE_URL na Login Key.`
-      );
-    }
-
-    if (!response.ok) {
+    if (response.status === 404 || response.status === 405 || (response.status >= 300 && response.status < 400)) {
+      // Servidor antigo: cai para o fluxo legado CMD_API_LOGIN_KEYS
+      console.warn(`[DA-SSO] /api/login/url indisponível (${response.status}). Usando fluxo legado CMD_API_LOGIN_KEYS.`);
+      needsLegacyFallback = true;
+    } else if (!response.ok) {
       throw new Error(`DirectAdmin respondeu ${response.status} ao gerar o acesso: ${text.slice(0, 200)}`);
-    }
-
-    try {
-      result = JSON.parse(text);
-    } catch {
-      result = text.trim();
+    } else {
+      try {
+        result = JSON.parse(text);
+      } catch {
+        result = text.trim();
+      }
     }
   } catch (e: any) {
     if (e?.name === 'TimeoutError' || e?.name === 'AbortError') {
       throw new Error(`O servidor DirectAdmin (${server.hostname}) não respondeu ao gerar o acesso seguro.`);
     }
-    throw e;
+    if (e instanceof TypeError) {
+      // Falha de rede/TLS no endpoint moderno: tenta o legado
+      console.warn(`[DA-SSO] Falha de rede em /api/login/url, tentando fluxo legado:`, e?.message);
+      needsLegacyFallback = true;
+    } else {
+      throw e;
+    }
   }
+
+  if (needsLegacyFallback) {
+    result = await callDA({
+      hostname: server.hostname,
+      apiUser: server.api_user,
+      apiToken: server.api_token,
+      command: 'CMD_API_LOGIN_KEYS',
+      method: 'POST',
+      params: {
+        action: 'create',
+        type: 'one_time_url',
+        user: targetUser,
+        login_keys_url: redirectUrl || '/',
+        expiry: '10m',
+        max_uses: '1',
+      },
+    });
+  }
+
 
   const resObj = (typeof result === 'object' && result !== null ? result : {}) as Record<string, any>;
 
