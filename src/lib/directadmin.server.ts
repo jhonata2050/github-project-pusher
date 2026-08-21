@@ -85,7 +85,9 @@ export async function callDA({ hostname, apiUser, apiToken, command, method = 'G
   const searchParams = new URLSearchParams();
   Object.entries(params).forEach(([key, val]) => searchParams.append(key, val));
   
-  const authString = `${apiUser.trim()}:${apiToken.trim()}`;
+  const apiUserTrimmed = apiUser.trim();
+  const apiTokenTrimmed = apiToken.trim();
+  const authString = `${apiUserTrimmed}:${apiTokenTrimmed}`;
   const authHeader = `Basic ${Buffer.from(authString).toString('base64')}`;
   
   try {
