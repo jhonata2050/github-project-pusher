@@ -102,6 +102,13 @@ export async function callDA({ hostname, apiUser, apiToken, command, method = 'G
             `(ou marque "All commands"). Verifique também se a chave não está restrita por IP.`,
         );
       }
+      if (response.status === 401) {
+        throw new Error(
+          `Falha na autenticação (401): O DirectAdmin não reconheceu as credenciais. ` +
+          `Certifique-se de que o "Usuário API" está no formato "USUARIO|NOME_DA_CHAVE" (ex: admin|EqsamKey) ` +
+          `e que o "Token API" é o valor (Key Value) gerado. Se usar Login Key, verifique se o IP do Eqsam não está bloqueado.`
+        );
+      }
       throw new Error(`DirectAdmin API Error (${response.status}): ${errorText}`);
     }
 
