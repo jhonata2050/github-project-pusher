@@ -244,8 +244,12 @@ function AdminServersPage() {
                   <Input id="hostname" name="hostname" placeholder="https://da.provedor.com:2222" required className="rounded-xl" />
                 </div>
                 <div className="grid gap-2">
-                  <Label htmlFor="api_user">Usuário API</Label>
-                  <Input id="api_user" name="api_user" placeholder="admin" required className="rounded-xl" />
+                  <Label htmlFor="api_user" className="flex items-center gap-2">
+                    Usuário API
+                    <Badge variant="outline" className="text-[9px] uppercase px-1.5 py-0">Formato: user|key</Badge>
+                  </Label>
+                  <Input id="api_user" name="api_user" placeholder="Ex: admin|TokenEqsam" required className="rounded-xl" />
+                  <p className="text-[10px] text-muted-foreground px-1">Obrigatório o uso do pipe (|) para Login Keys.</p>
                 </div>
                 <div className="grid gap-2">
                   <Label htmlFor="api_token">Chave de API / Senha</Label>
@@ -286,8 +290,15 @@ function AdminServersPage() {
                     <div className="h-10 w-10 rounded-2xl bg-brand/20 flex items-center justify-center">
                       <Server className="h-5 w-5 text-brand" />
                     </div>
-                    <div className="flex items-center gap-2 text-xs font-semibold text-brand px-2 py-1 rounded-full bg-brand/10">
-                      <Activity className="h-3 w-3" /> Configurado
+                    <div className="flex flex-col items-end gap-1">
+                      <div className="flex items-center gap-2 text-xs font-semibold text-brand px-2 py-1 rounded-full bg-brand/10">
+                        <Activity className="h-3 w-3" /> Configurado
+                      </div>
+                      {!server.api_user?.includes('|') && (
+                        <Badge variant="destructive" className="text-[9px] rounded-full uppercase px-2 py-0 animate-pulse">
+                          Usuário Inválido (Falta |)
+                        </Badge>
+                      )}
                     </div>
                   </div>
                   <CardTitle className="mt-4 text-xl font-bold">{server.hostname}</CardTitle>
@@ -391,8 +402,12 @@ function AdminServersPage() {
                   <Input id="edit-hostname" name="hostname" defaultValue={editingServer.hostname} required className="rounded-xl" />
                 </div>
                 <div className="grid gap-2">
-                  <Label htmlFor="edit-api_user">Usuário API</Label>
+                  <Label htmlFor="edit-api_user" className="flex items-center gap-2">
+                    Usuário API
+                    <Badge variant="outline" className="text-[9px] uppercase px-1.5 py-0">Formato: user|key</Badge>
+                  </Label>
                   <Input id="edit-api_user" name="api_user" defaultValue={editingServer.api_user} required className="rounded-xl" />
+                  <p className="text-[10px] text-muted-foreground px-1">Formato obrigatório: USUARIO|NOME_DA_CHAVE</p>
                 </div>
                 <div className="grid gap-2">
                   <Label htmlFor="edit-api_token">Chave de API / Senha</Label>
