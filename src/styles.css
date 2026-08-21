@@ -176,19 +176,27 @@
     -webkit-font-smoothing: antialiased;
   }
 
-  /* Custom scrollbar para o checkout */
-  .custom-scrollbar::-webkit-scrollbar {
-    width: 4px;
+  /* Custom scrollbar global baseada no layout do sistema */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
   }
-  .custom-scrollbar::-webkit-scrollbar-track {
+  ::-webkit-scrollbar-track {
     background: transparent;
   }
-  .custom-scrollbar::-webkit-scrollbar-thumb {
+  ::-webkit-scrollbar-thumb {
     background: var(--color-border);
     border-radius: 10px;
+    transition: background 0.2s ease;
   }
-  .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-    background: var(--color-muted-foreground);
+  ::-webkit-scrollbar-thumb:hover {
+    background: var(--brand);
+  }
+
+  /* Firefox */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-border) transparent;
   }
 }
 
