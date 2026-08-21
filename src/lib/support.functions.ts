@@ -449,12 +449,7 @@ export const testDAConnection = createServerFn({ method: "POST" })
     }
 
     const { testDAConnectionDetails } = await import("./directadmin.server");
-    try {
-      return await testDAConnectionDetails(serverId);
-    } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : "Erro desconhecido";
-      throw new Error(`Falha na conexão: ${message}`);
-    }
+    return testDAConnectionDetails(serverId);
   });
 
 
