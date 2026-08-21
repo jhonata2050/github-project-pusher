@@ -531,7 +531,13 @@ export const getServiceServerDetails = createServerFn({ method: "GET" })
 
     const { data: service, error } = await context.supabase
       .from("services")
-      .select("*")
+      .select(`
+        *,
+        products (
+          name,
+          product_type
+        )
+      `)
       .eq("id", serviceId)
       .maybeSingle();
 
@@ -557,8 +563,18 @@ export const getServiceServerDetails = createServerFn({ method: "GET" })
         .maybeSingle();
       server = srv ?? null;
     }
+    
+    // Fetch VPS instances if linked
+    let vps_instances: any[] = [];
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: vpsData } = await supabaseAdmin
+      .from("vps_instances")
+      .select("id, external_id, ip_address, status")
+      .eq("service_id", serviceId);
+    
+    vps_instances = vpsData ?? [];
 
-    return { ...service, servers: server };
+    return { ...service, servers: server, vps_instances };
   });
 
 
