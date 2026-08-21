@@ -232,23 +232,23 @@ function ClientDetailPage() {
         </>
       }
     >
-      <div className="flex flex-col gap-8">
+      <div className="flex flex-col gap-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
-            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">{client.full_name || "Sem Nome"}</h1>
+            <h1 className="text-xl sm:text-2xl font-bold tracking-tight">{client.full_name || "Sem Nome"}</h1>
             <p className="text-sm text-muted-foreground">{client.email}</p>
           </div>
           <div className="flex flex-wrap gap-3">
             <Button 
               variant="outline" 
-              className="rounded-xl flex gap-2 h-10 flex-1 sm:flex-none"
+              className="rounded-xl flex gap-2 h-9 text-xs flex-1 sm:flex-none"
               onClick={handleImpersonate}
               disabled={isImpersonating}
             >
               <LogIn className="size-4" /> 
               {isImpersonating ? "Acessando..." : "Acessar como Cliente"}
             </Button>
-            <Badge className="h-10 px-4 text-sm" variant={client.status === "active" ? "default" : "secondary"}>
+            <Badge className="h-9 px-3 text-xs" variant={client.status === "active" ? "default" : "secondary"}>
               {client.status === "active" ? "Ativo" : "Inativo"}
             </Badge>
           </div>
@@ -256,14 +256,14 @@ function ClientDetailPage() {
 
         <Tabs defaultValue="info" className="w-full">
           <div className="overflow-x-auto pb-2">
-            <TabsList className="bg-muted/50 p-1 rounded-2xl h-12 w-max min-w-full justify-start sm:w-auto">
-              <TabsTrigger value="info" className="rounded-xl flex gap-2"><User className="size-4" /> Dados</TabsTrigger>
-              <TabsTrigger value="services" className="rounded-xl flex gap-2"><Server className="size-4" /> Serviços</TabsTrigger>
-              <TabsTrigger value="finance" className="rounded-xl flex gap-2"><CreditCard className="size-4" /> Financeiro</TabsTrigger>
-              <TabsTrigger value="emails" className="rounded-xl flex gap-2"><Mail className="size-4" /> E-mails</TabsTrigger>
-              <TabsTrigger value="tickets" className="rounded-xl flex gap-2"><LifeBuoy className="size-4" /> Tickets</TabsTrigger>
-              <TabsTrigger value="provisioning" className="rounded-xl flex gap-2"><History className="size-4" /> Provisionamento</TabsTrigger>
-              <TabsTrigger value="system-logs" className="rounded-xl flex gap-2"><Database className="size-4" /> Auditoria</TabsTrigger>
+            <TabsList className="bg-muted/50 p-1 rounded-2xl h-10 w-max min-w-full justify-start sm:w-auto">
+              <TabsTrigger value="info" className="rounded-xl flex gap-2 text-xs py-1.5"><User className="size-3.5" /> Dados</TabsTrigger>
+              <TabsTrigger value="services" className="rounded-xl flex gap-2 text-xs py-1.5"><Server className="size-3.5" /> Serviços</TabsTrigger>
+              <TabsTrigger value="finance" className="rounded-xl flex gap-2 text-xs py-1.5"><CreditCard className="size-3.5" /> Financeiro</TabsTrigger>
+              <TabsTrigger value="emails" className="rounded-xl flex gap-2 text-xs py-1.5"><Mail className="size-3.5" /> E-mails</TabsTrigger>
+              <TabsTrigger value="tickets" className="rounded-xl flex gap-2 text-xs py-1.5"><LifeBuoy className="size-3.5" /> Tickets</TabsTrigger>
+              <TabsTrigger value="provisioning" className="rounded-xl flex gap-2 text-xs py-1.5"><History className="size-3.5" /> Provisionamento</TabsTrigger>
+              <TabsTrigger value="system-logs" className="rounded-xl flex gap-2 text-xs py-1.5"><Database className="size-3.5" /> Auditoria</TabsTrigger>
             </TabsList>
           </div>
 
@@ -283,21 +283,21 @@ function ClientDetailPage() {
 
           <TabsContent value="info" className="mt-6">
             <Card className="rounded-3xl border-none bg-card shadow-sm">
-              <CardHeader className="flex flex-row items-center justify-between">
+              <CardHeader className="flex flex-row items-center justify-between py-4">
                 <div>
-                  <CardTitle>Informações do Cliente</CardTitle>
-                  <CardDescription>Dados pessoais e de contato</CardDescription>
+                  <CardTitle className="text-lg">Informações do Cliente</CardTitle>
+                  <CardDescription className="text-xs">Dados pessoais e de contato</CardDescription>
                 </div>
                 {!isEditing && (
-                  <Button variant="outline" onClick={() => setIsEditing(true)} className="rounded-xl">
+                  <Button variant="outline" onClick={() => setIsEditing(true)} className="rounded-xl h-9 text-xs">
                     Editar Dados
                   </Button>
                 )}
               </CardHeader>
-              <CardContent>
+              <CardContent className="pb-6">
                 <form 
                   onSubmit={handleSubmit} 
-                  className="grid grid-cols-1 md:grid-cols-2 gap-6"
+                  className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-4"
                 >
                   <div className="space-y-2">
                     <Label htmlFor="full_name">Nome Completo</Label>
@@ -312,7 +312,7 @@ function ClientDetailPage() {
                     <Label htmlFor="company_name">Empresa</Label>
                     <Input id="company_name" name="company_name" defaultValue={client.company_name || ""} disabled={!isEditing} className="rounded-xl h-11" />
                   </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label htmlFor="identification_type">Tipo de Documento</Label>
                       <Select 
@@ -377,9 +377,8 @@ function ClientDetailPage() {
                     <input type="hidden" id="status_hidden" name="status" defaultValue={client.status} />
                   </div>
 
-                  <div className="col-span-full border-t pt-4">
-
-                    <h3 className="text-lg font-medium mb-4 flex items-center gap-2">
+                  <div className="col-span-full border-t pt-4 mt-2">
+                    <h3 className="text-base font-bold mb-2 flex items-center gap-2">
                       <MapPin className="size-4" /> Endereço
                     </h3>
                   </div>
@@ -392,7 +391,7 @@ function ClientDetailPage() {
                     <Label htmlFor="address_line2">Complemento / Bairro</Label>
                     <Input id="address_line2" name="address_line2" defaultValue={(client as any).address_line2 || ""} disabled={!isEditing} className="rounded-xl h-11" />
                   </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label htmlFor="city">Cidade</Label>
                       <Input id="city" name="city" defaultValue={client.city || ""} disabled={!isEditing} className="rounded-xl h-11" />
@@ -438,9 +437,9 @@ function ClientDetailPage() {
 
           <TabsContent value="services" className="mt-6">
             <Card className="rounded-3xl border-none shadow-sm">
-              <CardHeader>
-                <CardTitle>Serviços Contratados</CardTitle>
-                <CardDescription>Hospedagem, domínios e outros</CardDescription>
+              <CardHeader className="py-4">
+                <CardTitle className="text-lg">Serviços Contratados</CardTitle>
+                <CardDescription className="text-xs">Hospedagem, domínios e outros</CardDescription>
               </CardHeader>
               <CardContent>
                 {dossiersQuery.isLoading ? <Skeleton className="h-40" /> : (
@@ -459,7 +458,7 @@ function ClientDetailPage() {
                       <TableBody>
                         {dossiersQuery.data?.services.map((s: any) => (
                           <TableRow key={s.id}>
-                            <TableCell className="font-medium">
+                            <TableCell className="font-medium text-xs">
                               <div className="flex flex-col gap-1">
                                 <span>{s.products?.name || "Produto"}</span>
                                 <div className="flex flex-col gap-0.5">
@@ -484,7 +483,7 @@ function ClientDetailPage() {
                                 </div>
                               </div>
                             </TableCell>
-                            <TableCell className="text-muted-foreground">
+                            <TableCell className="text-muted-foreground text-xs">
                               {s.domain || "—"}
                             </TableCell>
                             <TableCell className="hidden sm:table-cell">
@@ -503,11 +502,11 @@ function ClientDetailPage() {
                                 <span className="text-[10px] text-destructive italic">Não vinculado</span>
                               )}
                             </TableCell>
-                            <TableCell className="hidden md:table-cell">
+                            <TableCell className="hidden md:table-cell text-xs">
                               {s.next_due_date ? format(new Date(s.next_due_date), "dd/MM/yyyy", { locale: ptBR }) : "—"}
                             </TableCell>
                             <TableCell>
-                              <Badge variant={s.status === 'active' ? 'default' : s.status === 'suspended' ? 'secondary' : 'destructive'}>
+                              <Badge className="text-[10px] uppercase px-1.5 h-5" variant={s.status === 'active' ? 'default' : s.status === 'suspended' ? 'secondary' : 'destructive'}>
                                 {s.status}
                               </Badge>
                             </TableCell>
@@ -715,22 +714,22 @@ function ClientDetailPage() {
       </div>
 
       <Dialog open={!!editingService} onOpenChange={(open) => !open && setEditingService(null)}>
-        <DialogContent className="rounded-3xl border-none shadow-2xl max-w-md">
+        <DialogContent className="rounded-3xl border-none shadow-2xl max-w-2xl">
           <DialogHeader>
-            <DialogTitle className="text-2xl font-bold">Gerenciar Serviço</DialogTitle>
-            <DialogDescription>
+            <DialogTitle className="text-xl font-bold">Gerenciar Serviço</DialogTitle>
+            <DialogDescription className="text-xs">
               Ajuste manualmente os detalhes técnicos para sincronização com o servidor.
             </DialogDescription>
           </DialogHeader>
           {editingService && (
             <form onSubmit={handleUpdateService} className="grid grid-cols-1 sm:grid-cols-2 gap-4 py-4">
               <div className="grid gap-2 sm:col-span-2">
-                <Label htmlFor="product_id">Produto / Plano</Label>
+                <Label htmlFor="product_id" className="text-xs">Produto / Plano</Label>
                 <Select 
                   name="product_id" 
                   defaultValue={editingService.product_id || ""}
                 >
-                  <SelectTrigger id="product_id" className="h-11 rounded-xl border-input bg-background shadow-sm">
+                  <SelectTrigger id="product_id" className="h-9 rounded-xl border-input bg-background shadow-sm text-xs">
                     <SelectValue placeholder="Selecione um produto" />
                   </SelectTrigger>
                   <SelectContent className="rounded-xl border-border/40 shadow-xl">
@@ -742,53 +741,53 @@ function ClientDetailPage() {
                 </Select>
               </div>
               <div className="grid gap-2">
-                <Label htmlFor="username">Usuário do Servidor (SSO)</Label>
+                <Label htmlFor="username" className="text-xs">Usuário do Servidor (SSO)</Label>
                 <Input 
                   id="username" 
                   name="username" 
                   defaultValue={editingService.username || ""} 
                   placeholder="Ex: abacap123" 
-                  className="rounded-xl h-11" 
+                  className="rounded-xl h-9 text-xs" 
                 />
               </div>
               <div className="grid gap-2">
-                <Label htmlFor="da_password">Senha do Servidor (SSO)</Label>
+                <Label htmlFor="da_password" className="text-xs">Senha do Servidor (SSO)</Label>
                 <Input 
                   id="da_password" 
                   name="da_password" 
                   defaultValue={editingService.password || ""} 
                   placeholder="Deixe vazio para manter a atual" 
-                  className="rounded-xl h-11" 
+                  className="rounded-xl h-9 text-xs" 
                   type="password"
                 />
               </div>
               <div className="grid gap-2">
-                <Label htmlFor="domain">Domínio</Label>
+                <Label htmlFor="domain" className="text-xs">Domínio</Label>
                 <Input 
                   id="domain" 
                   name="domain" 
                   defaultValue={editingService.domain || ""} 
                   placeholder="dominio.com.br" 
-                  className="rounded-xl h-11" 
+                  className="rounded-xl h-9 text-xs" 
                 />
               </div>
               <div className="grid gap-2">
-                <Label htmlFor="next_due_date">Data de Vencimento</Label>
+                <Label htmlFor="next_due_date" className="text-xs">Data de Vencimento</Label>
                 <Input 
                   type="date"
                   id="next_due_date" 
                   name="next_due_date" 
                   defaultValue={editingService.next_due_date ? editingService.next_due_date.split('T')[0] : ""} 
-                  className="rounded-xl h-11" 
+                  className="rounded-xl h-9 text-xs" 
                 />
               </div>
               <div className="grid gap-2">
-                <Label htmlFor="server_id">Servidor Vinculado</Label>
+                <Label htmlFor="server_id" className="text-xs">Servidor Vinculado</Label>
                 <Select 
                   name="server_id" 
                   defaultValue={editingService.server_id || ""}
                 >
-                  <SelectTrigger id="server_id" className="h-11 rounded-xl border-input bg-background shadow-sm">
+                  <SelectTrigger id="server_id" className="h-9 rounded-xl border-input bg-background shadow-sm text-xs">
                     <SelectValue placeholder="Nenhum" />
                   </SelectTrigger>
                   <SelectContent className="rounded-xl border-border/40 shadow-xl">
@@ -800,12 +799,12 @@ function ClientDetailPage() {
                 </Select>
               </div>
               <div className="grid gap-2">
-                <Label htmlFor="status">Status</Label>
+                <Label htmlFor="status" className="text-xs">Status</Label>
                 <Select 
                   name="status" 
                   defaultValue={editingService.status}
                 >
-                  <SelectTrigger id="status" className="h-11 rounded-xl border-input bg-background shadow-sm">
+                  <SelectTrigger id="status" className="h-9 rounded-xl border-input bg-background shadow-sm text-xs">
                     <SelectValue placeholder="Selecione o status" />
                   </SelectTrigger>
                   <SelectContent className="rounded-xl border-border/40 shadow-xl">
@@ -881,7 +880,7 @@ function ClientDetailPage() {
                 <Button 
                   type="submit" 
                   disabled={updateServiceMutation.isPending} 
-                  className="bg-brand text-brand-foreground w-full rounded-2xl h-12 font-bold"
+                  className="bg-brand text-brand-foreground w-full rounded-2xl h-11 font-bold text-sm"
                 >
                   {updateServiceMutation.isPending ? "Salvando..." : "Salvar Alterações"}
                 </Button>
