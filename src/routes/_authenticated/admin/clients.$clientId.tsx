@@ -753,6 +753,17 @@ function ClientDetailPage() {
                 />
               </div>
               <div className="grid gap-2">
+                <Label htmlFor="da_password">Senha do Servidor (SSO)</Label>
+                <Input 
+                  id="da_password" 
+                  name="da_password" 
+                  defaultValue={editingService.password || ""} 
+                  placeholder="Deixe vazio para manter a atual" 
+                  className="rounded-xl h-11" 
+                  type="password"
+                />
+              </div>
+              <div className="grid gap-2">
                 <Label htmlFor="domain">Domínio</Label>
                 <Input 
                   id="domain" 
