@@ -267,42 +267,27 @@ function AdminServersPage() {
                   </div>
 
                   <div className="space-y-3">
-                    <h4 className="font-bold text-foreground">Comandos de API Necessários:</h4>
+                    <h4 className="font-bold text-foreground">Configuração para SSO Seguro (Login-URL):</h4>
                     <p className="text-sm text-muted-foreground">
-                      Ao criar a Login Key, selecione "Allow commands" ou marque manualmente os itens abaixo:
+                      O sistema utiliza a API moderna do DirectAdmin para delegação segura. A Login Key <strong>PRECISA</strong> das seguintes permissões:
                     </p>
-                    <div className="bg-muted/50 p-4 rounded-2xl grid grid-cols-1 md:grid-cols-2 gap-2 text-[13px] font-mono">
+                    <div className="bg-muted/50 p-4 rounded-2xl grid grid-cols-1 gap-2 text-[13px] font-mono">
                       {[
+                        "api/login/url (Comando/POST)",
+                        "LKM_CREATE_URL (Permissão Específica)",
+                        "CMD_API_SHOW_USER_CONFIG",
                         "CMD_API_PACKAGES_USER",
                         "CMD_API_ACCOUNT_USER",
-                        "CMD_API_SHOW_USER_CONFIG",
-                        "CMD_API_SELECT_USERS",
-                        "CMD_API_LOGIN_KEYS",
-                        "CMD_API_USER_DOMAIN_LIST"
+                        "CMD_API_SELECT_USERS"
                       ].map(cmd => (
                         <div key={cmd} className="flex items-center gap-2 text-muted-foreground">
                           <Check className="h-3 w-3 text-brand" /> {cmd}
                         </div>
                       ))}
                     </div>
-                    <Button 
-                      variant="outline" 
-                      className="w-full rounded-xl"
-                      onClick={() => {
-                        const cmds = [
-                          "CMD_API_PACKAGES_USER",
-                          "CMD_API_ACCOUNT_USER",
-                          "CMD_API_SHOW_USER_CONFIG",
-                          "CMD_API_SELECT_USERS",
-                          "CMD_API_LOGIN_KEYS",
-                          "CMD_API_USER_DOMAIN_LIST"
-                        ].join("\n");
-                        navigator.clipboard.writeText(cmds);
-                        toast.success("Lista de comandos copiada!");
-                      }}
-                    >
-                      <Copy className="mr-2 h-4 w-4" /> Copiar Lista de Comandos
-                    </Button>
+                    <div className="p-3 bg-destructive/10 border border-destructive/20 rounded-xl text-destructive text-[11px] leading-tight">
+                      <strong>Aviso Crítico:</strong> O método antigo (CMD_API_LOGIN_KEYS) foi desativado por falha de segurança na delegação. Sem a permissão <strong>LKM_CREATE_URL</strong>, o login do cliente falhará.
+                    </div>
                   </div>
                 </div>
               </DialogContent>
