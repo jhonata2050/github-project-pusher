@@ -233,15 +233,15 @@ function ClientDetailPage() {
       }
     >
       <div className="flex flex-col gap-8">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-bold tracking-tight">{client.full_name || "Sem Nome"}</h1>
-            <p className="text-muted-foreground">{client.email}</p>
+            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">{client.full_name || "Sem Nome"}</h1>
+            <p className="text-sm text-muted-foreground">{client.email}</p>
           </div>
-          <div className="flex gap-3">
+          <div className="flex flex-wrap gap-3">
             <Button 
               variant="outline" 
-              className="rounded-xl flex gap-2 h-10"
+              className="rounded-xl flex gap-2 h-10 flex-1 sm:flex-none"
               onClick={handleImpersonate}
               disabled={isImpersonating}
             >
@@ -252,7 +252,6 @@ function ClientDetailPage() {
               {client.status === "active" ? "Ativo" : "Inativo"}
             </Badge>
           </div>
-
         </div>
 
         <Tabs defaultValue="info" className="w-full">
@@ -724,8 +723,8 @@ function ClientDetailPage() {
             </DialogDescription>
           </DialogHeader>
           {editingService && (
-            <form onSubmit={handleUpdateService} className="space-y-4 py-4">
-              <div className="grid gap-2">
+            <form onSubmit={handleUpdateService} className="grid grid-cols-1 sm:grid-cols-2 gap-4 py-4">
+              <div className="grid gap-2 sm:col-span-2">
                 <Label htmlFor="product_id">Produto / Plano</Label>
                 <Select 
                   name="product_id" 
