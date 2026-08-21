@@ -186,11 +186,11 @@ export async function callDA({ hostname, apiUser, apiToken, command, method = 'G
 
     const text = await response.text();
     try {
-      const parsed = JSON.parse(text);
+      const parsed = JSON.parse(text) as Record<string, any>;
       // REGRA: Se a resposta for JSON mas contiver 'error' como string "1" ou número 1, tratamos como erro da API
-      if (parsed && (parsed.error === '1' || parsed.error === 1)) {
-        const errorMsg = parsed.details || parsed.text || "Erro desconhecido na API do DirectAdmin";
-        throw new Error(errorMsg);
+      if (parsed && (parsed['error'] === '1' || parsed['error'] === 1)) {
+        const errorMsg = parsed['details'] || parsed['text'] || "Erro desconhecido na API do DirectAdmin";
+        throw new Error(String(errorMsg));
       }
       return parsed;
     } catch (e) {
@@ -201,9 +201,9 @@ export async function callDA({ hostname, apiUser, apiToken, command, method = 'G
       }
       
       // Fallback para URLSearchParams se não for JSON
-      const parsed = Object.fromEntries(new URLSearchParams(text));
-      if (parsed && (parsed.error === '1' || parsed.error === '1')) {
-         throw new Error(String(parsed.details || parsed.text || "Erro na API (Fallback)"));
+      const parsed = Object.fromEntries(new URLSearchParams(text)) as Record<string, any>;
+      if (parsed && (parsed['error'] === '1' || parsed['error'] === 1)) {
+         throw new Error(String(parsed['details'] || parsed['text'] || "Erro na API (Fallback)"));
       }
       return parsed;
     }
@@ -579,21 +579,22 @@ export async function getDASession(serverId: string, username: string, redirectU
   // DIAGNÓSTICO TÉCNICO E VALIDAÇÃO DE IDENTIDADE SSO
   if (result) {
     const { createSystemLog } = await import("./system-logs.server");
+    const resObj = result as Record<string, any>;
     
     // Log do resultado bruto para depuração (apenas logs internos)
-    console.log(`[DA-SSO-Response-Debug] Payload:`, JSON.stringify(result));
+    console.log(`[DA-SSO-Response-Debug] Payload:`, JSON.stringify(resObj));
 
     // Se o resultado não contiver o campo 'user', o DirectAdmin provavelmente não processou a impersonação
     // IMPORTANTE: Algumas versões do DA retornam o campo 'user' dentro de 'details' ou no root.
-    const returnedUser = result.user || result.username;
+    const returnedUser = resObj['user'] || resObj['username'];
 
     if (!returnedUser) {
-      console.error(`[DA-SSO-Security-Failure] Resposta sem confirmação de usuário. Resposta:`, JSON.stringify(result));
+      console.error(`[DA-SSO-Security-Failure] Resposta sem confirmação de usuário. Resposta:`, JSON.stringify(resObj));
       await createSystemLog({
         category: 'security',
         level: 'critical',
         message: `FALHA DE IDENTIDADE SSO: O servidor não confirmou o usuário alvo. A Login Key pode estar sem a permissão 'LKM_CREATE_URL' com impersonação.`,
-        metadata: { targetUser, serverId, response: result }
+        metadata: { targetUser, serverId, response: resObj }
       }).catch(e => console.error(e));
       
       throw new Error(`Erro de Segurança: O servidor DirectAdmin não confirmou a identidade do usuário na sessão gerada. O acesso foi bloqueado para evitar login administrativo indevido.`);
