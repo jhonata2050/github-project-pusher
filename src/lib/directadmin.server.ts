@@ -104,16 +104,18 @@ export async function callDA({ hostname, apiUser, apiToken, command, method = 'G
   // DIAGNÓSTICO TÉCNICO: Logs para auditoria de identidade SSO
   if (command === 'CMD_API_LOGIN_KEYS') {
     const { createSystemLog } = await import("./system-logs.server");
-    console.log(`[DA-SSO-Audit] Iniciando SSO para ${params['user'] || 'N/A'} via chave ${username}`);
+    const isImpersonated = username.includes('|');
+    console.log(`[DA-SSO-Audit] SSO para ${params['user'] || 'N/A'} | Auth=${username} | Impersonated=${isImpersonated}`);
     
     // Log persistente no banco para auditoria de administrador
     await createSystemLog({
       category: 'directadmin',
       level: 'info',
-      message: `SSO Gerado: Alvo=${params['user']} | Autenticador=${username}`,
+      message: `Requisição SSO: Alvo=${params['user']} | Autenticador=${username}`,
       metadata: { 
         targetUser: params['user'], 
         apiUser: username,
+        isImpersonated,
         endpoint: command,
         timestamp: new Date().toISOString()
       }
@@ -617,13 +619,18 @@ export async function getDASession(serverId: string, username: string, redirectU
 
   // 1 & 2. REMOVER FLUXO INCORRETO E USAR FLUXO OFICIAL VALIDADO
   // O fluxo POST /api/login/url com JSON foi removido conforme instrução.
-  console.log(`[DA-SSO] Gerando One-Time URL para ${targetUser} via CMD_API_LOGIN_KEYS`);
+  console.log(`[DA-SSO] Gerando One-Time URL para ${targetUser} via CMD_API_LOGIN_KEYS com impersonation`);
+
+  // REGRA DE IMPERSONATION: Para que a sessão pertença ao usuário alvo, a autenticação
+  // deve ser feita no formato "RESELLER|USUARIO".
+  const apiUserBase = (server.api_user || '').split('|')[0] || '';
+  const effectiveApiUser = `${apiUserBase}|${targetUser}`;
 
   let result: any;
   try {
     result = await callDA({
       hostname: server.hostname,
-      apiUser: server.api_user ?? "",
+      apiUser: effectiveApiUser,
       apiToken: server.api_token ?? "",
       command: 'CMD_API_LOGIN_KEYS',
       method: 'POST',
@@ -689,8 +696,10 @@ export async function getDASession(serverId: string, username: string, redirectU
 
   // 12. BLOQUEIO PROATIVO DE IDENTIDADE ADMINISTRATIVA (REFORÇADO)
   const apiAdmin = (server.api_user || '').split('|')[0] || '';
+  // Se a URL contiver o nome do reseller no parâmetro user=, e o targetUser for diferente, bloqueamos.
+  // Note: O DA costuma colocar user=TARGET na URL de one-time se o impersonation funcionou.
   if (apiAdmin && loginUrl.toLowerCase().includes(`user=${apiAdmin.toLowerCase()}`) && targetUser.toLowerCase() !== apiAdmin.toLowerCase()) {
-     console.error(`[SSO-Security-Violation] Admin Leak Detected in URL! Target=${targetUser}, Admin=${apiAdmin}`);
+     console.error(`[SSO-Security-Violation] Admin Identity Leak in URL! Target=${targetUser}, Leak=${apiAdmin}`);
      throw new Error("DA_DIRECTADMIN_BLOCKED");
   }
 
