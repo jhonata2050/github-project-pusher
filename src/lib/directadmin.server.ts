@@ -630,8 +630,15 @@ export async function getDASession(serverId: string, username: string, redirectU
 
   // REGRA DE IMPERSONATION: Para que a sessão pertença ao usuário alvo, a autenticação
   // deve ser feita no formato "RESELLER|USUARIO".
-  const apiUserBase = (server.api_user || '').split('|')[0] || '';
-  const effectiveApiUser = `${apiUserBase}|${targetUser}`;
+  // REGRA DE IMPERSONATION: Para que a sessão pertença ao usuário alvo, a autenticação
+  // deve ser feita no formato "RESELLER|USUARIO|NOME_CHAVE".
+  // Buscamos o reseller e o nome da chave das configurações do servidor.
+  const apiUserParts = (server.api_user || '').split('|');
+  const reseller = apiUserParts[0] || '';
+  const keyName = apiUserParts[apiUserParts.length - 1] || '';
+  
+  // Montamos a identidade com 3 partes para callDA processar: RESELLER|TARGET|KEYNAME
+  const effectiveApiUser = `${reseller}|${targetUser}|${keyName}`;
 
   let result: any;
   try {
