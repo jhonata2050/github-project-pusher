@@ -810,6 +810,7 @@ export const updateServiceDetails = createServerFn({ method: "POST" })
       next_due_date: z.string().nullable(),
       status: z.enum(["active", "pending", "suspended", "terminated", "cancelled"]).nullable(),
       block_directadmin: z.boolean().optional(),
+      password: z.string().nullable().optional(),
     }).parse(data)
   )
   .handler(async ({ data: input, context }) => {
