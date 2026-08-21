@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { LayoutPanelLeft, Search, Store, ExternalLink } from "lucide-react";
+import { LayoutPanelLeft, Search, Store, ExternalLink, Monitor } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 
@@ -124,7 +124,7 @@ function ClientServicesPage() {
                       "flex size-10 items-center justify-center rounded-xl",
                       svc.status === 'active' ? 'bg-success/10 text-success' : 'bg-warning/10 text-warning'
                     )}>
-                      <Store className="size-5" />
+                      {svc.products?.product_type === 'vps' ? <Monitor className="size-5" /> : <Store className="size-5" />}
                     </div>
                     <Badge variant="outline" className={cn(
                       "rounded-full border-none px-3 text-[10px] font-bold uppercase", 
