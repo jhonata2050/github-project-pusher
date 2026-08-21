@@ -155,7 +155,7 @@ function Index() {
 
             {groups.data.map((group) => (
               <TabsContent key={group.id} value={group.id} className="mt-8 animate-in fade-in zoom-in duration-300">
-                <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                   {group.products.map((plan) => {
                     const monthly = plan.product_prices?.find((p: any) => p.cycle === "monthly" && p.is_active);
                     return (
