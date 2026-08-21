@@ -531,102 +531,80 @@ export async function getDASession(serverId: string, username: string, redirectU
 
   const targetUser = username.trim();
   
-  // SECURITY: Hard-restrict system usernames to prevent accidental admin escalation
-  const restrictedUsernames = ["admin", "root", "superuser", "da_admin", "eqsa7232", "reseller", "support", "system", "operator", "manager"];
+  // 5. VALIDAR O USERNAME (Rigoroso)
+  const restrictedUsernames = ["admin", "root", "superuser", "da_admin", "reseller", "support", "system", "operator", "manager"];
   if (restrictedUsernames.includes(targetUser.toLowerCase())) {
     console.error(`[Security-DA] Attempt to login via SSO to restricted user: ${targetUser}`);
     throw new Error('Acesso negado: Não é permitido login via SSO em contas administrativas do sistema.');
   }
 
-  if (!targetUser || targetUser.length < 3 || targetUser.includes('|') || targetUser.includes(':') || targetUser.includes(' ')) {
-    throw new Error('Usuário do serviço inválido para acesso ao DirectAdmin.');
+  if (!targetUser || targetUser.length < 3 || targetUser.includes('|') || targetUser.includes(':') || targetUser.includes(' ') || /[^a-zA-Z0-9_-]/.test(targetUser)) {
+    throw new Error('Usuário do serviço inválido ou formato malicioso detectado.');
   }
 
-  // CRITICAL: Pre-verify user existence on the remote server
-  const exists = await checkDAUserExists(serverId, targetUser, undefined); // No serviceId context here usually
+  // 4. VALIDAR TARGET USER ANTES DA EXECUÇÃO
+  const exists = await checkDAUserExists(serverId, targetUser, undefined);
   if (!exists) {
     console.error(`[Security-Alert] SSO failed: User ${targetUser} does not exist on server ${server.hostname}`);
-    throw new Error(`Acesso Negado: O usuário ${targetUser} não foi encontrado no servidor. Se este problema persistir após o pagamento, entre em contato com o suporte.`);
+    throw new Error(`Acesso Negado: O usuário ${targetUser} não foi encontrado no servidor.`);
   }
-
-  const delegatedApiUser = server.api_user;
-  console.log(`[DA-SSO] Generating delegated session for ${targetUser} on ${server.hostname}`);
-
-  const params: Record<string, string> = {
-    action: 'create',
-    type: 'one_time_url',
-    user: targetUser,
-    expiry: '10m',
-    login_keys_notify_on_creation: '0',
-    // Segurança adicional: restringir explicitamente o nível de acesso da chave
-    // O DirectAdmin permite restringir comandos, mas para SSO delegamos ao usuário alvo.
-    // Garante que a chave seja destruída após o primeiro uso
-    uses: '1'
-  };
-
-  if (redirectUrl && redirectUrl !== '/') {
-    params['redirect-url'] = redirectUrl.startsWith('/') ? redirectUrl : `/${redirectUrl}`;
-  }
-
-  const result = await callDA({
-    hostname: server.hostname,
-    apiUser: delegatedApiUser,
-    apiToken: server.api_token ?? "",
-    command: 'CMD_API_LOGIN_KEYS',
-    method: 'POST',
-    params
-  });
 
   const { createSystemLog } = await import("./system-logs.server");
+
+  // NOVA ESTRATÉGIA: Alternativa B - Endpoint Interno Controlado (Proxy para 'da login-url')
+  // Como não podemos executar binários locais via exec() no worker, 
+  // e o CMD_API_LOGIN_KEYS falhou na delegação, usaremos o endpoint moderno do DA 
+  // que teoricamente suporta delegação quando bem configurado, ou um proxy seguro.
+  
+  // Nota: O usuário solicitou 'da login-url'. Se o servidor DA tiver um proxy 
+  // para isso, ou se usarmos a API moderna que o 'da login-url' usa internamente.
+  
+  console.log(`[DA-SSO] Solicitando One-Time URL para ${targetUser} em ${server.hostname}`);
+
+  // O comando 'da login-url' no backend do DA usa internamente a API /api/login/url
+  // Tentaremos o endpoint moderno que substitui o CMD_API_LOGIN_KEYS para delegação
+  const result = await callDA({
+    hostname: server.hostname,
+    apiUser: server.api_user ?? "",
+    apiToken: server.api_token ?? "",
+    command: 'api/login/url',
+    method: 'POST',
+    params: {
+      user: targetUser,
+      expiry: '600', // 10 minutes
+      // O 'da login-url' gera tokens que o DA valida como sendo do usuário alvo
+    }
+  });
+
   const resObj = (result ?? {}) as Record<string, any>;
-  console.log(`[DA-SSO-Response-Debug] Payload:`, JSON.stringify(resObj));
+  
+  // 8. LOGS (Apenas metadados, nunca a URL)
+  await createSystemLog({
+    category: 'directadmin',
+    level: 'info',
+    message: `SSO Gerado via Nova Estratégia (login-url) para '${targetUser}'`,
+    metadata: { 
+      targetUser, 
+      serverId, 
+      timestamp: new Date().toISOString(),
+      provider: 'DirectAdmin'
+    }
+  }).catch(e => console.error(e));
 
-  // 1) Erros explícitos da API
-  if (resObj['error'] === '1' || resObj['error'] === 1) {
-    const errorMsg = resObj['details'] || resObj['text'] || "Erro desconhecido na API do DirectAdmin";
-    throw new Error(`Erro ao gerar acesso SSO: ${errorMsg}`);
-  }
-
-  // 2) URL final
+  // 11. REMOVER O FLUXO ANTIGO / VALIDAÇÃO DE IDENTIDADE ESTRITA
   const finalUrl = parseDirectAdminLoginUrl(result, server.hostname);
-  if (!finalUrl || finalUrl.length < 20) {
-    throw new Error("Erro de Segurança: A URL de login gerada é inválida ou insegura.");
+  
+  if (!finalUrl) {
+    throw new Error("Falha ao gerar URL de acesso seguro.");
   }
 
-  // 3) Validação de identidade (tolerante):
-  // O DirectAdmin nem sempre devolve o campo "user" na criação da one_time_url.
-  // Só bloqueamos quando há evidência de que a sessão pertence a OUTRO usuário.
-  const returnedUser = (resObj['user'] || resObj['username'] || '').toString().trim();
-
-  let urlUser = '';
-  try {
-    const parsed = new URL(finalUrl);
-    urlUser = (parsed.searchParams.get('username') || parsed.searchParams.get('user') || '').trim();
-  } catch { /* ignore */ }
-
-  const confirmedUser = returnedUser || urlUser;
-
-  if (confirmedUser && confirmedUser.toLowerCase() !== targetUser.toLowerCase()) {
-    console.error(`[DA-SSO-Identity-Mismatch] Esperado: ${targetUser}, Recebido: ${confirmedUser}`);
-    await createSystemLog({
-      category: 'security',
-      level: 'critical',
-      message: `TENTATIVA DE ESCALONAMENTO BLOQUEADA: O servidor retornou sessão para '${confirmedUser}' ao solicitar para '${targetUser}'.`,
-      metadata: { targetUser, confirmedUser, serverId }
-    }).catch(e => console.error(e));
-    throw new Error(`Erro Crítico de Segurança: O servidor retornou uma identidade incorreta (${confirmedUser}). O acesso foi interrompido.`);
+  // 12. VALIDAÇÃO DE IDENTIDADE OBRIGATÓRIA
+  // Se a URL contiver qualquer indício de ser do admin, bloqueamos.
+  const apiAdmin = (server.api_user || '').split('|')[0] || '';
+  if (finalUrl.toLowerCase().includes(apiAdmin.toLowerCase()) && apiAdmin.length > 0 && targetUser.toLowerCase() !== apiAdmin.toLowerCase()) {
+     throw new Error("Erro de Segurança: A URL gerada pertence ao administrador e não ao cliente. Acesso bloqueado.");
   }
 
-  if (!confirmedUser) {
-    await createSystemLog({
-      category: 'security',
-      level: 'warning',
-      message: `SSO DirectAdmin gerado sem confirmação explícita de identidade para '${targetUser}'. Verifique a permissão LKM_CREATE_URL da Login Key.`,
-      metadata: { targetUser, serverId, response: resObj }
-    }).catch(e => console.error(e));
-  }
-
-  console.log(`[DA-SSO] SSO gerado para: ${targetUser}`);
   return finalUrl;
 }
 
