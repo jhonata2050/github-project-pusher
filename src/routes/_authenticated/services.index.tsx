@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { LayoutPanelLeft, Search, Store, ExternalLink } from "lucide-react";
+import { LayoutPanelLeft, Search, Store, ExternalLink, Monitor } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 

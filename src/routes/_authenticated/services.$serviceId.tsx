@@ -146,7 +146,7 @@ function ServiceManagementPage() {
           </Button>
           <div>
             <h1 className="text-2xl font-semibold tracking-tight">
-              {service?.products?.product_type === 'vps' ? 'Gerenciar VPS' : 'Gerenciar Plano'}
+              {(service as any)?.products?.product_type === 'vps' ? 'Gerenciar VPS' : 'Gerenciar Plano'}
             </h1>
             <p className="text-muted-foreground text-sm">
               {service?.domain || (isLoading ? "Carregando..." : "Sem domínio")}
