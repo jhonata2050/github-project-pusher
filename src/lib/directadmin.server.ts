@@ -614,8 +614,9 @@ export async function getDASession(serverId: string, username: string, redirectU
     }
   }
 
-  if (resObj && (resObj['error'] === '1' || resObj['error'] === 1)) {
-    const errorMsg = resObj['details'] || resObj['text'] || "Erro desconhecido na API do DirectAdmin";
+  const ssoRes = result as Record<string, any>;
+  if (ssoRes && (ssoRes['error'] === '1' || ssoRes['error'] === 1)) {
+    const errorMsg = ssoRes['details'] || ssoRes['text'] || "Erro desconhecido na API do DirectAdmin";
     throw new Error(`Erro ao gerar acesso SSO: ${errorMsg}`);
   }
 

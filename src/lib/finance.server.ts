@@ -243,8 +243,9 @@ export async function processProvisioning(invoiceId: string) {
         });
 
         // Validar se o DA retornou erro no corpo (mesmo com status 200)
-        if (result && (result.error === '1' || result.error === 1)) {
-          throw new Error(result.details || result.text || "O servidor DirectAdmin recusou a criação da conta.");
+        const resObj = result as Record<string, any>;
+        if (resObj && (resObj['error'] === '1' || resObj['error'] === 1)) {
+          throw new Error(String(resObj['details'] || resObj['text'] || "O servidor DirectAdmin recusou a criação da conta."));
         }
 
         await supabaseAdmin
