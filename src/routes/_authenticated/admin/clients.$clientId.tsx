@@ -880,7 +880,7 @@ function ClientDetailPage() {
                 <Button 
                   type="submit" 
                   disabled={updateServiceMutation.isPending} 
-                  className="bg-brand text-brand-foreground w-full rounded-2xl h-12 font-bold"
+                  className="bg-brand text-brand-foreground w-full rounded-2xl h-11 font-bold text-sm"
                 >
                   {updateServiceMutation.isPending ? "Salvando..." : "Salvar Alterações"}
                 </Button>
