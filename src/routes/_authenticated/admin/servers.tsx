@@ -221,19 +221,100 @@ function AdminServersPage() {
   return (
     <AppShell area="admin" breadcrumb={<span>Sistema / Servidores</span>}>
       <div className="space-y-8">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
             <h1 className="text-3xl font-bold tracking-tight text-foreground">Servidores</h1>
             <p className="text-muted-foreground mt-2">
               Gerencie a infraestrutura de hospedagem e provisionamento automático.
             </p>
           </div>
-          <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-            <DialogTrigger asChild>
-              <Button className="bg-brand text-brand-foreground hover:bg-brand/90 rounded-2xl px-6">
-                <Plus className="mr-2 h-4 w-4" /> Novo Servidor
-              </Button>
-            </DialogTrigger>
+          <div className="flex flex-wrap items-center gap-3">
+            <Dialog>
+              <DialogTrigger asChild>
+                <Button variant="outline" className="rounded-2xl border-brand/20 text-brand">
+                  <Shield className="mr-2 h-4 w-4" /> Comandos Necessários
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="rounded-3xl border-none shadow-2xl max-w-lg">
+                <DialogHeader>
+                  <DialogTitle className="text-2xl font-bold flex items-center gap-2">
+                    <Shield className="h-6 w-6 text-brand" /> 
+                    Configuração da Login Key
+                  </DialogTitle>
+                </DialogHeader>
+                <div className="space-y-6 py-4">
+                  <div className="bg-brand/5 border border-brand/10 p-4 rounded-2xl space-y-2">
+                    <h4 className="font-bold text-brand flex items-center gap-2">
+                      <AlertCircle className="h-4 w-4" /> Importante: Whitelist de IP
+                    </h4>
+                    <p className="text-sm text-muted-foreground">
+                      Para que o Eqsam Cloud consiga se comunicar com seu DirectAdmin, você deve permitir o IP abaixo na sua Login Key:
+                    </p>
+                    <div className="flex items-center justify-between bg-background p-3 rounded-xl border border-brand/20">
+                      <code className="text-brand font-mono font-bold">34.91.200.163</code>
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        className="h-8 rounded-lg"
+                        onClick={() => {
+                          navigator.clipboard.writeText("34.91.200.163");
+                          toast.success("IP copiado para a área de transferência!");
+                        }}
+                      >
+                        <Copy className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+
+                  <div className="space-y-3">
+                    <h4 className="font-bold text-foreground">Comandos de API Necessários:</h4>
+                    <p className="text-sm text-muted-foreground">
+                      Ao criar a Login Key, selecione "Allow commands" ou marque manualmente os itens abaixo:
+                    </p>
+                    <div className="bg-muted/50 p-4 rounded-2xl grid grid-cols-1 md:grid-cols-2 gap-2 text-[13px] font-mono">
+                      {[
+                        "CMD_API_PACKAGES_USER",
+                        "CMD_API_ACCOUNT_USER",
+                        "CMD_API_SHOW_USER_CONFIG",
+                        "CMD_API_SELECT_USERS",
+                        "CMD_API_LOGIN_KEYS",
+                        "CMD_API_USER_DOMAIN_LIST"
+                      ].map(cmd => (
+                        <div key={cmd} className="flex items-center gap-2 text-muted-foreground">
+                          <Check className="h-3 w-3 text-brand" /> {cmd}
+                        </div>
+                      ))}
+                    </div>
+                    <Button 
+                      variant="outline" 
+                      className="w-full rounded-xl"
+                      onClick={() => {
+                        const cmds = [
+                          "CMD_API_PACKAGES_USER",
+                          "CMD_API_ACCOUNT_USER",
+                          "CMD_API_SHOW_USER_CONFIG",
+                          "CMD_API_SELECT_USERS",
+                          "CMD_API_LOGIN_KEYS",
+                          "CMD_API_USER_DOMAIN_LIST"
+                        ].join("\n");
+                        navigator.clipboard.writeText(cmds);
+                        toast.success("Lista de comandos copiada!");
+                      }}
+                    >
+                      <Copy className="mr-2 h-4 w-4" /> Copiar Lista de Comandos
+                    </Button>
+                  </div>
+                </div>
+              </DialogContent>
+            </Dialog>
+
+            <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
+              <DialogTrigger asChild>
+                <Button className="bg-brand text-brand-foreground hover:bg-brand/90 rounded-2xl px-6">
+                  <Plus className="mr-2 h-4 w-4" /> Novo Servidor
+                </Button>
+              </DialogTrigger>
+
             <DialogContent className="rounded-3xl border-none shadow-2xl max-w-md">
               <DialogHeader>
                 <DialogTitle className="text-2xl font-bold">Adicionar Servidor</DialogTitle>
