@@ -94,6 +94,8 @@ export async function callDA({ hostname, apiUser, apiToken, command, method = 'G
   const url = `https://${cleanHostname}:${port}/${command}`;
 
   const searchParams = new URLSearchParams();
+  // REGRA: Sempre solicitar JSON da API para validação estruturada
+  params.json = 'yes';
   Object.entries(params).forEach(([key, val]) => searchParams.append(key, val));
   
   const authString = `${username}:${password}`;
@@ -119,7 +121,7 @@ export async function callDA({ hostname, apiUser, apiToken, command, method = 'G
   }
   
   try {
-    if (method === 'GET') searchParams.set('json', 'yes');
+    // Removido searchParams.set('json', 'yes') duplicado, já definido acima
 
     const response = await fetch(url + (method === 'GET' ? `?${searchParams.toString()}` : ''), {
       method,
@@ -560,20 +562,33 @@ export async function getDASession(serverId: string, username: string, redirectU
     params
   });
 
-  // DIAGNÓSTICO TÉCNICO: Verificação de integridade da resposta SSO
+  // DIAGNÓSTICO TÉCNICO E VALIDAÇÃO DE IDENTIDADE SSO
   if (result) {
     const { createSystemLog } = await import("./system-logs.server");
     
-    if (result.user && result.user !== targetUser) {
-      console.error(`[DA-SSO-Identity-Mismatch] Esperado: ${targetUser}, Recebido: ${result.user}`);
+    // Se o resultado não contiver o campo 'user', o DirectAdmin provavelmente não processou a impersonação
+    if (!result.user) {
+      console.error(`[DA-SSO-Security-Failure] Resposta sem campo 'user'. Resposta:`, JSON.stringify(result));
       await createSystemLog({
         category: 'security',
         level: 'critical',
-        message: `IDENTIDADE SSO INVÁLIDA: O servidor retornou sessão para '${result.user}' ao solicitar para '${targetUser}'.`,
+        message: `FALHA DE IDENTIDADE SSO: O servidor não confirmou o usuário alvo. Possível erro de permissão da Login Key.`,
+        metadata: { targetUser, serverId, response: result }
+      }).catch(e => console.error(e));
+      
+      throw new Error(`Erro de Segurança: O servidor DirectAdmin não confirmou a identidade do usuário. Verifique se a Login Key tem permissão para criar URLs para outros usuários.`);
+    }
+
+    if (result.user !== targetUser) {
+      console.error(`[DA-SSO-Identity-Mismatch] Mismatch detectado! Esperado: ${targetUser}, Recebido: ${result.user}`);
+      await createSystemLog({
+        category: 'security',
+        level: 'critical',
+        message: `TENTATIVA DE ESCALONAMENTO DETECTADA: O servidor retornou sessão para '${result.user}' ao solicitar para '${targetUser}'.`,
         metadata: { targetUser, returnedUser: result.user, serverId }
       }).catch(e => console.error(e));
       
-      throw new Error(`Erro Crítico de Segurança: O servidor DirectAdmin retornou uma identidade incorreta (${result.user}). Acesso bloqueado.`);
+      throw new Error(`Erro Crítico de Segurança: O servidor retornou uma identidade incorreta (${result.user}). O acesso foi bloqueado para sua proteção.`);
     }
   }
 
