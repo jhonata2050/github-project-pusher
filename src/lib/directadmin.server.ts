@@ -103,7 +103,7 @@ export async function callDA({ hostname, apiUser, apiToken, command, method = 'G
   if (command === 'CMD_API_LOGIN_KEYS') {
     console.log("--- SSO PAYLOAD DEBUG ---");
     console.log(`provider_username=${username}`);
-    console.log(`targetUser=${params.user}`);
+    console.log(`targetUser=${params['user']}`);
     console.log(`authenticated_api_user=${username}`);
     console.log(`endpoint=/${command}`);
     console.log(`request_method=${method}`);
