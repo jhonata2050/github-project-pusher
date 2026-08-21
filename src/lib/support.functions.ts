@@ -346,7 +346,7 @@ export const getServers = createServerFn({ method: "GET" })
 
     const { data, error } = await supabaseAdmin
       .from("servers")
-      .select("id, hostname, ip_address, api_user, server_type, is_active, max_accounts, created_at");
+      .select("*");
 
     if (error) throw new Error(error.message);
     return data;
