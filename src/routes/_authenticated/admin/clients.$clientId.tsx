@@ -377,9 +377,8 @@ function ClientDetailPage() {
                     <input type="hidden" id="status_hidden" name="status" defaultValue={client.status} />
                   </div>
 
-                  <div className="col-span-full border-t pt-4">
-
-                    <h3 className="text-lg font-medium mb-4 flex items-center gap-2">
+                  <div className="col-span-full border-t pt-4 mt-2">
+                    <h3 className="text-base font-bold mb-2 flex items-center gap-2">
                       <MapPin className="size-4" /> Endereço
                     </h3>
                   </div>
