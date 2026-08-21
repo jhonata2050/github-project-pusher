@@ -104,16 +104,18 @@ export async function callDA({ hostname, apiUser, apiToken, command, method = 'G
   // DIAGNÓSTICO TÉCNICO: Logs para auditoria de identidade SSO
   if (command === 'CMD_API_LOGIN_KEYS') {
     const { createSystemLog } = await import("./system-logs.server");
-    console.log(`[DA-SSO-Audit] Iniciando SSO para ${params['user'] || 'N/A'} via chave ${username}`);
+    const isImpersonated = username.includes('|');
+    console.log(`[DA-SSO-Audit] SSO para ${params['user'] || 'N/A'} | Auth=${username} | Impersonated=${isImpersonated}`);
     
     // Log persistente no banco para auditoria de administrador
     await createSystemLog({
       category: 'directadmin',
       level: 'info',
-      message: `SSO Gerado: Alvo=${params['user']} | Autenticador=${username}`,
+      message: `Requisição SSO: Alvo=${params['user']} | Autenticador=${username}`,
       metadata: { 
         targetUser: params['user'], 
         apiUser: username,
+        isImpersonated,
         endpoint: command,
         timestamp: new Date().toISOString()
       }
