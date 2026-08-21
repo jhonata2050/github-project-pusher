@@ -46,6 +46,7 @@ import { Route as AuthenticatedTicketsTicketIdRouteImport } from './routes/_auth
 import { Route as AuthenticatedVpsIndexRouteImport } from './routes/_authenticated/vps/index'
 import { Route as AuthenticatedVpsVpsIdRouteImport } from './routes/_authenticated/vps/$vpsId'
 import { Route as ApiPublicBrandingRouteImport } from './routes/api/public/branding'
+import { Route as ApiPublicDebugSsoRouteImport } from './routes/api/public/debug-sso'
 import { Route as ApiPublicPasswordResetRouteImport } from './routes/api/public/password-reset'
 import { Route as ApiPublicVpsMetricsRouteImport } from './routes/api/public/vps-metrics'
 import { Route as ApiPublicWebhookRouteImport } from './routes/api/public/webhook'
@@ -268,6 +269,11 @@ const ApiPublicBrandingRoute = ApiPublicBrandingRouteImport.update({
   path: '/api/public/branding',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicDebugSsoRoute = ApiPublicDebugSsoRouteImport.update({
+  id: '/api/public/debug-sso',
+  path: '/api/public/debug-sso',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicPasswordResetRoute = ApiPublicPasswordResetRouteImport.update({
   id: '/api/public/password-reset',
   path: '/api/public/password-reset',
@@ -391,6 +397,7 @@ export interface FileRoutesByFullPath {
   '/tickets/$ticketId': typeof AuthenticatedTicketsTicketIdRoute
   '/vps/$vpsId': typeof AuthenticatedVpsVpsIdRoute
   '/api/public/branding': typeof ApiPublicBrandingRoute
+  '/api/public/debug-sso': typeof ApiPublicDebugSsoRoute
   '/api/public/password-reset': typeof ApiPublicPasswordResetRoute
   '/api/public/vps-metrics': typeof ApiPublicVpsMetricsRoute
   '/api/public/webhook': typeof ApiPublicWebhookRoute
@@ -440,6 +447,7 @@ export interface FileRoutesByTo {
   '/tickets/$ticketId': typeof AuthenticatedTicketsTicketIdRoute
   '/vps/$vpsId': typeof AuthenticatedVpsVpsIdRoute
   '/api/public/branding': typeof ApiPublicBrandingRoute
+  '/api/public/debug-sso': typeof ApiPublicDebugSsoRoute
   '/api/public/password-reset': typeof ApiPublicPasswordResetRoute
   '/api/public/vps-metrics': typeof ApiPublicVpsMetricsRoute
   '/api/public/webhook': typeof ApiPublicWebhookRoute
@@ -496,6 +504,7 @@ export interface FileRoutesById {
   '/_authenticated/tickets/$ticketId': typeof AuthenticatedTicketsTicketIdRoute
   '/_authenticated/vps/$vpsId': typeof AuthenticatedVpsVpsIdRoute
   '/api/public/branding': typeof ApiPublicBrandingRoute
+  '/api/public/debug-sso': typeof ApiPublicDebugSsoRoute
   '/api/public/password-reset': typeof ApiPublicPasswordResetRoute
   '/api/public/vps-metrics': typeof ApiPublicVpsMetricsRoute
   '/api/public/webhook': typeof ApiPublicWebhookRoute
@@ -552,6 +561,7 @@ export interface FileRouteTypes {
     | '/tickets/$ticketId'
     | '/vps/$vpsId'
     | '/api/public/branding'
+    | '/api/public/debug-sso'
     | '/api/public/password-reset'
     | '/api/public/vps-metrics'
     | '/api/public/webhook'
@@ -601,6 +611,7 @@ export interface FileRouteTypes {
     | '/tickets/$ticketId'
     | '/vps/$vpsId'
     | '/api/public/branding'
+    | '/api/public/debug-sso'
     | '/api/public/password-reset'
     | '/api/public/vps-metrics'
     | '/api/public/webhook'
@@ -656,6 +667,7 @@ export interface FileRouteTypes {
     | '/_authenticated/tickets/$ticketId'
     | '/_authenticated/vps/$vpsId'
     | '/api/public/branding'
+    | '/api/public/debug-sso'
     | '/api/public/password-reset'
     | '/api/public/vps-metrics'
     | '/api/public/webhook'
@@ -685,6 +697,7 @@ export interface RootRouteChildren {
   AuthRoute: typeof AuthRouteWithChildren
   CheckoutProductIdRoute: typeof CheckoutProductIdRoute
   ApiPublicBrandingRoute: typeof ApiPublicBrandingRoute
+  ApiPublicDebugSsoRoute: typeof ApiPublicDebugSsoRoute
   ApiPublicPasswordResetRoute: typeof ApiPublicPasswordResetRoute
   ApiPublicVpsMetricsRoute: typeof ApiPublicVpsMetricsRoute
   ApiPublicWebhookRoute: typeof ApiPublicWebhookRoute
@@ -961,6 +974,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicBrandingRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/debug-sso': {
+      id: '/api/public/debug-sso'
+      path: '/api/public/debug-sso'
+      fullPath: '/api/public/debug-sso'
+      preLoaderRoute: typeof ApiPublicDebugSsoRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/password-reset': {
       id: '/api/public/password-reset'
       path: '/api/public/password-reset'
@@ -1225,6 +1245,7 @@ const rootRouteChildren: RootRouteChildren = {
   AuthRoute: AuthRouteWithChildren,
   CheckoutProductIdRoute: CheckoutProductIdRoute,
   ApiPublicBrandingRoute: ApiPublicBrandingRoute,
+  ApiPublicDebugSsoRoute: ApiPublicDebugSsoRoute,
   ApiPublicPasswordResetRoute: ApiPublicPasswordResetRoute,
   ApiPublicVpsMetricsRoute: ApiPublicVpsMetricsRoute,
   ApiPublicWebhookRoute: ApiPublicWebhookRoute,
