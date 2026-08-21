@@ -762,13 +762,13 @@ function ClientDetailPage() {
                 />
               </div>
               <div className="grid gap-2">
-                <Label htmlFor="domain">Domínio</Label>
+                <Label htmlFor="domain" className="text-xs">Domínio</Label>
                 <Input 
                   id="domain" 
                   name="domain" 
                   defaultValue={editingService.domain || ""} 
                   placeholder="dominio.com.br" 
-                  className="rounded-xl h-11" 
+                  className="rounded-xl h-9 text-xs" 
                 />
               </div>
               <div className="grid gap-2">
