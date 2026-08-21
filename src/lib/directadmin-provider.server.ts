@@ -63,8 +63,8 @@ export class DirectAdminProvider implements HostingProvider {
   }
 
   async getAccountStatus(username: string) {
-    const config = await this.getAccount(username);
-    if (config && config.suspended === 'yes') return 'suspended';
+    const config = await this.getAccount(username) as Record<string, any>;
+    if (config && config['suspended'] === 'yes') return 'suspended';
     return 'active';
   }
 

@@ -460,8 +460,9 @@ export async function checkDAUserExists(serverId: string, username: string, serv
       params: { user: username.trim() }
     });
 
-    if (result && (result.error === '1' || result.error === 1)) {
-      const details = String(result.details || result.text || "");
+    const resObj = result as Record<string, any>;
+    if (resObj && (resObj['error'] === '1' || resObj['error'] === 1)) {
+      const details = String(resObj['details'] || resObj['text'] || "");
       if (details.includes("Cannot show user") || details.includes("does not exist")) {
         return false;
       }
@@ -470,11 +471,11 @@ export async function checkDAUserExists(serverId: string, username: string, serv
     
     // Além de existir, verificamos se o tipo é estritamente 'user' para clientes
     // Se o resultado contiver usertype=reseller ou admin, e não for uma consulta de admin, podemos sinalizar
-    if (result && result.usertype && result.usertype !== 'user' && !username.toLowerCase().includes('admin')) {
-      console.warn(`[DA-Security-Warning] Usuário ${username} detectado com nível ${result.usertype} no servidor ${server.hostname}`);
+    if (resObj && resObj['usertype'] && resObj['usertype'] !== 'user' && !username.toLowerCase().includes('admin')) {
+      console.warn(`[DA-Security-Warning] Usuário ${username} detectado com nível ${resObj['usertype']} no servidor ${server.hostname}`);
     }
 
-    return !!(result && (result.username || result.email || result.error === '0'));
+    return !!(resObj && (resObj['username'] || resObj['email'] || resObj['error'] === '0'));
   } catch (e) {
     const errorStr = String(e);
     
@@ -613,8 +614,8 @@ export async function getDASession(serverId: string, username: string, redirectU
     }
   }
 
-  if (result && (result.error === '1' || result.error === 1)) {
-    const errorMsg = result.details || result.text || "Erro desconhecido na API do DirectAdmin";
+  if (resObj && (resObj['error'] === '1' || resObj['error'] === 1)) {
+    const errorMsg = resObj['details'] || resObj['text'] || "Erro desconhecido na API do DirectAdmin";
     throw new Error(`Erro ao gerar acesso SSO: ${errorMsg}`);
   }
 
