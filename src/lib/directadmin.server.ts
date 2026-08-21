@@ -72,16 +72,16 @@ export async function callDA({ hostname, apiUser, apiToken, command, method = 'G
     );
   }
 
-  // REGRA FUNDAMENTAL: Separar USERNAME e PASSWORD da Login Key
+  // REGRA FUNDAMENTAL: Separar USERNAME e PASSWORD da Login Key.
+  // Suporte a impersonation no formato "RESELLER|USUARIO|NOME_CHAVE" ou "RESELLER|NOME_CHAVE"
   let username = apiUserRaw;
   let password = apiTokenTrimmed;
 
-  // REGRA FUNDAMENTAL: Separar USERNAME e PASSWORD da Login Key.
-  // Suporte a impersonation no formato "RESELLER|USUARIO|NOME_CHAVE" ou "RESELLER|NOME_CHAVE"
   if (apiUserRaw.includes('|')) {
     const parts = apiUserRaw.split('|');
     if (parts.length >= 3) {
       // Formato com impersonation: reseller|target|keyname
+      // O DirectAdmin exige "reseller|target" como usuário na autenticação básica
       username = `${parts[0]}|${parts[1]}`;
     } else {
       // Formato padrão: reseller|keyname
