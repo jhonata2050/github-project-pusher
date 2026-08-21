@@ -506,7 +506,7 @@ function ClientDetailPage() {
                               {s.next_due_date ? format(new Date(s.next_due_date), "dd/MM/yyyy", { locale: ptBR }) : "—"}
                             </TableCell>
                             <TableCell>
-                              <Badge variant={s.status === 'active' ? 'default' : s.status === 'suspended' ? 'secondary' : 'destructive'}>
+                              <Badge className="text-[10px] uppercase px-1.5 h-5" variant={s.status === 'active' ? 'default' : s.status === 'suspended' ? 'secondary' : 'destructive'}>
                                 {s.status}
                               </Badge>
                             </TableCell>
