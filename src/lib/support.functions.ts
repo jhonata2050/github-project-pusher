@@ -529,7 +529,6 @@ export const getServiceServerDetails = createServerFn({ method: "GET" })
       _role: "admin",
     });
 
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data: service, error } = await supabaseAdmin
       .from("services")
       .select(`
@@ -555,29 +554,7 @@ export const getServiceServerDetails = createServerFn({ method: "GET" })
       throw new Error("Acesso negado: Você não possui permissão para acessar este serviço.");
     }
 
-    // Servers table is not readable by clients (RLS/grants), fetch it server-side
-    let server: any = null;
-    if (service.server_id) {
-      const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-      const { data: srv } = await supabaseAdmin
-        .from("servers")
-        .select("id, name, hostname, ip_address, sso_supported")
-        .eq("id", service.server_id)
-        .maybeSingle();
-      server = srv ?? null;
-    }
-    
-    // Fetch VPS instances if linked
-    let vps_instances: any[] = [];
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { data: vpsData } = await supabaseAdmin
-      .from("vps_instances")
-      .select("id, external_id, ip_address, status")
-      .eq("service_id", serviceId);
-    
-    vps_instances = vpsData ?? [];
-
-    return { ...service, servers: server, vps_instances };
+    return service;
   });
 
 
