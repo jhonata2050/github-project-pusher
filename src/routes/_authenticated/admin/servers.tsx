@@ -330,10 +330,10 @@ function AdminServersPage() {
                 <div className="grid gap-2">
                   <Label htmlFor="api_user" className="flex items-center gap-2">
                     Usuário API
-                    <Badge variant="outline" className="text-[9px] uppercase px-1.5 py-0 border-brand/50 text-brand font-bold">Obrigatório: USUARIO|CHAVE</Badge>
+                    <Badge variant="outline" className="text-[9px] uppercase px-1.5 py-0 border-brand/50 text-brand font-bold">Convenção: USER|KEY</Badge>
                   </Label>
                   <Input id="api_user" name="api_user" placeholder="Ex: admin|TokenEqsam" required className="rounded-xl" />
-                  <p className="text-[10px] text-muted-foreground px-1">Obrigatório o uso do pipe (|) para Login Keys.</p>
+                  <p className="text-[10px] text-muted-foreground px-1">Use "usuario|nome_da_chave" para sua organização. O backend enviará o usuário real para o DirectAdmin.</p>
                 </div>
                 <div className="grid gap-2">
                   <Label htmlFor="api_token">Chave de API / Senha</Label>
