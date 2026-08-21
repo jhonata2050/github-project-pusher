@@ -99,15 +99,23 @@ export async function callDA({ hostname, apiUser, apiToken, command, method = 'G
   const authString = `${username}:${password}`;
   const authHeader = `Basic ${Buffer.from(authString).toString('base64')}`;
 
-  // DIAGNÓSTICO TEMPORÁRIO (Requisito 3)
+  // DIAGNÓSTICO TÉCNICO: Logs para auditoria de identidade SSO
   if (command === 'CMD_API_LOGIN_KEYS') {
-    console.log("--- SSO PAYLOAD DEBUG ---");
-    console.log(`provider_username=${username}`);
-    console.log(`targetUser=${params['user']}`);
-    console.log(`authenticated_api_user=${username}`);
-    console.log(`endpoint=/${command}`);
-    console.log(`request_method=${method}`);
-    console.log("-------------------------");
+    const { createSystemLog } = await import("./system-logs.server");
+    console.log(`[DA-SSO-Audit] Iniciando SSO para ${params['user'] || 'N/A'} via chave ${username}`);
+    
+    // Log persistente no banco para auditoria de administrador
+    await createSystemLog({
+      category: 'directadmin',
+      level: 'info',
+      message: `SSO Gerado: Alvo=${params['user']} | Autenticador=${username}`,
+      metadata: { 
+        targetUser: params['user'], 
+        apiUser: username,
+        endpoint: command,
+        timestamp: new Date().toISOString()
+      }
+    }).catch(e => console.error("Erro ao logar auditoria SSO:", e));
   }
   
   try {
@@ -552,16 +560,21 @@ export async function getDASession(serverId: string, username: string, redirectU
     params
   });
 
-  // DIAGNÓSTICO TEMPORÁRIO (Requisito 4)
+  // DIAGNÓSTICO TÉCNICO: Verificação de integridade da resposta SSO
   if (result) {
-    console.log("--- SSO RESPONSE DEBUG ---");
-    console.log(`error=${result.error}`);
-    console.log(`text=${result.text}`);
-    console.log(`details=${result.details ? 'PRESENT' : 'MISSING'}`);
-    console.log(`keyname=${result.keyname}`);
-    console.log(`type=${result.type}`);
-    console.log(`user=${result.user}`);
-    console.log("--------------------------");
+    const { createSystemLog } = await import("./system-logs.server");
+    
+    if (result.user && result.user !== targetUser) {
+      console.error(`[DA-SSO-Identity-Mismatch] Esperado: ${targetUser}, Recebido: ${result.user}`);
+      await createSystemLog({
+        category: 'security',
+        level: 'critical',
+        message: `IDENTIDADE SSO INVÁLIDA: O servidor retornou sessão para '${result.user}' ao solicitar para '${targetUser}'.`,
+        metadata: { targetUser, returnedUser: result.user, serverId }
+      }).catch(e => console.error(e));
+      
+      throw new Error(`Erro Crítico de Segurança: O servidor DirectAdmin retornou uma identidade incorreta (${result.user}). Acesso bloqueado.`);
+    }
   }
 
   if (result && (result.error === '1' || result.error === 1)) {
