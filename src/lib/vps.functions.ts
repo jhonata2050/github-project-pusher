@@ -11,7 +11,10 @@ export const getMyVPSInstances = createServerFn({ method: "GET" })
     const { supabase, userId } = context as any;
     if (!userId) throw new Error("Unauthorized");
 
-    const { data: services, error: svcError } = await supabase
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    
+    // Busca os serviços do usuário usando supabaseAdmin para evitar RLS restritivo no SELECT inicial
+    const { data: services, error: svcError } = await supabaseAdmin
       .from('services')
       .select('*')
       .eq('user_id', userId);
@@ -20,7 +23,8 @@ export const getMyVPSInstances = createServerFn({ method: "GET" })
     const serviceIds = (services ?? []).map((s: any) => s.id);
     if (serviceIds.length === 0) return [];
 
-    const { data: instances, error } = await supabase
+    // Busca as instâncias vinculadas a esses serviços usando supabaseAdmin
+    const { data: instances, error } = await supabaseAdmin
       .from('vps_instances')
       .select('*')
       .in('service_id', serviceIds);
@@ -72,8 +76,10 @@ export const getVPSDetails = createServerFn({ method: "GET" })
     const { supabase, userId } = context as any;
     if (!userId) throw new Error("Unauthorized");
 
-    // Verificar posse
-    const { data: vps, error: instError } = await supabase
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
+    // Verificar posse usando admin para garantir leitura
+    const { data: vps, error: instError } = await supabaseAdmin
       .from('vps_instances')
       .select('*')
       .eq('id', data.instanceId)
@@ -83,7 +89,7 @@ export const getVPSDetails = createServerFn({ method: "GET" })
 
     let service: any = null;
     if (vps.service_id) {
-      const { data: svc } = await supabase
+      const { data: svc } = await supabaseAdmin
         .from('services')
         .select('*')
         .eq('id', vps.service_id)
@@ -186,7 +192,27 @@ export const getVPSMetricsHistory = createServerFn({ method: "GET" })
     if (data.period === '7d') interval = '7 days';
     if (data.period === '30d') interval = '30 days';
 
-    const { data: metrics, error } = await supabase
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
+    // Verificar se o usuário tem acesso à VPS antes de buscar histórico
+    const { data: vps } = await supabaseAdmin
+      .from('vps_instances')
+      .select('service_id')
+      .eq('id', data.instanceId)
+      .maybeSingle();
+    
+    if (!vps) throw new Error("VPS não encontrada");
+
+    const { data: service } = await supabaseAdmin
+      .from('services')
+      .select('user_id')
+      .eq('id', vps.service_id)
+      .maybeSingle();
+    
+    const { data: isStaff } = await supabase.rpc('is_staff', { _user_id: userId });
+    if (!isStaff && service?.user_id !== userId) throw new Error("Acesso negado");
+
+    const { data: metrics, error } = await supabaseAdmin
       .from('vps_metrics_history')
       .select('cpu, ram, disk, created_at')
       .eq('vps_id', data.instanceId)
