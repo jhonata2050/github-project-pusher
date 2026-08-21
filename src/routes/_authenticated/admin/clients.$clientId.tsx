@@ -235,7 +235,7 @@ function ClientDetailPage() {
       <div className="flex flex-col gap-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
-            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">{client.full_name || "Sem Nome"}</h1>
+            <h1 className="text-xl sm:text-2xl font-bold tracking-tight">{client.full_name || "Sem Nome"}</h1>
             <p className="text-sm text-muted-foreground">{client.email}</p>
           </div>
           <div className="flex flex-wrap gap-3">
