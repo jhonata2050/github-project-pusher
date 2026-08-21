@@ -116,8 +116,8 @@ export async function callDA({ hostname, apiUser, apiToken, command, method = 'G
       if (response.status === 403 && /not allowed|Access Denied/i.test(errorText)) {
         throw new Error(
           `A chave de API do DirectAdmin não tem permissão para o comando "${command}". ` +
-            `No DirectAdmin, edite a Login Key/Token usada (usuário ${apiUser}) e libere os comandos: ` +
-            `CMD_API_PACKAGES_USER, CMD_API_ACCOUNT_USER, CMD_API_SHOW_USER_CONFIG, CMD_API_SELECT_USERS e CMD_API_LOGIN_KEYS ` +
+            `No DirectAdmin, edite a Login Key/Token usada (usuário ${apiUser}) e libere TODOS os comandos a seguir: ` +
+            `CMD_API_PACKAGES_USER, CMD_API_ACCOUNT_USER, CMD_API_SHOW_USER_CONFIG, CMD_API_SELECT_USERS, CMD_API_LOGIN_KEYS e CMD_API_USER_DOMAIN_LIST ` +
             `(ou marque "All commands"). Verifique também se a chave não está restrita por IP.`,
         );
       }
@@ -126,8 +126,8 @@ export async function callDA({ hostname, apiUser, apiToken, command, method = 'G
         const ipGuidance = reportedClientIp === '127.0.0.1'
           ? ` O servidor informou client_ip 127.0.0.1. Isso ocorre quando o DirectAdmin está atrás de proxy: remova a restrição de IP da Login Key ou inclua 127.0.0.1 nos IPs permitidos.`
           : reportedClientIp
-            ? ` O DirectAdmin identificou o IP ${reportedClientIp}; ele precisa estar permitido na Login Key.`
-            : '';
+            ? ` O DirectAdmin identificou o IP ${reportedClientIp}; ele PRECISA estar permitido na Login Key (Whitelist de IP).`
+            : ` Certifique-se de que o IP 34.91.200.163 está permitido na Login Key.`;
         throw new Error(
           `Falha na autenticação (401): O DirectAdmin não reconheceu as credenciais. ` +
           `Certifique-se de que o "Usuário API" está no formato "USUARIO|NOME_DA_CHAVE" (ex: admin|EqsamKey) ` +
