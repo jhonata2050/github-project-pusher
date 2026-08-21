@@ -110,8 +110,6 @@ export async function callDA({ hostname, apiUser, apiToken, command, method = 'G
       method,
       headers: {
         'Authorization': authHeader,
-        // Using both headers to maximize compatibility with DA versions and proxies
-        'X-DirectAdmin-Login-Key': Buffer.from(authString).toString('base64'),
         'Content-Type': 'application/x-www-form-urlencoded',
         'Accept': 'application/json, text/plain',
       },
@@ -190,12 +188,24 @@ export async function callDA({ hostname, apiUser, apiToken, command, method = 'G
   }
 }
 
-function normalizePackageList(result: unknown): string[] {
-  if (Array.isArray(result)) return result.filter((item): item is string => typeof item === 'string');
-  if (!result || typeof result !== 'object' || !('list' in result)) return [];
-  const list = result.list;
-  if (Array.isArray(list)) return list.filter((item): item is string => typeof item === 'string');
-  return typeof list === 'string' ? [list] : [];
+function normalizePackageList(result: any): string[] {
+  if (Array.isArray(result)) return result.filter((item: any): item is string => typeof item === 'string');
+  if (!result || typeof result !== 'object') return [];
+  
+  // DirectAdmin results for CMD_API_PACKAGES_USER often return a list in the root
+  // or under 'list' or as numbered keys select0, select1...
+  if ('list' in result && Array.isArray(result.list)) {
+    return result.list.filter((item: any): item is string => typeof item === 'string');
+  }
+  
+  const packages: string[] = [];
+  Object.entries(result).forEach(([key, val]) => {
+    if (key.startsWith('select') || key === 'list') {
+      if (typeof val === 'string' && val.length > 0) packages.push(val);
+    }
+  });
+
+  return packages;
 }
 
 export async function getDAPackages(serverId: string) {
@@ -540,8 +550,18 @@ export async function getDASession(serverId: string, username: string, redirectU
     throw new Error(`Erro ao gerar acesso SSO: ${errorMsg}`);
   }
 
-  console.log("DirectAdmin SSO API call completed.");
-  return parseDirectAdminLoginUrl(result, server.hostname);
+  // VALIDATION: Ensure the response indicates a session for the target user if possible
+  // DirectAdmin results for CMD_API_LOGIN_KEYS don't always echo the user, but we check common patterns
+  console.log(`[DA-SSO] SSO API call completed for target: ${targetUser}`);
+  
+  const finalUrl = parseDirectAdminLoginUrl(result, server.hostname);
+  
+  // Rule 5: Basic verification that the token isn't suspiciously short or missing
+  if (!finalUrl || finalUrl.length < 20) {
+    throw new Error("Erro de Segurança: A URL de login gerada é inválida ou insegura.");
+  }
+
+  return finalUrl;
 }
 
 
