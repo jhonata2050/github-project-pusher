@@ -314,11 +314,10 @@ function AdminServersPage() {
                   <Plus className="mr-2 h-4 w-4" /> Novo Servidor
                 </Button>
               </DialogTrigger>
-
-            <DialogContent className="rounded-3xl border-none shadow-2xl max-w-md">
-              <DialogHeader>
-                <DialogTitle className="text-2xl font-bold">Adicionar Servidor</DialogTitle>
-              </DialogHeader>
+              <DialogContent className="rounded-3xl border-none shadow-2xl max-w-md">
+                <DialogHeader>
+                  <DialogTitle className="text-2xl font-bold">Adicionar Servidor</DialogTitle>
+                </DialogHeader>
               <form onSubmit={handleAddServer} className="space-y-4 py-4">
                 <div className="grid gap-2">
                   <Label htmlFor="name">Nome Amigável</Label>
