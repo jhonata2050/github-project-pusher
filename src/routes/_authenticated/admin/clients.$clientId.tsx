@@ -502,7 +502,7 @@ function ClientDetailPage() {
                                 <span className="text-[10px] text-destructive italic">Não vinculado</span>
                               )}
                             </TableCell>
-                            <TableCell className="hidden md:table-cell">
+                            <TableCell className="hidden md:table-cell text-xs">
                               {s.next_due_date ? format(new Date(s.next_due_date), "dd/MM/yyyy", { locale: ptBR }) : "—"}
                             </TableCell>
                             <TableCell>
