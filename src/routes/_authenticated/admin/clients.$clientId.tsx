@@ -289,7 +289,7 @@ function ClientDetailPage() {
                   <CardDescription className="text-xs">Dados pessoais e de contato</CardDescription>
                 </div>
                 {!isEditing && (
-                  <Button variant="outline" onClick={() => setIsEditing(true)} className="rounded-xl">
+                  <Button variant="outline" onClick={() => setIsEditing(true)} className="rounded-xl h-9 text-xs">
                     Editar Dados
                   </Button>
                 )}
