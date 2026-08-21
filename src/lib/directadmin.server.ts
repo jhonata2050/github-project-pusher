@@ -56,6 +56,19 @@ function generateStrongPassword(length = 32): string {
 
 
 export async function callDA({ hostname, apiUser, apiToken, command, method = 'GET', params = {} }: DARequestOptions) {
+  // Pré-validação das credenciais: Login Keys exigem "USUARIO|NOME_DA_CHAVE"
+  if (!apiUser.trim() || !apiToken.trim()) {
+    throw new Error(
+      `Credenciais do servidor ${hostname} não configuradas. Preencha o "Usuário API" (formato admin|NOME_DA_CHAVE) e o "Token API" em Sistema > Servidores.`,
+    );
+  }
+  if (!apiUser.includes('|')) {
+    throw new Error(
+      `Credenciais inválidas no servidor ${hostname}: o "Usuário API" está como "${apiUser.trim()}", mas o DirectAdmin exige o formato "USUARIO|NOME_DA_CHAVE" (ex: admin|${apiUser.trim()}). ` +
+        `Corrija em Sistema > Servidores usando o usuário dono da Login Key seguido de "|" e o nome da chave; o "Token API" deve ser o Key Value gerado.`,
+    );
+  }
+
   // Limpa o hostname e garante o uso da porta 2222
   const cleanHostname = hostname.replace(/^https?:\/\//, '').split(':')[0];
   const url = `https://${cleanHostname}:2222/${command}`;
