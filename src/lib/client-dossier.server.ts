@@ -19,6 +19,10 @@ export async function fetchClientDossier(
     throw new Error("Acesso restrito à equipe administrativa.");
   }
 
+  // A tabela `servers` não é acessível pelo papel autenticado (contém credenciais),
+  // então o join precisa ser feito com o cliente privilegiado após validar o staff.
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
   const [profile, invoices, services, tickets, emailLogs] = await Promise.all([
     supabase.from("profiles").select("*").eq("id", clientId).single(),
     supabase
@@ -27,7 +31,7 @@ export async function fetchClientDossier(
       .eq("user_id", clientId)
       .order("created_at", { ascending: false })
       .limit(RECENT_LIMIT),
-    supabase
+    supabaseAdmin
       .from("services")
       .select("id, status, domain, username, billing_cycle, next_due_date, server_id, product_id, auto_renew, created_at, block_directadmin, products(name), servers(hostname)")
       .eq("user_id", clientId)
