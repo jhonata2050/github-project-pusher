@@ -30,10 +30,13 @@ export const getMyVPSInstances = createServerFn({ method: "GET" })
       .in('service_id', serviceIds);
     if (error) throw error;
 
-    return (instances ?? []).map((i: any) => ({
-      ...i,
-      service: (services ?? []).find((s: any) => s.id === i.service_id) ?? null,
-    }));
+    return (instances ?? []).map((i: any) => {
+      const service = (services ?? []).find((s: any) => s.id === i.service_id);
+      return {
+        ...i,
+        service: service ?? null,
+      };
+    }).filter((i: any) => i.service !== null); // Apenas instâncias de serviços que pertencem ao usuário
   });
 
 export const contaboAction = createServerFn({ method: "POST" })

@@ -119,7 +119,7 @@ function ClientServicesPage() {
         ) : (
           filtered.map((svc: any) => {
             const status = STATUS_LABELS[svc.status] || { label: svc.status, color: "bg-muted" };
-            const isVPS = svc.products?.product_type === 'vps';
+            const isVPS = svc.products?.product_type === 'vps' || svc.billing_cycle === 'vps';
             const vpsInstance = svc.vps_instances?.[0];
             
             return (

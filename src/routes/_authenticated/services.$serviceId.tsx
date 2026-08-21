@@ -282,7 +282,7 @@ function ServiceManagementPage() {
 
             {/* Quick Actions Grid */}
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 sm:gap-4">
-              {(service as any)?.products?.product_type === 'vps' ? (
+              {(service as any)?.products?.product_type === 'vps' || (service as any)?.billing_cycle === 'vps' ? (
                 <>
                   <QuickActionCard 
                     icon={<Activity className="size-6" />} 
