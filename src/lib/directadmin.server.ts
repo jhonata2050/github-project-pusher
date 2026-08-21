@@ -122,18 +122,29 @@ export async function callDA({ hostname, apiUser, apiToken, command, method = 'G
         );
       }
       if (response.status === 401) {
-        const reportedClientIp = errorText.match(/"client_ip"\s*:\s*"([^"]+)"/)?.[1];
+        const reportedClientIp = errorText.match(/"client_ip"\s*:\s*"([^"]+)"/)?.[1] || 
+                               errorText.match(/client_ip=([^&]+)/)?.[1];
+        
+        console.log(`[DirectAdmin-401] Host: ${hostname}, API User: ${apiUser}, IP: ${reportedClientIp}, Body: ${errorText}`);
+
         const ipGuidance = reportedClientIp === '127.0.0.1'
           ? ` O servidor informou client_ip 127.0.0.1. Isso ocorre quando o DirectAdmin está atrás de proxy: remova a restrição de IP da Login Key ou inclua 127.0.0.1 nos IPs permitidos.`
           : reportedClientIp
             ? ` O DirectAdmin identificou o IP ${reportedClientIp}; ele PRECISA estar permitido na Login Key (Whitelist de IP).`
             : ` Certifique-se de que o IP 34.91.200.163 está permitido na Login Key.`;
+        
+        let extraInfo = "";
+        if (errorText.includes("Invalid login") || errorText.includes("Authentication failed")) {
+          extraInfo = " O DirectAdmin rejeitou o par Usuário|Chave e Token. Verifique se não há espaços extras e se a chave não expirou.";
+        }
+
         throw new Error(
           `Falha na autenticação (401): O DirectAdmin não reconheceu as credenciais. ` +
           `Certifique-se de que o "Usuário API" está no formato "USUARIO|NOME_DA_CHAVE" (ex: admin|EqsamKey) ` +
-          `e que o "Token API" é o valor (Key Value) gerado.${ipGuidance}`
+          `e que o "Token API" é o valor (Key Value) gerado.${ipGuidance}${extraInfo}`
         );
       }
+
       throw new Error(`DirectAdmin API Error (${response.status}): ${errorText}`);
     }
 
