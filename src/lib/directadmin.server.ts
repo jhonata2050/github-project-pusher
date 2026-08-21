@@ -85,23 +85,28 @@ export async function callDA({ hostname, apiUser, apiToken, command, method = 'G
   const searchParams = new URLSearchParams();
   Object.entries(params).forEach(([key, val]) => searchParams.append(key, val));
   
-  const authString = `${apiUser.trim()}:${apiToken.trim()}`;
+  const apiUserTrimmed = apiUser.trim();
+  const apiTokenTrimmed = apiToken.trim();
+  const authString = `${apiUserTrimmed}:${apiTokenTrimmed}`;
   const authHeader = `Basic ${Buffer.from(authString).toString('base64')}`;
   
   try {
     if (method === 'GET') searchParams.set('json', 'yes');
 
+    // Debug logging for credentials (redacted token)
+    console.log(`[DirectAdmin-Request] ${method} to ${url} (User: ${apiUserTrimmed})`);
+
     const response = await fetch(url + (method === 'GET' ? `?${searchParams.toString()}` : ''), {
       method,
       headers: {
         'Authorization': authHeader,
-        'X-DirectAdmin-Login-Key': Buffer.from(authString).toString('base64'), // Redundância para alguns firewalls/proxies
+        // Using both headers to maximize compatibility with DA versions and proxies
+        'X-DirectAdmin-Login-Key': Buffer.from(authString).toString('base64'),
         'Content-Type': 'application/x-www-form-urlencoded',
         'Accept': 'application/json, text/plain',
       },
-
       body: method === 'POST' ? searchParams.toString() : null,
-      signal: AbortSignal.timeout(60_000), // Aumentado para 60s para maior resiliência
+      signal: AbortSignal.timeout(60_000),
       redirect: 'manual',
     });
 

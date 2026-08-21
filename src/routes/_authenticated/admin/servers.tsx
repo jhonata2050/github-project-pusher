@@ -330,7 +330,7 @@ function AdminServersPage() {
                 <div className="grid gap-2">
                   <Label htmlFor="api_user" className="flex items-center gap-2">
                     Usuário API
-                    <Badge variant="outline" className="text-[9px] uppercase px-1.5 py-0">Formato: user|key</Badge>
+                    <Badge variant="outline" className="text-[9px] uppercase px-1.5 py-0 border-brand/50 text-brand font-bold">Obrigatório: USUARIO|CHAVE</Badge>
                   </Label>
                   <Input id="api_user" name="api_user" placeholder="Ex: admin|TokenEqsam" required className="rounded-xl" />
                   <p className="text-[10px] text-muted-foreground px-1">Obrigatório o uso do pipe (|) para Login Keys.</p>
