@@ -349,7 +349,7 @@ export const getServers = createServerFn({ method: "GET" })
       .select("*");
 
     if (error) throw new Error(error.message);
-    return data;
+    return (data ?? []) as Database["public"]["Tables"]["servers"]["Row"][];
   });
 
 export const createServerDA = createServerFn({ method: "POST" })
