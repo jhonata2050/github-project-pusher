@@ -99,12 +99,19 @@ export async function callDA({ hostname, apiUser, apiToken, command, method = 'G
   const authString = `${username}:${password}`;
   const authHeader = `Basic ${Buffer.from(authString).toString('base64')}`;
 
+  // DIAGNÓSTICO TEMPORÁRIO (Requisito 3)
+  if (command === 'CMD_API_LOGIN_KEYS') {
+    console.log("--- SSO PAYLOAD DEBUG ---");
+    console.log(`provider_username=${username}`);
+    console.log(`targetUser=${params['user']}`);
+    console.log(`authenticated_api_user=${username}`);
+    console.log(`endpoint=/${command}`);
+    console.log(`request_method=${method}`);
+    console.log("-------------------------");
+  }
   
   try {
     if (method === 'GET') searchParams.set('json', 'yes');
-
-    // Debug logging for credentials (redacted token)
-    console.log(`[DirectAdmin-Request] ${method} to ${url} (User: ${username})`);
 
     const response = await fetch(url + (method === 'GET' ? `?${searchParams.toString()}` : ''), {
       method,
@@ -545,18 +552,28 @@ export async function getDASession(serverId: string, username: string, redirectU
     params
   });
 
+  // DIAGNÓSTICO TEMPORÁRIO (Requisito 4)
+  if (result) {
+    console.log("--- SSO RESPONSE DEBUG ---");
+    console.log(`error=${result.error}`);
+    console.log(`text=${result.text}`);
+    console.log(`details=${result.details ? 'PRESENT' : 'MISSING'}`);
+    console.log(`keyname=${result.keyname}`);
+    console.log(`type=${result.type}`);
+    console.log(`user=${result.user}`);
+    console.log("--------------------------");
+  }
+
   if (result && (result.error === '1' || result.error === 1)) {
     const errorMsg = result.details || result.text || "Erro desconhecido na API do DirectAdmin";
     throw new Error(`Erro ao gerar acesso SSO: ${errorMsg}`);
   }
 
   // VALIDATION: Ensure the response indicates a session for the target user if possible
-  // DirectAdmin results for CMD_API_LOGIN_KEYS don't always echo the user, but we check common patterns
   console.log(`[DA-SSO] SSO API call completed for target: ${targetUser}`);
   
   const finalUrl = parseDirectAdminLoginUrl(result, server.hostname);
   
-  // Rule 5: Basic verification that the token isn't suspiciously short or missing
   if (!finalUrl || finalUrl.length < 20) {
     throw new Error("Erro de Segurança: A URL de login gerada é inválida ou insegura.");
   }
