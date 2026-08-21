@@ -741,13 +741,13 @@ function ClientDetailPage() {
                 </Select>
               </div>
               <div className="grid gap-2">
-                <Label htmlFor="username">Usuário do Servidor (SSO)</Label>
+                <Label htmlFor="username" className="text-xs">Usuário do Servidor (SSO)</Label>
                 <Input 
                   id="username" 
                   name="username" 
                   defaultValue={editingService.username || ""} 
                   placeholder="Ex: abacap123" 
-                  className="rounded-xl h-11" 
+                  className="rounded-xl h-9 text-xs" 
                 />
               </div>
               <div className="grid gap-2">
