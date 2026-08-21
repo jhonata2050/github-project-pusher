@@ -94,6 +94,14 @@ export async function callDA({ hostname, apiUser, apiToken, command, method = 'G
             `É necessário liberar o IP do Eqsam na whitelist do Imunify360 (Firewall > White List) ou desativar a proteção anti-bot para a porta 2222.`,
         );
       }
+      if (response.status === 403 && /not allowed|Access Denied/i.test(errorText)) {
+        throw new Error(
+          `A chave de API do DirectAdmin não tem permissão para o comando "${command}". ` +
+            `No DirectAdmin, edite a Login Key/Token usada (usuário ${apiUser}) e libere os comandos: ` +
+            `CMD_API_PACKAGES_USER, CMD_API_ACCOUNT_USER, CMD_API_SHOW_USER_CONFIG, CMD_API_SELECT_USERS e CMD_API_LOGIN_KEYS ` +
+            `(ou marque "All commands"). Verifique também se a chave não está restrita por IP.`,
+        );
+      }
       throw new Error(`DirectAdmin API Error (${response.status}): ${errorText}`);
     }
 
