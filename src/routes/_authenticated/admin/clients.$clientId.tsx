@@ -488,7 +488,12 @@ function ClientDetailPage() {
                           <TableRow key={s.id}>
                             <TableCell className="font-medium text-xs">
                               <div className="flex flex-col gap-1">
-                                <span>{s.products?.name || "Produto"}</span>
+                                <span>
+                                  {s.products?.name || "Produto"}
+                                  {s.products?.product_type === 'vps' && (
+                                    <Badge variant="outline" className="ml-2 text-[8px] h-3.5 border-brand/30 text-brand bg-brand/5">VPS</Badge>
+                                  )}
+                                </span>
                                 <div className="flex flex-col gap-0.5">
                                   {s.username ? (
                                     <div className="flex flex-col gap-0.5">
