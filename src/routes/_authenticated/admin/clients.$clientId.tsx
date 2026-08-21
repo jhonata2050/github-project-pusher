@@ -20,9 +20,10 @@ import {
   Edit2,
   ExternalLink,
   Link2,
-  ShieldAlert,
-  Database,
-} from "lucide-react";
+   ShieldAlert,
+   Database,
+   Monitor,
+ } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useState } from "react";
 import { toast } from "sonner";
