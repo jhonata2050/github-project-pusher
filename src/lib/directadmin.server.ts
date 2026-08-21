@@ -186,12 +186,26 @@ export async function callDA({ hostname, apiUser, apiToken, command, method = 'G
 
     const text = await response.text();
     try {
-      return JSON.parse(text);
-    } catch {
+      const parsed = JSON.parse(text);
+      // REGRA: Se a resposta for JSON mas contiver 'error' como string "1" ou número 1, tratamos como erro da API
+      if (parsed && (parsed.error === '1' || parsed.error === 1)) {
+        const errorMsg = parsed.details || parsed.text || "Erro desconhecido na API do DirectAdmin";
+        throw new Error(errorMsg);
+      }
+      return parsed;
+    } catch (e) {
+      if (e instanceof Error && !e.message.includes('Unexpected token')) throw e;
+      
       if (text.trimStart().startsWith('<!DOCTYPE html') || text.includes('<html')) {
         throw new Error('O DirectAdmin retornou a tela de login em vez dos dados da API. Verifique as permissões da chave de acesso.');
       }
-      return Object.fromEntries(new URLSearchParams(text));
+      
+      // Fallback para URLSearchParams se não for JSON
+      const parsed = Object.fromEntries(new URLSearchParams(text));
+      if (parsed && (parsed.error === '1' || parsed.error === '1')) {
+         throw new Error(String(parsed.details || parsed.text || "Erro na API (Fallback)"));
+      }
+      return parsed;
     }
   } catch (error: unknown) {
     if (error instanceof Error && (error.name === 'AbortError' || error.name === 'TimeoutError')) {
@@ -566,29 +580,35 @@ export async function getDASession(serverId: string, username: string, redirectU
   if (result) {
     const { createSystemLog } = await import("./system-logs.server");
     
+    // Log do resultado bruto para depuração (apenas logs internos)
+    console.log(`[DA-SSO-Response-Debug] Payload:`, JSON.stringify(result));
+
     // Se o resultado não contiver o campo 'user', o DirectAdmin provavelmente não processou a impersonação
-    if (!result.user) {
-      console.error(`[DA-SSO-Security-Failure] Resposta sem campo 'user'. Resposta:`, JSON.stringify(result));
+    // IMPORTANTE: Algumas versões do DA retornam o campo 'user' dentro de 'details' ou no root.
+    const returnedUser = result.user || result.username;
+
+    if (!returnedUser) {
+      console.error(`[DA-SSO-Security-Failure] Resposta sem confirmação de usuário. Resposta:`, JSON.stringify(result));
       await createSystemLog({
         category: 'security',
         level: 'critical',
-        message: `FALHA DE IDENTIDADE SSO: O servidor não confirmou o usuário alvo. Possível erro de permissão da Login Key.`,
+        message: `FALHA DE IDENTIDADE SSO: O servidor não confirmou o usuário alvo. A Login Key pode estar sem a permissão 'LKM_CREATE_URL' com impersonação.`,
         metadata: { targetUser, serverId, response: result }
       }).catch(e => console.error(e));
       
-      throw new Error(`Erro de Segurança: O servidor DirectAdmin não confirmou a identidade do usuário. Verifique se a Login Key tem permissão para criar URLs para outros usuários.`);
+      throw new Error(`Erro de Segurança: O servidor DirectAdmin não confirmou a identidade do usuário na sessão gerada. O acesso foi bloqueado para evitar login administrativo indevido.`);
     }
 
-    if (result.user !== targetUser) {
-      console.error(`[DA-SSO-Identity-Mismatch] Mismatch detectado! Esperado: ${targetUser}, Recebido: ${result.user}`);
+    if (returnedUser !== targetUser) {
+      console.error(`[DA-SSO-Identity-Mismatch] Mismatch detectado! Esperado: ${targetUser}, Recebido: ${returnedUser}`);
       await createSystemLog({
         category: 'security',
         level: 'critical',
-        message: `TENTATIVA DE ESCALONAMENTO DETECTADA: O servidor retornou sessão para '${result.user}' ao solicitar para '${targetUser}'.`,
-        metadata: { targetUser, returnedUser: result.user, serverId }
+        message: `TENTATIVA DE ESCALONAMENTO BLOQUEADA: O servidor retornou sessão para '${returnedUser}' ao solicitar para '${targetUser}'.`,
+        metadata: { targetUser, returnedUser, serverId }
       }).catch(e => console.error(e));
       
-      throw new Error(`Erro Crítico de Segurança: O servidor retornou uma identidade incorreta (${result.user}). O acesso foi bloqueado para sua proteção.`);
+      throw new Error(`Erro Crítico de Segurança: O servidor retornou uma identidade administrativa incorreta (${returnedUser}). O acesso foi interrompido imediatamente.`);
     }
   }
 
