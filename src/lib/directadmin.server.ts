@@ -629,8 +629,6 @@ export async function getDASession(serverId: string, username: string, redirectU
   console.log(`[DA-SSO] Gerando One-Time URL para ${targetUser} via CMD_API_LOGIN_KEYS com impersonation`);
 
   // REGRA DE IMPERSONATION: Para que a sessão pertença ao usuário alvo, a autenticação
-  // deve ser feita no formato "RESELLER|USUARIO".
-  // REGRA DE IMPERSONATION: Para que a sessão pertença ao usuário alvo, a autenticação
   // deve ser feita no formato "RESELLER|USUARIO|NOME_CHAVE".
   // Buscamos o reseller e o nome da chave das configurações do servidor.
   const apiUserParts = (server.api_user || '').split('|');
