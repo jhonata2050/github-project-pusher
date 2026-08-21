@@ -113,6 +113,31 @@ function ClientDetailPage() {
   // Estado para o modal de edição de serviço
   const [editingService, setEditingService] = useState<any>(null);
 
+  function VPSInstanceSelector({ serviceId, currentVpsId }: { serviceId: string, currentVpsId?: string }) {
+    const { data: vpsInstances, isLoading } = useQuery({
+      queryKey: ["available-vps-instances", serviceId],
+      queryFn: () => getAvailableVPSInstances({ data: { serviceId } }),
+    });
+
+    return (
+      <div className="space-y-2">
+        <Select name="vps_instance_id" defaultValue={currentVpsId || "none"}>
+          <SelectTrigger className="h-9 rounded-xl border-input bg-background shadow-sm text-xs">
+            <SelectValue placeholder={isLoading ? "Carregando..." : "Selecione uma instância..."} />
+          </SelectTrigger>
+          <SelectContent className="rounded-xl border-border/40 shadow-xl">
+            <SelectItem value="none">Nenhuma vinculada</SelectItem>
+            {vpsInstances?.map((vps: any) => (
+              <SelectItem key={vps.id} value={vps.id}>
+                {vps.ip_address || 'Pendente'} ({vps.external_id || 'Sem ID'}) - {vps.status}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+    );
+  }
+
   const { data: client } = useSuspenseQuery(clientDossierQueryOptions(clientId));
   const { data: servers } = useSuspenseQuery(serversQueryOptions);
   const { data: allProducts } = useSuspenseQuery(productsQueryOptions);

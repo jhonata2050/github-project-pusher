@@ -176,5 +176,5 @@ export const getAvailableVPSInstances = createServerFn({ method: "GET" })
       .from('vps_instances')
       .select('id, external_id, ip_address, status, service_id');
       
-    return (allInstances ?? []).filter(i => !i.service_id || i.service_id === data.serviceId);
+    return (allInstances ?? []).filter((i: any) => !i.service_id || i.service_id === data.serviceId);
   });
