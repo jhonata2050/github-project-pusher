@@ -76,10 +76,17 @@ export async function callDA({ hostname, apiUser, apiToken, command, method = 'G
   let username = apiUserRaw;
   let password = apiTokenTrimmed;
 
+  // REGRA FUNDAMENTAL: Separar USERNAME e PASSWORD da Login Key.
+  // Suporte a impersonation no formato "RESELLER|USUARIO|NOME_CHAVE" ou "RESELLER|NOME_CHAVE"
   if (apiUserRaw.includes('|')) {
     const parts = apiUserRaw.split('|');
-    username = parts[0]?.trim() || '';
-    password = apiTokenTrimmed;
+    if (parts.length >= 3) {
+      // Formato com impersonation: reseller|target|keyname
+      username = `${parts[0]}|${parts[1]}`;
+    } else {
+      // Formato padrão: reseller|keyname
+      username = parts[0]?.trim() || '';
+    }
   }
 
   // SECURITY: Prevent credentials from leaking in logs or being misused
