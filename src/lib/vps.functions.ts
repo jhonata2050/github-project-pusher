@@ -192,7 +192,27 @@ export const getVPSMetricsHistory = createServerFn({ method: "GET" })
     if (data.period === '7d') interval = '7 days';
     if (data.period === '30d') interval = '30 days';
 
-    const { data: metrics, error } = await supabase
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
+    // Verificar se o usuário tem acesso à VPS antes de buscar histórico
+    const { data: vps } = await supabaseAdmin
+      .from('vps_instances')
+      .select('service_id')
+      .eq('id', data.instanceId)
+      .maybeSingle();
+    
+    if (!vps) throw new Error("VPS não encontrada");
+
+    const { data: service } = await supabaseAdmin
+      .from('services')
+      .select('user_id')
+      .eq('id', vps.service_id)
+      .maybeSingle();
+    
+    const { data: isStaff } = await supabase.rpc('is_staff', { _user_id: userId });
+    if (!isStaff && service?.user_id !== userId) throw new Error("Acesso negado");
+
+    const { data: metrics, error } = await supabaseAdmin
       .from('vps_metrics_history')
       .select('cpu, ram, disk, created_at')
       .eq('vps_id', data.instanceId)
