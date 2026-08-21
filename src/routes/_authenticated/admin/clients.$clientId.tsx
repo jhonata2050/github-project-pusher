@@ -464,7 +464,12 @@ function ClientDetailPage() {
                                 <span>{s.products?.name || "Produto"}</span>
                                 <div className="flex flex-col gap-0.5">
                                   {s.username ? (
-                                    <span className="text-[10px] text-muted-foreground font-mono">Usuário: {s.username}</span>
+                                    <div className="flex flex-col gap-0.5">
+                                      <span className="text-[10px] text-muted-foreground font-mono">Usuário: {s.username}</span>
+                                      {s.password && (
+                                        <span className="text-[9px] text-muted-foreground font-mono">Senha: {s.password ? '********' : '—'}</span>
+                                      )}
+                                    </div>
                                   ) : (
                                     <span className="text-[10px] text-destructive italic">Usuário ausente</span>
                                   )}
