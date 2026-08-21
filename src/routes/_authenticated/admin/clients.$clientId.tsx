@@ -524,15 +524,15 @@ function ClientDetailPage() {
                                  <span className="text-xs">
                                    {(s.servers?.hostname || servers?.find(sv => sv.id === s.server_id)?.hostname) || "Servidor"}
                                  </span>
-                               ) : s.vps_instances ? (
+                               ) : (s.vps_instances && s.vps_instances.length > 0) ? (
                                  <div className="flex flex-col gap-0.5">
                                    <Link 
                                      to="/admin/vps" 
                                      className="text-xs font-medium text-brand hover:underline flex items-center gap-1"
                                    >
-                                     <Monitor className="size-3" /> {s.vps_instances.ip_address || "Instância VPS"}
+                                     <Monitor className="size-3" /> {s.vps_instances[0].ip_address || "Instância VPS"}
                                    </Link>
-                                   <span className="text-[10px] text-muted-foreground font-mono">ID: {s.vps_instances.external_id}</span>
+                                   <span className="text-[10px] text-muted-foreground font-mono">ID: {s.vps_instances[0].external_id}</span>
                                  </div>
                                ) : (s.products?.product_type === 'vps' || s.billing_cycle === 'vps') ? (
                                  <Link 
@@ -555,29 +555,42 @@ function ClientDetailPage() {
                             </TableCell>
                             <TableCell className="text-right">
                               <div className="flex items-center justify-end gap-1">
-                                {s.status === 'active' && s.username && s.server_id && (
-                                  <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    className="size-8 rounded-lg text-brand hover:text-brand hover:bg-brand/10"
-                                    onClick={async () => {
-                                      const { getDASSOUrl } = await import("@/lib/support.functions");
-                                      const promise = (async () => {
-                                        const url = await getDASSOUrl({ data: { serverId: s.server_id, username: s.username, redirectUrl: '/' } });
-                                        window.open(url, '_blank');
-                                        return url;
-                                      })();
+                                {s.status === 'active' && (
+                                  s.products?.product_type === 'vps' && s.vps_instances?.[0]?.id ? (
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      className="size-8 rounded-lg text-brand hover:text-brand hover:bg-brand/10"
+                                      asChild
+                                    >
+                                      <Link to="/admin/vps" title="Ver VPS no Painel Admin">
+                                        <Monitor className="size-3" />
+                                      </Link>
+                                    </Button>
+                                  ) : (s.username && s.server_id && (
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      className="size-8 rounded-lg text-brand hover:text-brand hover:bg-brand/10"
+                                      onClick={async () => {
+                                        const { getDASSOUrl } = await import("@/lib/support.functions");
+                                        const promise = (async () => {
+                                          const url = await getDASSOUrl({ data: { serverId: s.server_id, username: s.username, redirectUrl: '/' } });
+                                          window.open(url, '_blank');
+                                          return url;
+                                        })();
 
-                                      toast.promise(promise, {
-                                        loading: 'Gerando acesso...',
-                                        success: 'Redirecionando...',
-                                        error: (err) => `Erro: ${err.message}`
-                                      });
-                                    }}
-                                    title="Acessar Painel"
-                                  >
-                                    <ExternalLink className="size-3" />
-                                  </Button>
+                                        toast.promise(promise, {
+                                          loading: 'Gerando acesso...',
+                                          success: 'Redirecionando...',
+                                          error: (err) => `Erro: ${err.message}`
+                                        });
+                                      }}
+                                      title="Acessar Painel"
+                                    >
+                                      <ExternalLink className="size-3" />
+                                    </Button>
+                                  ))
                                 )}
                                 <Button 
                                   variant="ghost" 

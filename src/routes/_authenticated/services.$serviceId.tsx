@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { 
   LayoutPanelLeft, 
@@ -35,6 +35,7 @@ export const Route = createFileRoute("/_authenticated/services/$serviceId")({
 
 function ServiceManagementPage() {
   const { serviceId } = Route.useParams();
+  const navigate = useNavigate();
 
   const { data: service, isLoading, error } = useQuery({
     queryKey: ["service-details", serviceId],
@@ -281,31 +282,58 @@ function ServiceManagementPage() {
 
             {/* Quick Actions Grid */}
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 sm:gap-4">
-              <QuickActionCard 
-                icon={<Mail className="size-6" />} 
-                title="E-mails" 
-                onClick={() => handleSSO('CMD_EMAIL_POP')} 
-              />
-              <QuickActionCard 
-                icon={<Database className="size-6" />} 
-                title="Bancos de Dados" 
-                onClick={() => handleSSO('CMD_DB')} 
-              />
-              <QuickActionCard 
-                icon={<Globe className="size-6" />} 
-                title="Gerenciar DNS" 
-                onClick={() => handleSSO('CMD_DNS_CONTROL')} 
-              />
-              <QuickActionCard 
-                icon={<ShieldCheck className="size-6" />} 
-                title="SSL / TLS" 
-                onClick={() => handleSSO('CMD_SSL')} 
-              />
-              <QuickActionCard 
-                icon={<User className="size-6" />} 
-                title="Contas FTP" 
-                onClick={() => handleSSO('CMD_FTP')} 
-              />
+              {(service as any)?.products?.product_type === 'vps' ? (
+                <>
+                  <QuickActionCard 
+                    icon={<Activity className="size-6" />} 
+                    title="Monitorar VPS" 
+                    onClick={() => {
+                      if ((service as any).vps_instances?.[0]?.id) {
+                         navigate({ to: "/vps/$vpsId", params: { vpsId: (service as any).vps_instances[0].id } });
+                      } else {
+                        toast.error("Instância VPS não encontrada.");
+                      }
+                    }} 
+                  />
+                  <QuickActionCard 
+                    icon={<Zap className="size-6" />} 
+                    title="Recursos" 
+                    onClick={() => {
+                      if ((service as any).vps_instances?.[0]?.id) {
+                         navigate({ to: "/vps/$vpsId", params: { vpsId: (service as any).vps_instances[0].id } });
+                      }
+                    }} 
+                  />
+                </>
+              ) : (
+                <>
+                  <QuickActionCard 
+                    icon={<Mail className="size-6" />} 
+                    title="E-mails" 
+                    onClick={() => handleSSO('CMD_EMAIL_POP')} 
+                  />
+                  <QuickActionCard 
+                    icon={<Database className="size-6" />} 
+                    title="Bancos de Dados" 
+                    onClick={() => handleSSO('CMD_DB')} 
+                  />
+                  <QuickActionCard 
+                    icon={<Globe className="size-6" />} 
+                    title="Gerenciar DNS" 
+                    onClick={() => handleSSO('CMD_DNS_CONTROL')} 
+                  />
+                  <QuickActionCard 
+                    icon={<ShieldCheck className="size-6" />} 
+                    title="SSL / TLS" 
+                    onClick={() => handleSSO('CMD_SSL')} 
+                  />
+                  <QuickActionCard 
+                    icon={<User className="size-6" />} 
+                    title="Contas FTP" 
+                    onClick={() => handleSSO('CMD_FTP')} 
+                  />
+                </>
+              )}
             </div>
           </>
         )}

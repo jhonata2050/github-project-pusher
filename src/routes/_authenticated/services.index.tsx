@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { LayoutPanelLeft, Search, Store, ExternalLink, Monitor } from "lucide-react";
+import { LayoutPanelLeft, Search, Store, ExternalLink, Monitor, Activity } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 
@@ -50,7 +50,13 @@ function ClientServicesPage() {
           *,
           products (
             name,
+            product_type,
             directadmin_package
+          ),
+          vps_instances (
+            id,
+            ip_address,
+            status
           )
         `)
         .eq("user_id", effectiveUserId!)
@@ -113,6 +119,9 @@ function ClientServicesPage() {
         ) : (
           filtered.map((svc: any) => {
             const status = STATUS_LABELS[svc.status] || { label: svc.status, color: "bg-muted" };
+            const isVPS = svc.products?.product_type === 'vps';
+            const vpsInstance = svc.vps_instances?.[0];
+            
             return (
               <div
                 key={svc.id}
@@ -124,7 +133,7 @@ function ClientServicesPage() {
                       "flex size-10 items-center justify-center rounded-xl",
                       svc.status === 'active' ? 'bg-success/10 text-success' : 'bg-warning/10 text-warning'
                     )}>
-                      {svc.products?.product_type === 'vps' ? <Monitor className="size-5" /> : <Store className="size-5" />}
+                      {isVPS ? <Monitor className="size-5" /> : <Store className="size-5" />}
                     </div>
                     <Badge variant="outline" className={cn(
                       "rounded-full border-none px-3 text-[10px] font-bold uppercase", 
@@ -137,7 +146,7 @@ function ClientServicesPage() {
                   <div className="mt-4">
                     <h3 className="font-bold text-foreground">{svc.products?.name}</h3>
                     <p className="mt-1 text-sm text-muted-foreground truncate">
-                      {svc.domain || "Sem domínio associado"}
+                      {svc.domain || (isVPS && vpsInstance?.ip_address) || "Sem domínio associado"}
                     </p>
                   </div>
 
@@ -168,33 +177,50 @@ function ClientServicesPage() {
                       Gerenciar
                     </Link>
                   </Button>
-                  {svc.status === 'active' && svc.username && svc.server_id && (
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
-                      className="rounded-xl border-brand/20 text-brand hover:bg-brand/5"
-                      onClick={async () => {
-                        if (svc.block_directadmin) {
-                          toast.error("Acesso bloqueado para este serviço.");
-                          return;
-                        }
+                  {svc.status === 'active' && (
+                    isVPS && vpsInstance ? (
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        className="rounded-xl border-brand/20 text-brand hover:bg-brand/5"
+                        asChild
+                      >
+                        <Link 
+                          to="/vps/$vpsId" 
+                          params={{ vpsId: vpsInstance.id }}
+                        >
+                          <Activity className="size-3 mr-1" />
+                          Monitorar
+                        </Link>
+                      </Button>
+                    ) : (svc.username && svc.server_id && (
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        className="rounded-xl border-brand/20 text-brand hover:bg-brand/5"
+                        onClick={async () => {
+                          if (svc.block_directadmin) {
+                            toast.error("Acesso bloqueado para este serviço.");
+                            return;
+                          }
 
-                        const promise = (async () => {
-                          const url = await getDASSOUrl({ data: { serverId: svc.server_id, username: svc.username, redirectUrl: '/' } });
-                          window.open(url, '_blank');
-                          return url;
-                        })();
+                          const promise = (async () => {
+                            const url = await getDASSOUrl({ data: { serverId: svc.server_id, username: svc.username, redirectUrl: '/' } });
+                            window.open(url, '_blank');
+                            return url;
+                          })();
 
-                        toast.promise(promise, {
-                          loading: 'Gerando acesso...',
-                          success: 'Redirecionando...',
-                          error: (err) => `Erro: ${err.message}`
-                        });
-                      }}
-                    >
-                      <ExternalLink className="size-3 mr-1" />
-                      Painel
-                    </Button>
+                          toast.promise(promise, {
+                            loading: 'Gerando acesso...',
+                            success: 'Redirecionando...',
+                            error: (err) => `Erro: ${err.message}`
+                          });
+                        }}
+                      >
+                        <ExternalLink className="size-3 mr-1" />
+                        Painel
+                      </Button>
+                    ))
                   )}
                 </div>
               </div>
