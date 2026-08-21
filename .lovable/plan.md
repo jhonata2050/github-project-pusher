@@ -1,41 +1,39 @@
-# Plano de Implementação - Painel Administrativo Aprimorado e Gestão de Clientes
+# Plano de Correção e Padronização: Integração DirectAdmin API e SSO
 
-Este plano detalha a criação da tela de gerenciamento de clientes, logs de auditoria de provisionamento e filtros avançados para falhas no dashboard administrativo da EQSAM CLOUD.
+Este plano detalha as alterações necessárias para alinhar a integração do DirectAdmin com as melhores práticas de segurança e a documentação oficial, separando claramente a autenticação da API (via Login Keys) do mecanismo de SSO (One-Time Login URL).
 
-## Alterações Propostas
+## Alterações de Design e Lógica
 
-### Backend (Servidores e Funções)
+### 1. Refatoração da Autenticação da API
+Atualmente, o sistema utiliza o formato `USER|KEY` diretamente no cabeçalho de autenticação. De acordo com a regra fundamental, esse formato deve ser apenas uma convenção interna.
+- O backend irá separar o `api_user` (ex: `admin|Token`) em `username` (`admin`) e `password` (`Token`) antes de realizar chamadas de API.
+- A autenticação passará a usar estritamente o padrão HTTP Basic Authentication com os valores separados.
 
-- **Nova Função de Auditoria:** Criação de `getClientProvisioningAudit` em `src/lib/provisioning.functions.ts` e sua implementação em `src/lib/provisioning.server.ts` para buscar o histórico completo de tentativas de ativação por cliente.
-- **Expansão do Dossier:** Atualização de `fetchClientDossier` em `src/lib/client-dossier.server.ts` para incluir um resumo de métricas financeiras (saldo devedor) e contagem de serviços.
+### 2. Separação entre Login Key e SSO
+O sistema deixará de tratar a One-Time Login URL como uma credencial de API.
+- **API**: Continuará usando a Login Key salva nas configurações do servidor.
+- **SSO**: Utilizará o comando oficial (`CMD_API_LOGIN_KEYS` com `type=one_time_url`) para gerar um hash temporário, redirecionando o cliente para a URL gerada pelo DirectAdmin.
 
-### Frontend (Interface do Admin)
-
-#### 1. Tela de Detalhes do Cliente (`/admin/clients/$clientId`)
-- **Aba Financeira:** Exibição de saldo devedor, listagem de faturas pendentes e histórico de pagamentos.
-- **Aba Provisionamento:** Implementação de uma linha do tempo (Timeline) com `timestamps`, tentativas e códigos de erro de cada serviço vinculado ao cliente.
-- **Histórico de VPS:** Listagem detalhada das instâncias de VPS contratadas, com status e data de vencimento.
-
-#### 2. Dashboard Admin (`/admin/index.tsx`)
-- **Filtros Avançados:** Adição de campos de busca na listagem de "Serviços Pendentes" para filtrar por:
-  - Nome do Cliente
-  - Produto
-  - Data da Falha
-  - Tipo de Erro (401, Timeout, IP Blocked, etc.)
-- **Melhoria no Audit Log:** Acesso rápido ao log de auditoria diretamente do widget de falhas.
-
-#### 3. Listagem de Clientes (`/admin/clients.tsx`)
-- Adição de colunas rápidas para "Faturas Pendentes" e "VPS Ativas" na tabela principal.
+### 3. Melhoria na Segurança do Backend
+- O frontend nunca terá acesso direto à Login Key administrativa.
+- Todas as validações de privilégio (evitar escalonamento para contas de sistema como `root` ou `admin`) serão reforçadas no servidor.
 
 ## Detalhes Técnicos
 
-- **Componentes:** Utilização de componentes `shadcn/ui` (`Table`, `Badge`, `Tabs`, `Dialog`) para manter a consistência visual "Apple-like" da EQSAM.
-- **Dados:** Integração com as tabelas `provisioning_logs`, `services`, `invoices` e `profiles`.
-- **Segurança:** Todas as novas funções de servidor utilizam `requireSupabaseAuth` e verificam o papel `admin` via `has_role`.
+### Arquivos afetados:
+- `src/lib/directadmin.server.ts`:
+    - Atualização da função `callDA` para separar o `apiUser` pelo caractere `|`.
+    - Ajuste no cabeçalho `Authorization` para refletir o usuário real e a chave como senha.
+    - Manutenção da compatibilidade com o formato `USER|KEY` no banco de dados para evitar quebra de configurações existentes.
+- `src/lib/security.server.ts`:
+    - Reforço das listas de usuários restritos.
+- `src/routes/_authenticated/admin/servers.tsx`:
+    - Atualização das dicas visuais para os administradores, deixando claro que o formato `USER|KEY` é apenas para organização da aplicação e não o username literal enviado ao servidor.
 
-## Próximos Passos
+### Fluxo de Validação:
+1. Testar conexão com um servidor configurado no formato `usuario|chave`.
+2. Validar que o DirectAdmin recebe o `usuario` como username e a `chave` como password.
+3. Verificar se o SSO gera uma URL de uso único (`One-Time URL`) válida.
 
-1. Atualizar `fetchClientDossier` no servidor.
-2. Implementar a interface de auditoria na tela do cliente.
-3. Adicionar os filtros de busca no dashboard principal.
-4. Validar o fluxo completo simulando falhas de provisionamento.
+---
+Vou prosseguir com a implementação assim que o plano for aprovado.
