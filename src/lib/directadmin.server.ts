@@ -95,8 +95,8 @@ export async function callDA({ hostname, apiUser, apiToken, command, method = 'G
 
   const searchParams = new URLSearchParams();
   // REGRA: Sempre solicitar JSON da API para validação estruturada
-  params.json = 'yes';
-  Object.entries(params).forEach(([key, val]) => searchParams.append(key, val));
+  const finalParams = { ...params, json: 'yes' };
+  Object.entries(finalParams).forEach(([key, val]) => searchParams.append(key, val));
   
   const authString = `${username}:${password}`;
   const authHeader = `Basic ${Buffer.from(authString).toString('base64')}`;
