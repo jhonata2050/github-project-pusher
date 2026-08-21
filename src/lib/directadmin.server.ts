@@ -371,28 +371,31 @@ export async function createDAAccount(serverId: string, details: {
 
   if (error || !server) throw new Error("Servidor não encontrado");
 
-  const password = generateStrongPassword(24); // Reduzido de 128 para 24 para compatibilidade com DA
+  // REGRA WHMCS: Senha do DirectAdmin é gerada e separada da senha do cliente no sistema
+  const daPassword = generateStrongPassword(24);
 
-  return await callDA({
+  const result = await callDA({
     hostname: server.hostname,
     apiUser: server.api_user ?? "",
     apiToken: server.api_token ?? "",
     command: 'CMD_API_ACCOUNT_USER',
     method: 'POST',
-
     params: {
       action: 'create',
       add: 'Submit',
       username: details.username,
       email: details.email,
-      passwd: password,
-      passwd2: password,
+      passwd: daPassword,
+      passwd2: daPassword,
       domain: details.domain,
       package: details.package,
       ip: server.ip_address || '',
       notify: 'no'
     }
   });
+
+  // Retornamos a senha gerada para que o chamador possa salvar na tabela 'services'
+  return { ...result, daPassword };
 }
 
 export async function suspendDAAccount(serverId: string, username: string) {
@@ -718,18 +721,21 @@ export async function getDASession(serverId: string, username: string, redirectU
   }).catch(e => console.error(e));
 
 
-  // 11. REMOVER O FLUXO ANTIGO / VALIDAÇÃO DE IDENTIDADE ESTRITA
+  // 11. VALIDAÇÃO DE IDENTIDADE ESTRITA (Arquitetura WHMCS)
+  // O SSO deve retornar uma URL que autentica o usuário do cliente, nunca o admin.
   const finalUrl = parseDirectAdminLoginUrl(result, server.hostname);
   
   if (!finalUrl) {
-    throw new Error("Falha ao gerar URL de acesso seguro.");
+    throw new Error("Falha ao gerar URL de acesso seguro: O servidor DirectAdmin não retornou uma URL válida.");
   }
 
-  // 12. VALIDAÇÃO DE IDENTIDADE OBRIGATÓRIA
-  // Se a URL contiver qualquer indício de ser do admin, bloqueamos.
+  // 12. BLOQUEIO PROATIVO DE IDENTIDADE ADMINISTRATIVA
+  // Se o servidor retornar uma URL que contenha o username do administrador do sistema, 
+  // e o alvo não for o próprio administrador, bloqueamos por segurança.
   const apiAdmin = (server.api_user || '').split('|')[0] || '';
-  if (finalUrl.toLowerCase().includes(apiAdmin.toLowerCase()) && apiAdmin.length > 0 && targetUser.toLowerCase() !== apiAdmin.toLowerCase()) {
-     throw new Error("Erro de Segurança: A URL gerada pertence ao administrador e não ao cliente. Acesso bloqueado.");
+  if (apiAdmin && finalUrl.toLowerCase().includes(apiAdmin.toLowerCase()) && targetUser.toLowerCase() !== apiAdmin.toLowerCase()) {
+     console.error(`[SSO-Security-Violation] Admin Leak Detected! Target=${targetUser}, Admin=${apiAdmin}, URL=${finalUrl}`);
+     throw new Error("Erro de Segurança: O servidor DirectAdmin tentou gerar uma sessão administrativa em vez de uma sessão de cliente. O acesso foi bloqueado para sua proteção.");
   }
 
   return finalUrl;

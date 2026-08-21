@@ -507,7 +507,7 @@ function AdminServersPage() {
             <h2 className="text-2xl font-bold tracking-tight text-foreground">Provedores Externos</h2>
           </div>
           <p className="text-muted-foreground">
-            Configure as credenciais de API para provedores de infraestrutura como a Contabo.
+            Configure as credenciais de API para provedores de infraestrutura.
           </p>
           
           <form onSubmit={(e) => {

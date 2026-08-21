@@ -213,6 +213,7 @@ function ClientDetailPage() {
       next_due_date: formData.get("next_due_date") as string || null,
       status: formData.get("status") as any || null,
       block_directadmin: formData.get("block_directadmin_service") === 'true',
+      password: formData.get("da_password") as string || null,
     });
   };
 
@@ -464,7 +465,12 @@ function ClientDetailPage() {
                                 <span>{s.products?.name || "Produto"}</span>
                                 <div className="flex flex-col gap-0.5">
                                   {s.username ? (
-                                    <span className="text-[10px] text-muted-foreground font-mono">Usuário: {s.username}</span>
+                                    <div className="flex flex-col gap-0.5">
+                                      <span className="text-[10px] text-muted-foreground font-mono">Usuário: {s.username}</span>
+                                      {s.password && (
+                                        <span className="text-[9px] text-muted-foreground font-mono">Senha: {s.password ? '********' : '—'}</span>
+                                      )}
+                                    </div>
                                   ) : (
                                     <span className="text-[10px] text-destructive italic">Usuário ausente</span>
                                   )}
@@ -744,6 +750,17 @@ function ClientDetailPage() {
                   defaultValue={editingService.username || ""} 
                   placeholder="Ex: abacap123" 
                   className="rounded-xl h-11" 
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="da_password">Senha do Servidor (SSO)</Label>
+                <Input 
+                  id="da_password" 
+                  name="da_password" 
+                  defaultValue={editingService.password || ""} 
+                  placeholder="Deixe vazio para manter a atual" 
+                  className="rounded-xl h-11" 
+                  type="password"
                 />
               </div>
               <div className="grid gap-2">

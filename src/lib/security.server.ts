@@ -128,7 +128,7 @@ export async function validateDASSORequest(
   // SECURITY: Even for Admins, we block SSO into the main reseller account unless it's the master dev
   // This satisfies point 11 of the request (if providerAccount.isAdmin === true: bloquear login)
   if (result.usertype !== 'user' && userId !== 'a6e63201-1901-4f5c-ab62-a83f6b55b8a6') {
-     throw new Error("Acesso negado: Acesso a contas administrativas via SSO de cliente é proibido por segurança.");
+     throw new Error("Erro de Segurança: O provedor DirectAdmin identificou que esta conta possui nível administrativo. O acesso via SSO é bloqueado para proteger a integridade do servidor.");
   }
 
   return { isAdmin: !!isAdmin, targetUsername: cleanUsername };
