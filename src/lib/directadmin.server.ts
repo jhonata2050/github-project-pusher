@@ -72,14 +72,21 @@ export async function callDA({ hostname, apiUser, apiToken, command, method = 'G
     );
   }
 
-  // REGRA FUNDAMENTAL: Separar USERNAME e PASSWORD da Login Key
+  // REGRA FUNDAMENTAL: Separar USERNAME e PASSWORD da Login Key.
+  // Suporte a impersonation no formato "RESELLER|USUARIO|NOME_CHAVE" ou "RESELLER|NOME_CHAVE"
   let username = apiUserRaw;
   let password = apiTokenTrimmed;
 
   if (apiUserRaw.includes('|')) {
     const parts = apiUserRaw.split('|');
-    username = parts[0]?.trim() || '';
-    password = apiTokenTrimmed;
+    if (parts.length >= 3) {
+      // Formato com impersonation: reseller|target|keyname
+      // O DirectAdmin exige "reseller|target" como usuário na autenticação básica
+      username = `${parts[0]}|${parts[1]}`;
+    } else {
+      // Formato padrão: reseller|keyname
+      username = parts[0]?.trim() || '';
+    }
   }
 
   // SECURITY: Prevent credentials from leaking in logs or being misused
@@ -622,9 +629,14 @@ export async function getDASession(serverId: string, username: string, redirectU
   console.log(`[DA-SSO] Gerando One-Time URL para ${targetUser} via CMD_API_LOGIN_KEYS com impersonation`);
 
   // REGRA DE IMPERSONATION: Para que a sessão pertença ao usuário alvo, a autenticação
-  // deve ser feita no formato "RESELLER|USUARIO".
-  const apiUserBase = (server.api_user || '').split('|')[0] || '';
-  const effectiveApiUser = `${apiUserBase}|${targetUser}`;
+  // deve ser feita no formato "RESELLER|USUARIO|NOME_CHAVE".
+  // Buscamos o reseller e o nome da chave das configurações do servidor.
+  const apiUserParts = (server.api_user || '').split('|');
+  const reseller = apiUserParts[0] || '';
+  const keyName = apiUserParts[apiUserParts.length - 1] || '';
+  
+  // Montamos a identidade com 3 partes para callDA processar: RESELLER|TARGET|KEYNAME
+  const effectiveApiUser = `${reseller}|${targetUser}|${keyName}`;
 
   let result: any;
   try {
