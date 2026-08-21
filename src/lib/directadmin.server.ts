@@ -696,8 +696,10 @@ export async function getDASession(serverId: string, username: string, redirectU
 
   // 12. BLOQUEIO PROATIVO DE IDENTIDADE ADMINISTRATIVA (REFORÇADO)
   const apiAdmin = (server.api_user || '').split('|')[0] || '';
+  // Se a URL contiver o nome do reseller no parâmetro user=, e o targetUser for diferente, bloqueamos.
+  // Note: O DA costuma colocar user=TARGET na URL de one-time se o impersonation funcionou.
   if (apiAdmin && loginUrl.toLowerCase().includes(`user=${apiAdmin.toLowerCase()}`) && targetUser.toLowerCase() !== apiAdmin.toLowerCase()) {
-     console.error(`[SSO-Security-Violation] Admin Leak Detected in URL! Target=${targetUser}, Admin=${apiAdmin}`);
+     console.error(`[SSO-Security-Violation] Admin Identity Leak in URL! Target=${targetUser}, Leak=${apiAdmin}`);
      throw new Error("DA_DIRECTADMIN_BLOCKED");
   }
 
