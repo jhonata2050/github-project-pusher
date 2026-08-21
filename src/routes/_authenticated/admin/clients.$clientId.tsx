@@ -799,12 +799,12 @@ function ClientDetailPage() {
                 </Select>
               </div>
               <div className="grid gap-2">
-                <Label htmlFor="status">Status</Label>
+                <Label htmlFor="status" className="text-xs">Status</Label>
                 <Select 
                   name="status" 
                   defaultValue={editingService.status}
                 >
-                  <SelectTrigger id="status" className="h-11 rounded-xl border-input bg-background shadow-sm">
+                  <SelectTrigger id="status" className="h-9 rounded-xl border-input bg-background shadow-sm text-xs">
                     <SelectValue placeholder="Selecione o status" />
                   </SelectTrigger>
                   <SelectContent className="rounded-xl border-border/40 shadow-xl">
