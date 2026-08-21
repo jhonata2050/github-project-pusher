@@ -622,7 +622,6 @@ export async function getDASession(serverId: string, username: string, redirectU
         login_keys_url: redirectUrl || '/',
         expiry: '10m',
         max_uses: '1',
-techo: '',
       },
     });
   }
