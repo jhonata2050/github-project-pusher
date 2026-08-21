@@ -256,7 +256,7 @@ function ClientDetailPage() {
 
         <Tabs defaultValue="info" className="w-full">
           <div className="overflow-x-auto pb-2">
-            <TabsList className="bg-muted/50 p-1 rounded-2xl h-12 w-max min-w-full justify-start sm:w-auto">
+            <TabsList className="bg-muted/50 p-1 rounded-2xl h-10 w-max min-w-full justify-start sm:w-auto">
               <TabsTrigger value="info" className="rounded-xl flex gap-2"><User className="size-4" /> Dados</TabsTrigger>
               <TabsTrigger value="services" className="rounded-xl flex gap-2"><Server className="size-4" /> Serviços</TabsTrigger>
               <TabsTrigger value="finance" className="rounded-xl flex gap-2"><CreditCard className="size-4" /> Financeiro</TabsTrigger>
