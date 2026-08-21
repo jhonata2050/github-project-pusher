@@ -269,12 +269,11 @@ function AdminServersPage() {
                   <div className="space-y-3">
                     <h4 className="font-bold text-foreground">Configuração para SSO Seguro (Login-URL):</h4>
                     <p className="text-sm text-muted-foreground">
-                      O sistema utiliza a API moderna do DirectAdmin para delegação segura. A Login Key <strong>PRECISA</strong> das seguintes permissões:
+                      O sistema utiliza a API do DirectAdmin para delegação segura de sessões. A Login Key deve possuir as permissões necessárias para gerenciar usuários e visualizar configurações.
                     </p>
                     <div className="bg-muted/50 p-4 rounded-2xl grid grid-cols-1 gap-2 text-[13px] font-mono">
                       {[
-                        "api/login/url (Comando/POST)",
-                        "LKM_CREATE_URL (Permissão Específica)",
+                        "CMD_API_LOGIN_KEYS",
                         "CMD_API_SHOW_USER_CONFIG",
                         "CMD_API_PACKAGES_USER",
                         "CMD_API_ACCOUNT_USER",
@@ -285,8 +284,8 @@ function AdminServersPage() {
                         </div>
                       ))}
                     </div>
-                    <div className="p-3 bg-destructive/10 border border-destructive/20 rounded-xl text-destructive text-[11px] leading-tight">
-                      <strong>Aviso Crítico:</strong> O método antigo (CMD_API_LOGIN_KEYS) foi desativado por falha de segurança na delegação. Sem a permissão <strong>LKM_CREATE_URL</strong>, o login do cliente falhará.
+                    <div className="p-3 bg-brand/5 border border-brand/20 rounded-xl text-brand text-[11px] leading-tight">
+                      <strong>Nota de Segurança:</strong> O SSO utiliza o mecanismo nativo de delegação do servidor. Se o seu servidor não suportar `api/login/url`, o login direto para clientes estará indisponível por motivos de segurança.
                     </div>
                   </div>
                 </div>
