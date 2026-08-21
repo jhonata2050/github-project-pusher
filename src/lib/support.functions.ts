@@ -552,7 +552,7 @@ export const getServiceServerDetails = createServerFn({ method: "GET" })
       const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
       const { data: srv } = await supabaseAdmin
         .from("servers")
-        .select("id, name, hostname, ip_address, type")
+        .select("id, name, hostname, ip_address, sso_supported")
         .eq("id", service.server_id)
         .maybeSingle();
       server = srv ?? null;

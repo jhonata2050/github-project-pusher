@@ -309,15 +309,20 @@ export async function getDACapabilities(serverId: string) {
       
       if (response.ok) {
         capabilities.api_login_url = true;
-        
-        // 3. Testar se permite delegação para um usuário inexistente (ou se o erro é permissão)
-        // Nota: Um teste real de delegação exigiria um usuário filho válido. 
-        // Por enquanto, baseamos na resposta do endpoint.
         capabilities.delegated_sso = true; 
       }
     } catch (e) {
       console.warn(`[DA-Capability] /api/login/url indisponível:`, e);
     }
+
+    // Salvar o resultado no banco para evitar consultas repetidas
+    await supabaseAdmin
+      .from('servers')
+      .update({ 
+        sso_supported: capabilities.delegated_sso,
+        last_capability_check: new Date().toISOString()
+      })
+      .eq('id', serverId);
 
     return capabilities;
   } catch (e: any) {
