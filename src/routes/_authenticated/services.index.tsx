@@ -121,6 +121,7 @@ function ClientServicesPage() {
             const status = STATUS_LABELS[svc.status] || { label: svc.status, color: "bg-muted" };
             const isVPS = svc.products?.product_type === 'vps';
             const vpsInstance = svc.vps_instances?.[0];
+            
             return (
               <div
                 key={svc.id}
@@ -132,7 +133,7 @@ function ClientServicesPage() {
                       "flex size-10 items-center justify-center rounded-xl",
                       svc.status === 'active' ? 'bg-success/10 text-success' : 'bg-warning/10 text-warning'
                     )}>
-                      {svc.products?.product_type === 'vps' ? <Monitor className="size-5" /> : <Store className="size-5" />}
+                      {isVPS ? <Monitor className="size-5" /> : <Store className="size-5" />}
                     </div>
                     <Badge variant="outline" className={cn(
                       "rounded-full border-none px-3 text-[10px] font-bold uppercase", 
@@ -220,7 +221,7 @@ function ClientServicesPage() {
                         Painel
                       </Button>
                     ))
-                  ))}
+                  )}
                 </div>
               </div>
             );
