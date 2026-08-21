@@ -437,9 +437,9 @@ function ClientDetailPage() {
 
           <TabsContent value="services" className="mt-6">
             <Card className="rounded-3xl border-none shadow-sm">
-              <CardHeader>
-                <CardTitle>Serviços Contratados</CardTitle>
-                <CardDescription>Hospedagem, domínios e outros</CardDescription>
+              <CardHeader className="py-4">
+                <CardTitle className="text-lg">Serviços Contratados</CardTitle>
+                <CardDescription className="text-xs">Hospedagem, domínios e outros</CardDescription>
               </CardHeader>
               <CardContent>
                 {dossiersQuery.isLoading ? <Skeleton className="h-40" /> : (
