@@ -241,7 +241,7 @@ function ClientDetailPage() {
           <div className="flex flex-wrap gap-3">
             <Button 
               variant="outline" 
-              className="rounded-xl flex gap-2 h-10 flex-1 sm:flex-none"
+              className="rounded-xl flex gap-2 h-9 text-xs flex-1 sm:flex-none"
               onClick={handleImpersonate}
               disabled={isImpersonating}
             >
