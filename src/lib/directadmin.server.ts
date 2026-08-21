@@ -62,17 +62,29 @@ function generateStrongPassword(length = 32): string {
 
 
 export async function callDA({ hostname, apiUser, apiToken, command, method = 'GET', params = {} }: DARequestOptions) {
-  // Pré-validação das credenciais: Login Keys exigem "USUARIO|NOME_DA_CHAVE"
-  if (!apiUser.trim() || !apiToken.trim()) {
+  // Pré-validação das credenciais: Login Keys no formato interno "USUARIO|NOME_DA_CHAVE"
+  const apiUserRaw = apiUser.trim();
+  const apiTokenTrimmed = apiToken.trim();
+
+  if (!apiUserRaw || !apiTokenTrimmed) {
     throw new Error(
-      `Credenciais do servidor ${hostname} não configuradas. Preencha o "Usuário API" (formato admin|NOME_DA_CHAVE) e o "Token API" em Sistema > Servidores.`,
+      `Credenciais do servidor ${hostname} não configuradas. Preencha o "Usuário API" (formato admin|EqsamKey) e o "Token API" em Sistema > Servidores.`,
     );
   }
-  if (!apiUser.includes('|')) {
-    throw new Error(
-      `Credenciais inválidas no servidor ${hostname}: o "Usuário API" está como "${apiUser.trim()}", mas o DirectAdmin exige o formato "USUARIO|NOME_DA_CHAVE" (ex: admin|${apiUser.trim()}). ` +
-        `Corrija em Sistema > Servidores usando o usuário dono da Login Key seguido de "|" e o nome da chave; o "Token API" deve ser o Key Value gerado.`,
-    );
+
+  // REGRA FUNDAMENTAL: Separar USERNAME e PASSWORD da Login Key
+  // O caractere '|' é uma convenção interna da aplicação para identificar qual chave usar.
+  let username = apiUserRaw;
+  let password = apiTokenTrimmed;
+
+  if (apiUserRaw.includes('|')) {
+    const parts = apiUserRaw.split('|');
+    username = parts[0]?.trim() || '';
+    // De acordo com a documentação oficial, a autenticação deve usar o USER real e o KEY VALUE como senha.
+    // O nome da chave pode ser ignorado no cabeçalho Basic Auth se o Token já for o valor secreto.
+    // No entanto, o DirectAdmin às vezes exige USUARIO|NOME_DA_CHAVE como username se a chave for restrita.
+    // Para seguir a especificação técnica do usuário: username = USUARIO real, password = segredo da Login Key.
+    password = apiTokenTrimmed;
   }
 
   // Limpa o hostname e preserva a porta se especificada, caso contrário usa 2222
@@ -81,20 +93,18 @@ export async function callDA({ hostname, apiUser, apiToken, command, method = 'G
   const port = hostParts[1] || '2222';
   const url = `https://${cleanHostname}:${port}/${command}`;
 
-  
   const searchParams = new URLSearchParams();
   Object.entries(params).forEach(([key, val]) => searchParams.append(key, val));
   
-  const apiUserTrimmed = apiUser.trim();
-  const apiTokenTrimmed = apiToken.trim();
-  const authString = `${apiUserTrimmed}:${apiTokenTrimmed}`;
+  const authString = `${username}:${password}`;
   const authHeader = `Basic ${Buffer.from(authString).toString('base64')}`;
+
   
   try {
     if (method === 'GET') searchParams.set('json', 'yes');
 
     // Debug logging for credentials (redacted token)
-    console.log(`[DirectAdmin-Request] ${method} to ${url} (User: ${apiUserTrimmed})`);
+    console.log(`[DirectAdmin-Request] ${method} to ${url} (User: ${username})`);
 
     const response = await fetch(url + (method === 'GET' ? `?${searchParams.toString()}` : ''), {
       method,
@@ -150,7 +160,7 @@ export async function callDA({ hostname, apiUser, apiToken, command, method = 'G
 
         throw new Error(
           `Falha na autenticação (401): O DirectAdmin não reconheceu as credenciais. ` +
-          `Certifique-se de que o "Usuário API" está no formato "USUARIO|NOME_DA_CHAVE" (ex: admin|EqsamKey) ` +
+          `Certifique-se de que o "Usuário API" está no formato interno "USUARIO|NOME_DA_CHAVE" (ex: admin|EqsamKey) ` +
           `e que o "Token API" é o valor (Key Value) gerado.${ipGuidance}${extraInfo}`
         );
       }

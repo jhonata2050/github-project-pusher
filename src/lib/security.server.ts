@@ -60,7 +60,7 @@ export async function validateDASSORequest(
 
     // 3. Additional check: ensure the target username isn't a system one even if database says they own it (tamper check)
     // We strictly block any SSO into system accounts for non-admins.
-    const restrictedUsernames = ["admin", "root", "superuser", "da_admin", "eqsa7232"];
+    const restrictedUsernames = ["admin", "root", "superuser", "da_admin", "eqsa7232", "reseller", "support", "system"];
     if (restrictedUsernames.includes(cleanUsername.toLowerCase())) {
       console.error(`[Security-Violation] User ${userId} attempted to SSO into restricted username ${cleanUsername} (DB Ownership Claimed)`);
       await logSecurityEvent(userId, "system_account_sso_attempt", { username: cleanUsername, serverId });
@@ -68,7 +68,7 @@ export async function validateDASSORequest(
     }
   } else {
     // 4. For admins, verify they aren't accidentally trying to login as the root reseller or system accounts
-    const restrictedUsernames = ["admin", "root", "superuser", "da_admin", "eqsa7232"];
+    const restrictedUsernames = ["admin", "root", "superuser", "da_admin", "eqsa7232", "reseller", "support", "system"];
     
     // We allow the main developer/admin ID to bypass for maintenance if needed, 
     // but block general admin escalation into the core reseller account.
