@@ -519,20 +519,34 @@ export const getServiceServerDetails = createServerFn({ method: "GET" })
 
     const { data: service, error } = await context.supabase
       .from("services")
-      .select("*, servers(*)")
+      .select("*")
       .eq("id", serviceId)
-      .single();
+      .maybeSingle();
 
-    if (error || !service) throw new Error("Serviço não encontrado");
+    if (error) {
+      console.error("[getServiceServerDetails] erro ao buscar serviço:", error.message);
+      throw new Error("Serviço não encontrado");
+    }
+    if (!service) throw new Error("Serviço não encontrado");
 
     // If not admin, the service must belong to the user
     if (!isAdmin && service.user_id !== context.userId) {
       throw new Error("Acesso negado: Você não possui permissão para acessar este serviço.");
     }
-    
-    // Se for DirectAdmin, poderíamos buscar estatísticas reais aqui futuramente
-    // Por enquanto retornamos os dados do banco e as capacidades do servidor
-    return service;
+
+    // Servers table is not readable by clients (RLS/grants), fetch it server-side
+    let server: any = null;
+    if (service.server_id) {
+      const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+      const { data: srv } = await supabaseAdmin
+        .from("servers")
+        .select("id, name, hostname, ip_address, type")
+        .eq("id", service.server_id)
+        .maybeSingle();
+      server = srv ?? null;
+    }
+
+    return { ...service, servers: server };
   });
 
 
