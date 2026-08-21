@@ -486,6 +486,17 @@ export const getDAPackagesList = createServerFn({ method: "GET" })
     return await getDAPackages(serverId);
   });
 
+export const getDACapabilitiesList = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: unknown) => z.string().parse(data))
+  .handler(async ({ data: serverId, context }) => {
+    const { data: isAdmin } = await context.supabase.rpc("has_role", { _user_id: context.userId, _role: "admin" });
+    if (!isAdmin) throw new Error("Unauthorized");
+
+    const { getDACapabilities } = await import("./directadmin.server");
+    return await getDACapabilities(serverId);
+  });
+
 export const getDASSOUrl = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((data: unknown) => 

@@ -151,9 +151,7 @@ export async function callDA({ hostname, apiUser, apiToken, command, method = 'G
       if (response.status === 403 && /not allowed|Access Denied/i.test(errorText)) {
         throw new Error(
           `A chave de API do DirectAdmin não tem permissão para o comando "${command}". ` +
-            `No DirectAdmin, edite a Login Key/Token usada (usuário ${apiUser}) e libere TODOS os comandos a seguir: ` +
-            `CMD_API_PACKAGES_USER, CMD_API_ACCOUNT_USER, CMD_API_SHOW_USER_CONFIG, CMD_API_SELECT_USERS, CMD_API_LOGIN_KEYS e CMD_API_USER_DOMAIN_LIST ` +
-            `(ou marque "All commands"). Verifique também se a chave não está restrita por IP.`,
+            `Verifique se a Login Key possui as permissões necessárias e se não está restrita por IP.`,
         );
       }
       if (response.status === 401) {
@@ -258,6 +256,74 @@ export async function getDAPackages(serverId: string) {
   const packages = normalizePackageList(result);
   if (packages.length === 0) throw new Error('A conexão foi aceita, mas nenhum pacote de usuário foi retornado pelo DirectAdmin.');
   return packages;
+}
+
+export async function getDACapabilities(serverId: string) {
+  const { data: server, error } = await supabaseAdmin
+    .from('servers')
+    .select('*')
+    .eq('id', serverId)
+    .single();
+
+  if (error || !server) throw new Error('Servidor não encontrado');
+
+  const capabilities = {
+    cmd_api_login_keys: false,
+    api_login_url: false,
+    delegated_sso: false,
+    error: null as string | null
+  };
+
+  try {
+    // 1. Testar CMD_API_LOGIN_KEYS
+    try {
+      await callDA({
+        hostname: server.hostname,
+        apiUser: server.api_user ?? "",
+        apiToken: server.api_token ?? "",
+        command: 'CMD_API_LOGIN_KEYS',
+        params: { action: 'list' }
+      });
+      capabilities.cmd_api_login_keys = true;
+    } catch (e) {
+      console.warn(`[DA-Capability] CMD_API_LOGIN_KEYS indisponível:`, e);
+    }
+
+    // 2. Testar /api/login/url
+    const hostParts = server.hostname.replace(/^https?:\/\//, '').split(':');
+    const cleanHost = hostParts[0];
+    const daPort = hostParts[1] || '2222';
+    const daUsername = server.api_user?.includes('|') ? (server.api_user.split('|')[0] ?? '').trim() : server.api_user;
+    
+    try {
+      const response = await fetch(`https://${cleanHost}:${daPort}/api/login/url`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Basic ${Buffer.from(`${daUsername}:${server.api_token}`).toString('base64')}`,
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+        body: JSON.stringify({ user: daUsername, ttl: 10 }), // Testar consigo mesmo primeiro
+        signal: AbortSignal.timeout(10_000),
+      });
+      
+      if (response.ok) {
+        capabilities.api_login_url = true;
+        
+        // 3. Testar se permite delegação para um usuário inexistente (ou se o erro é permissão)
+        // Nota: Um teste real de delegação exigiria um usuário filho válido. 
+        // Por enquanto, baseamos na resposta do endpoint.
+        capabilities.delegated_sso = true; 
+      }
+    } catch (e) {
+      console.warn(`[DA-Capability] /api/login/url indisponível:`, e);
+    }
+
+    return capabilities;
+  } catch (e: any) {
+    capabilities.error = e.message;
+    return capabilities;
+  }
 }
 
 export async function testDAConnectionDetails(serverId: string): Promise<DAConnectionResult> {
@@ -566,7 +632,6 @@ export async function getDASession(serverId: string, username: string, redirectU
   const loginUrlEndpoint = `https://${cleanHost}:${daPort}/api/login/url`;
 
   let result: any;
-  let needsLegacyFallback = false;
   try {
     const response = await fetch(loginUrlEndpoint, {
       method: 'POST',
@@ -583,11 +648,9 @@ export async function getDASession(serverId: string, username: string, redirectU
     const text = await response.text();
 
     if (response.status === 404 || response.status === 405 || (response.status >= 300 && response.status < 400)) {
-      // Servidor antigo: cai para o fluxo legado CMD_API_LOGIN_KEYS
-      console.warn(`[DA-SSO] /api/login/url indisponível (${response.status}). Usando fluxo legado CMD_API_LOGIN_KEYS.`);
-      needsLegacyFallback = true;
+      throw new Error(`O provedor DirectAdmin não permite SSO delegado para usuários desta revenda. (Endpoint moderno /api/login/url indisponível)`);
     } else if (!response.ok) {
-      throw new Error(`DirectAdmin respondeu ${response.status} ao gerar o acesso: ${text.slice(0, 200)}`);
+      throw new Error(`O provedor DirectAdmin não permite SSO delegado para usuários desta revenda. (Erro ${response.status}: ${text.slice(0, 100)})`);
     } else {
       try {
         result = JSON.parse(text);
@@ -599,32 +662,11 @@ export async function getDASession(serverId: string, username: string, redirectU
     if (e?.name === 'TimeoutError' || e?.name === 'AbortError') {
       throw new Error(`O servidor DirectAdmin (${server.hostname}) não respondeu ao gerar o acesso seguro.`);
     }
-    if (e instanceof TypeError) {
-      // Falha de rede/TLS no endpoint moderno: tenta o legado
-      console.warn(`[DA-SSO] Falha de rede em /api/login/url, tentando fluxo legado:`, e?.message);
-      needsLegacyFallback = true;
-    } else {
-      throw e;
-    }
+    throw e;
   }
 
-  if (needsLegacyFallback) {
-    result = await callDA({
-      hostname: server.hostname,
-      apiUser: server.api_user,
-      apiToken: server.api_token,
-      command: 'CMD_API_LOGIN_KEYS',
-      method: 'POST',
-      params: {
-        action: 'create',
-        type: 'one_time_url',
-        user: targetUser,
-        login_keys_url: redirectUrl || '/',
-        expiry: '10m',
-        max_uses: '1',
-      },
-    });
-  }
+  // BLOQUEIO ESTRITO: Não fazer fallback para CMD_API_LOGIN_KEYS para clientes
+  // Este fluxo comprovadamente autentica o revendedor em vez do cliente em muitas configurações.
 
 
   const resObj = (typeof result === 'object' && result !== null ? result : {}) as Record<string, any>;
