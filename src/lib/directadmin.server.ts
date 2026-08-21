@@ -75,9 +75,12 @@ export async function callDA({ hostname, apiUser, apiToken, command, method = 'G
     );
   }
 
-  // Limpa o hostname e garante o uso da porta 2222
-  const cleanHostname = hostname.replace(/^https?:\/\//, '').split(':')[0];
-  const url = `https://${cleanHostname}:2222/${command}`;
+  // Limpa o hostname e preserva a porta se especificada, caso contrário usa 2222
+  const hostParts = hostname.replace(/^https?:\/\//, '').split(':');
+  const cleanHostname = hostParts[0];
+  const port = hostParts[1] || '2222';
+  const url = `https://${cleanHostname}:${port}/${command}`;
+
   
   const searchParams = new URLSearchParams();
   Object.entries(params).forEach(([key, val]) => searchParams.append(key, val));
