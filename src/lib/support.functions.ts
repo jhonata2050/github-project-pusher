@@ -715,7 +715,7 @@ export const createProduct = createServerFn({ method: "POST" })
 
     if (prodError) throw new Error(prodError.message);
 
-    const pricesToInsert = input.prices.map(p => ({
+    const pricesToInsert = input.prices.map((p: any) => ({
       product_id: product.id,
       cycle: p.cycle,
       price: p.price,
@@ -782,7 +782,7 @@ export const updateProduct = createServerFn({ method: "POST" })
       .delete()
       .eq("product_id", input.id);
 
-    const pricesToInsert = input.prices.map(p => ({
+    const pricesToInsert = input.prices.map((p: any) => ({
       product_id: input.id,
       cycle: p.cycle,
       price: p.price,
