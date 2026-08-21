@@ -94,7 +94,9 @@ export async function callDA({ hostname, apiUser, apiToken, command, method = 'G
   const url = `https://${cleanHostname}:${port}/${command}`;
 
   const searchParams = new URLSearchParams();
-  Object.entries(params).forEach(([key, val]) => searchParams.append(key, val));
+  // REGRA: Sempre solicitar JSON da API para validação estruturada
+  const finalParams = { ...params, json: 'yes' };
+  Object.entries(finalParams).forEach(([key, val]) => searchParams.append(key, val));
   
   const authString = `${username}:${password}`;
   const authHeader = `Basic ${Buffer.from(authString).toString('base64')}`;
@@ -119,7 +121,7 @@ export async function callDA({ hostname, apiUser, apiToken, command, method = 'G
   }
   
   try {
-    if (method === 'GET') searchParams.set('json', 'yes');
+    // Removido searchParams.set('json', 'yes') duplicado, já definido acima
 
     const response = await fetch(url + (method === 'GET' ? `?${searchParams.toString()}` : ''), {
       method,
@@ -184,12 +186,26 @@ export async function callDA({ hostname, apiUser, apiToken, command, method = 'G
 
     const text = await response.text();
     try {
-      return JSON.parse(text);
-    } catch {
+      const parsed = JSON.parse(text) as Record<string, any>;
+      // REGRA: Se a resposta for JSON mas contiver 'error' como string "1" ou número 1, tratamos como erro da API
+      if (parsed && (parsed['error'] === '1' || parsed['error'] === 1)) {
+        const errorMsg = parsed['details'] || parsed['text'] || "Erro desconhecido na API do DirectAdmin";
+        throw new Error(String(errorMsg));
+      }
+      return parsed;
+    } catch (e) {
+      if (e instanceof Error && !e.message.includes('Unexpected token')) throw e;
+      
       if (text.trimStart().startsWith('<!DOCTYPE html') || text.includes('<html')) {
         throw new Error('O DirectAdmin retornou a tela de login em vez dos dados da API. Verifique as permissões da chave de acesso.');
       }
-      return Object.fromEntries(new URLSearchParams(text));
+      
+      // Fallback para URLSearchParams se não for JSON
+      const parsed = Object.fromEntries(new URLSearchParams(text)) as Record<string, any>;
+      if (parsed && (parsed['error'] === '1' || parsed['error'] === 1)) {
+         throw new Error(String(parsed['details'] || parsed['text'] || "Erro na API (Fallback)"));
+      }
+      return parsed;
     }
   } catch (error: unknown) {
     if (error instanceof Error && (error.name === 'AbortError' || error.name === 'TimeoutError')) {
@@ -444,8 +460,9 @@ export async function checkDAUserExists(serverId: string, username: string, serv
       params: { user: username.trim() }
     });
 
-    if (result && (result.error === '1' || result.error === 1)) {
-      const details = String(result.details || result.text || "");
+    const resObj = result as Record<string, any>;
+    if (resObj && (resObj['error'] === '1' || resObj['error'] === 1)) {
+      const details = String(resObj['details'] || resObj['text'] || "");
       if (details.includes("Cannot show user") || details.includes("does not exist")) {
         return false;
       }
@@ -454,11 +471,11 @@ export async function checkDAUserExists(serverId: string, username: string, serv
     
     // Além de existir, verificamos se o tipo é estritamente 'user' para clientes
     // Se o resultado contiver usertype=reseller ou admin, e não for uma consulta de admin, podemos sinalizar
-    if (result && result.usertype && result.usertype !== 'user' && !username.toLowerCase().includes('admin')) {
-      console.warn(`[DA-Security-Warning] Usuário ${username} detectado com nível ${result.usertype} no servidor ${server.hostname}`);
+    if (resObj && resObj['usertype'] && resObj['usertype'] !== 'user' && !username.toLowerCase().includes('admin')) {
+      console.warn(`[DA-Security-Warning] Usuário ${username} detectado com nível ${resObj['usertype']} no servidor ${server.hostname}`);
     }
 
-    return !!(result && (result.username || result.email || result.error === '0'));
+    return !!(resObj && (resObj['username'] || resObj['email'] || resObj['error'] === '0'));
   } catch (e) {
     const errorStr = String(e);
     
@@ -560,25 +577,46 @@ export async function getDASession(serverId: string, username: string, redirectU
     params
   });
 
-  // DIAGNÓSTICO TÉCNICO: Verificação de integridade da resposta SSO
+  // DIAGNÓSTICO TÉCNICO E VALIDAÇÃO DE IDENTIDADE SSO
   if (result) {
     const { createSystemLog } = await import("./system-logs.server");
+    const resObj = result as Record<string, any>;
     
-    if (result.user && result.user !== targetUser) {
-      console.error(`[DA-SSO-Identity-Mismatch] Esperado: ${targetUser}, Recebido: ${result.user}`);
+    // Log do resultado bruto para depuração (apenas logs internos)
+    console.log(`[DA-SSO-Response-Debug] Payload:`, JSON.stringify(resObj));
+
+    // Se o resultado não contiver o campo 'user', o DirectAdmin provavelmente não processou a impersonação
+    // IMPORTANTE: Algumas versões do DA retornam o campo 'user' dentro de 'details' ou no root.
+    const returnedUser = resObj['user'] || resObj['username'];
+
+    if (!returnedUser) {
+      console.error(`[DA-SSO-Security-Failure] Resposta sem confirmação de usuário. Resposta:`, JSON.stringify(resObj));
       await createSystemLog({
         category: 'security',
         level: 'critical',
-        message: `IDENTIDADE SSO INVÁLIDA: O servidor retornou sessão para '${result.user}' ao solicitar para '${targetUser}'.`,
-        metadata: { targetUser, returnedUser: result.user, serverId }
+        message: `FALHA DE IDENTIDADE SSO: O servidor não confirmou o usuário alvo. A Login Key pode estar sem a permissão 'LKM_CREATE_URL' com impersonação.`,
+        metadata: { targetUser, serverId, response: resObj }
       }).catch(e => console.error(e));
       
-      throw new Error(`Erro Crítico de Segurança: O servidor DirectAdmin retornou uma identidade incorreta (${result.user}). Acesso bloqueado.`);
+      throw new Error(`Erro de Segurança: O servidor DirectAdmin não confirmou a identidade do usuário na sessão gerada. O acesso foi bloqueado para evitar login administrativo indevido.`);
+    }
+
+    if (returnedUser !== targetUser) {
+      console.error(`[DA-SSO-Identity-Mismatch] Mismatch detectado! Esperado: ${targetUser}, Recebido: ${returnedUser}`);
+      await createSystemLog({
+        category: 'security',
+        level: 'critical',
+        message: `TENTATIVA DE ESCALONAMENTO BLOQUEADA: O servidor retornou sessão para '${returnedUser}' ao solicitar para '${targetUser}'.`,
+        metadata: { targetUser, returnedUser, serverId }
+      }).catch(e => console.error(e));
+      
+      throw new Error(`Erro Crítico de Segurança: O servidor retornou uma identidade administrativa incorreta (${returnedUser}). O acesso foi interrompido imediatamente.`);
     }
   }
 
-  if (result && (result.error === '1' || result.error === 1)) {
-    const errorMsg = result.details || result.text || "Erro desconhecido na API do DirectAdmin";
+  const ssoRes = result as Record<string, any>;
+  if (ssoRes && (ssoRes['error'] === '1' || ssoRes['error'] === 1)) {
+    const errorMsg = ssoRes['details'] || ssoRes['text'] || "Erro desconhecido na API do DirectAdmin";
     throw new Error(`Erro ao gerar acesso SSO: ${errorMsg}`);
   }
 
