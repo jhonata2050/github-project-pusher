@@ -839,12 +839,12 @@ function ClientDetailPage() {
                   <input type="hidden" id="block_directadmin_service_hidden" name="block_directadmin_service" value={editingService.block_directadmin ? 'true' : 'false'} />
                 </div>
               </div>
-              <div className="flex gap-2 pt-4 border-t">
+              <div className="flex flex-col sm:flex-row gap-2 pt-4 border-t">
                 {editingService.status === 'active' ? (
                   <Button 
                     type="button" 
                     variant="outline" 
-                    className="flex-1 rounded-xl text-orange-600 border-orange-200 hover:bg-orange-50"
+                    className="flex-1 rounded-xl text-orange-600 border-orange-200 hover:bg-orange-50 h-11"
                     onClick={() => hostingActionMutation.mutate({ serviceId: editingService.id, action: 'suspend' })}
                     disabled={hostingActionMutation.isPending}
                   >
@@ -854,7 +854,7 @@ function ClientDetailPage() {
                   <Button 
                     type="button" 
                     variant="outline" 
-                    className="flex-1 rounded-xl text-green-600 border-green-200 hover:bg-green-50"
+                    className="flex-1 rounded-xl text-green-600 border-green-200 hover:bg-green-50 h-11"
                     onClick={() => hostingActionMutation.mutate({ serviceId: editingService.id, action: 'unsuspend' })}
                     disabled={hostingActionMutation.isPending}
                   >
@@ -865,7 +865,7 @@ function ClientDetailPage() {
                 <Button 
                   type="button" 
                   variant="outline" 
-                  className="flex-1 rounded-xl text-red-600 border-red-200 hover:bg-red-50"
+                  className="flex-1 rounded-xl text-red-600 border-red-200 hover:bg-red-50 h-11"
                   onClick={() => {
                     if (confirm("Tem certeza que deseja DELETAR esta conta no servidor? Esta ação é irreversível.")) {
                       hostingActionMutation.mutate({ serviceId: editingService.id, action: 'delete' });
