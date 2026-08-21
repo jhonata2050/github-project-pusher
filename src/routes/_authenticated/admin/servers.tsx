@@ -175,6 +175,10 @@ function AdminServersPage() {
   const testMutation = useMutation({
     mutationFn: (serverId: string) => testDAConnection({ data: serverId }),
     onSuccess: (result) => {
+      if (!result.success) {
+        toast.error(result.error, { duration: 12_000 });
+        return;
+      }
       setSyncResults((current) => ({
         ...current,
         [testMutation.variables ?? ""]: { packages: result.packages, syncedAt: new Date().toISOString() },

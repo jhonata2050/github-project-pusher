@@ -15,13 +15,19 @@ interface DARequestOptions {
   params?: Record<string, string>;
 }
 
-interface DAConnectionResult {
-  success: true;
-  hostname: string;
-  apiUser: string;
-  packageCount: number;
-  packages: string[];
-}
+type DAConnectionResult =
+  | {
+      success: true;
+      hostname: string;
+      apiUser: string;
+      packageCount: number;
+      packages: string[];
+    }
+  | {
+      success: false;
+      hostname: string;
+      error: string;
+    };
 
 function generateStrongPassword(length = 32): string {
   const uppercase = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
@@ -116,10 +122,16 @@ export async function callDA({ hostname, apiUser, apiToken, command, method = 'G
         );
       }
       if (response.status === 401) {
+        const reportedClientIp = errorText.match(/"client_ip"\s*:\s*"([^"]+)"/)?.[1];
+        const ipGuidance = reportedClientIp === '127.0.0.1'
+          ? ` O servidor informou client_ip 127.0.0.1. Isso ocorre quando o DirectAdmin está atrás de proxy: remova a restrição de IP da Login Key ou inclua 127.0.0.1 nos IPs permitidos.`
+          : reportedClientIp
+            ? ` O DirectAdmin identificou o IP ${reportedClientIp}; ele precisa estar permitido na Login Key.`
+            : '';
         throw new Error(
           `Falha na autenticação (401): O DirectAdmin não reconheceu as credenciais. ` +
           `Certifique-se de que o "Usuário API" está no formato "USUARIO|NOME_DA_CHAVE" (ex: admin|EqsamKey) ` +
-          `e que o "Token API" é o valor (Key Value) gerado. Se usar Login Key, verifique se o IP do Eqsam não está bloqueado.`
+          `e que o "Token API" é o valor (Key Value) gerado.${ipGuidance}`
         );
       }
       throw new Error(`DirectAdmin API Error (${response.status}): ${errorText}`);
@@ -184,14 +196,22 @@ export async function testDAConnectionDetails(serverId: string): Promise<DAConne
     .single();
 
   if (error || !server) throw new Error('Servidor não encontrado');
-  const packages = await getDAPackages(serverId);
-  return {
-    success: true,
-    hostname: server.hostname,
-    apiUser: server.api_user ?? "",
-    packageCount: packages.length,
-    packages,
-  };
+  try {
+    const packages = await getDAPackages(serverId);
+    return {
+      success: true,
+      hostname: server.hostname,
+      apiUser: server.api_user ?? "",
+      packageCount: packages.length,
+      packages,
+    };
+  } catch (error: unknown) {
+    return {
+      success: false,
+      hostname: server.hostname,
+      error: error instanceof Error ? error.message : 'Não foi possível validar a conexão.',
+    };
+  }
 }
 
 export async function createDAAccount(serverId: string, details: {
