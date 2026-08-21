@@ -85,7 +85,8 @@ export async function callDA({ hostname, apiUser, apiToken, command, method = 'G
   const searchParams = new URLSearchParams();
   Object.entries(params).forEach(([key, val]) => searchParams.append(key, val));
   
-  const authHeader = `Basic ${Buffer.from(`${apiUser.trim()}:${apiToken.trim()}`).toString('base64')}`;
+  const authString = `${apiUser.trim()}:${apiToken.trim()}`;
+  const authHeader = `Basic ${Buffer.from(authString).toString('base64')}`;
   
   try {
     if (method === 'GET') searchParams.set('json', 'yes');
@@ -94,10 +95,11 @@ export async function callDA({ hostname, apiUser, apiToken, command, method = 'G
       method,
       headers: {
         'Authorization': authHeader,
+        'X-DirectAdmin-Login-Key': Buffer.from(authString).toString('base64'), // Redundância para alguns firewalls/proxies
         'Content-Type': 'application/x-www-form-urlencoded',
         'Accept': 'application/json, text/plain',
-        'User-Agent': 'Mozilla/5.0 (compatible; Eqsam/1.0; +https://eqsam.com)',
       },
+
       body: method === 'POST' ? searchParams.toString() : null,
       signal: AbortSignal.timeout(60_000), // Aumentado para 60s para maior resiliência
       redirect: 'manual',
