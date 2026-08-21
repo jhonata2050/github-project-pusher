@@ -283,10 +283,10 @@ function ClientDetailPage() {
 
           <TabsContent value="info" className="mt-6">
             <Card className="rounded-3xl border-none bg-card shadow-sm">
-              <CardHeader className="flex flex-row items-center justify-between">
+              <CardHeader className="flex flex-row items-center justify-between py-4">
                 <div>
-                  <CardTitle>Informações do Cliente</CardTitle>
-                  <CardDescription>Dados pessoais e de contato</CardDescription>
+                  <CardTitle className="text-lg">Informações do Cliente</CardTitle>
+                  <CardDescription className="text-xs">Dados pessoais e de contato</CardDescription>
                 </div>
                 {!isEditing && (
                   <Button variant="outline" onClick={() => setIsEditing(true)} className="rounded-xl">
