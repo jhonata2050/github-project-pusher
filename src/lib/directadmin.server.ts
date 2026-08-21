@@ -490,7 +490,7 @@ export async function getDASession(serverId: string, username: string, redirectU
   const targetUser = username.trim();
   
   // SECURITY: Hard-restrict system usernames to prevent accidental admin escalation
-  const restrictedUsernames = ["admin", "root", "superuser", "da_admin", "eqsa7232", "reseller"];
+  const restrictedUsernames = ["admin", "root", "superuser", "da_admin", "eqsa7232", "reseller", "support", "system", "operator", "manager"];
   if (restrictedUsernames.includes(targetUser.toLowerCase())) {
     console.error(`[Security-DA] Attempt to login via SSO to restricted user: ${targetUser}`);
     throw new Error('Acesso negado: Não é permitido login via SSO em contas administrativas do sistema.');
