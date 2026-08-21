@@ -458,7 +458,7 @@ function ClientDetailPage() {
                       <TableBody>
                         {dossiersQuery.data?.services.map((s: any) => (
                           <TableRow key={s.id}>
-                            <TableCell className="font-medium">
+                            <TableCell className="font-medium text-xs">
                               <div className="flex flex-col gap-1">
                                 <span>{s.products?.name || "Produto"}</span>
                                 <div className="flex flex-col gap-0.5">
