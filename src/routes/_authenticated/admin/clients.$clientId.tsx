@@ -486,22 +486,32 @@ function ClientDetailPage() {
                             <TableCell className="text-muted-foreground text-xs">
                               {s.domain || "—"}
                             </TableCell>
-                            <TableCell className="hidden sm:table-cell">
-                              {s.server_id || s.servers ? (
-                                <span className="text-xs">
-                                  {(s.servers?.hostname || servers?.find(sv => sv.id === s.server_id)?.hostname) || "Servidor"}
-                                </span>
-                              ) : (s.products?.product_type === 'vps' || s.billing_cycle === 'vps') ? (
-                                <Link 
-                                  to="/admin/vps" 
-                                  className="text-[10px] text-brand hover:underline flex items-center gap-1"
-                                >
-                                  <Link2 className="size-3" /> Vincular VPS
-                                </Link>
-                              ) : (
-                                <span className="text-[10px] text-destructive italic">Não vinculado</span>
-                              )}
-                            </TableCell>
+                             <TableCell className="hidden sm:table-cell">
+                               {s.server_id || s.servers ? (
+                                 <span className="text-xs">
+                                   {(s.servers?.hostname || servers?.find(sv => sv.id === s.server_id)?.hostname) || "Servidor"}
+                                 </span>
+                               ) : s.vps_instances ? (
+                                 <div className="flex flex-col gap-0.5">
+                                   <Link 
+                                     to="/admin/vps" 
+                                     className="text-xs font-medium text-brand hover:underline flex items-center gap-1"
+                                   >
+                                     <Monitor className="size-3" /> {s.vps_instances.ip_address || "Instância VPS"}
+                                   </Link>
+                                   <span className="text-[10px] text-muted-foreground font-mono">ID: {s.vps_instances.external_id}</span>
+                                 </div>
+                               ) : (s.products?.product_type === 'vps' || s.billing_cycle === 'vps') ? (
+                                 <Link 
+                                   to="/admin/vps" 
+                                   className="text-[10px] text-brand hover:underline flex items-center gap-1"
+                                 >
+                                   <Link2 className="size-3" /> Vincular VPS
+                                 </Link>
+                               ) : (
+                                 <span className="text-[10px] text-destructive italic">Não vinculado</span>
+                               )}
+                             </TableCell>
                             <TableCell className="hidden md:table-cell text-xs">
                               {s.next_due_date ? format(new Date(s.next_due_date), "dd/MM/yyyy", { locale: ptBR }) : "—"}
                             </TableCell>
