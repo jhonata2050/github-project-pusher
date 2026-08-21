@@ -290,8 +290,15 @@ function AdminServersPage() {
                     <div className="h-10 w-10 rounded-2xl bg-brand/20 flex items-center justify-center">
                       <Server className="h-5 w-5 text-brand" />
                     </div>
-                    <div className="flex items-center gap-2 text-xs font-semibold text-brand px-2 py-1 rounded-full bg-brand/10">
-                      <Activity className="h-3 w-3" /> Configurado
+                    <div className="flex flex-col items-end gap-1">
+                      <div className="flex items-center gap-2 text-xs font-semibold text-brand px-2 py-1 rounded-full bg-brand/10">
+                        <Activity className="h-3 w-3" /> Configurado
+                      </div>
+                      {!server.api_user?.includes('|') && (
+                        <Badge variant="destructive" className="text-[9px] rounded-full uppercase px-2 py-0 animate-pulse">
+                          Usuário Inválido (Falta |)
+                        </Badge>
+                      )}
                     </div>
                   </div>
                   <CardTitle className="mt-4 text-xl font-bold">{server.hostname}</CardTitle>
