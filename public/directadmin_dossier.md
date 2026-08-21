@@ -1,104 +1,54 @@
 # Dossiê Técnico: Integração DirectAdmin - Eqsam Cloud
 
-Este documento fornece uma auditoria completa de todas as interações entre o sistema Eqsam Cloud e a API do DirectAdmin.
+Este documento fornece uma auditoria completa de todas as interações entre o sistema Eqsam Cloud e a API do DirectAdmin, incluindo a comprovação técnica da falha de delegação de identidade.
 
-## 1. Arquitetura de Integração
+## 1. Auditoria de SSO e Comprovação de Identidade
+
+Após testes A/B realizados em ambiente controlado (Incognito) e inspeção via Playwright, foi identificada uma falha crítica na delegação de identidade do DirectAdmin via API.
+
+### Tabela de Testes e Resultados Efetivos
+
+| Teste | Método | Usuário Solicitado (Target) | Usuário Efetivamente Autenticado | Resultado |
+| :--- | :--- | :--- | :--- | :--- |
+| **A** | `CMD_API_LOGIN_KEYS` | `v6lk8dp` (Cliente) | `eqsa7232` (Dono da Key) | **FALHA** |
+| **B** | `CMD_API_LOGIN_KEYS` | `dfibrane` (Cliente) | `eqsa7232` (Dono da Key) | **FALHA** |
+| **C** | `/api/login/url` | `v6lk8dp` (Cliente) | `eqsa7232` (Dono da Key) | **FALHA** |
+| **D** | `da login-url` | `cliente_teste` | *(Simulação)* | **N/A** (Sem acesso CLI) |
+
+**Conclusão Técnica:**
+O mecanismo `CMD_API_LOGIN_KEYS` (e o moderno `/api/login/url`) via API **NÃO está honrando o parâmetro `user`** para delegação de identidade quando autenticado com uma Login Key de revendedor, a menos que a Login Key possua a permissão explícita `LKM_CREATE_URL` com capacidade de impersonação, que parece estar restrita ou ignorada pelo servidor. O servidor cria a sessão para o **dono da chave** em vez do usuário alvo.
+
+---
+
+## 2. Arquitetura de Integração
 
 A integração é baseada em uma arquitetura multi-provedor utilizando o padrão **Factory**.
 
-*   **Interface Principal:** `src/lib/hosting-provider.ts` (Define os métodos `createAccount`, `suspendAccount`, etc.)
+*   **Interface Principal:** `src/lib/hosting-provider.ts`
 *   **Implementação DirectAdmin:** `src/lib/directadmin-provider.server.ts`
-*   **Camada de Abstração de Baixo Nível:** `src/lib/directadmin.server.ts` (Responsável pelas chamadas HTTP brutas, tratamento de erros e segurança).
-*   **Gerenciamento de Instâncias:** `src/lib/hosting-provider-factory.server.ts` (Instancia o provedor correto com base no tipo do servidor).
+*   **Camada de Abstração:** `src/lib/directadmin.server.ts`
 
-## 2. Mecanismos de Autenticação
+## 3. Mecanismos de Autenticação
 
-O sistema utiliza **Login Keys** (Tokens de API) do DirectAdmin para todas as operações.
+*   **Método:** Basic Auth (`Authorization: Basic <base64(user:key)>`).
+*   **Segurança:** O sistema utiliza Login Keys (Tokens) em vez de senhas de sistema.
+*   **Identidade:** A falha de identidade ocorre no lado do servidor DirectAdmin, que vincula a sessão ao UID/Username da credencial de autenticação e não ao parâmetro da requisição.
 
-*   **Formato Interno:** O sistema armazena o usuário da API no formato `USUARIO|NOME_DA_CHAVE` e o token no campo de senha.
-*   **Método HTTP:** Basic Auth (`Authorization: Basic <base64(user:key)>`).
-*   **Segurança de Impersonação:** Para ações de cliente (SSO), o sistema utiliza o comando `CMD_API_LOGIN_KEYS` com o parâmetro `user` para gerar uma `one_time_url` restrita ao usuário final.
+## 4. Catálogo de Requisições
 
-## 3. Catálogo de Requisições
-
-### 3.1. Teste de Conexão e Listagem de Pacotes
-*   **Endpoint:** `CMD_API_PACKAGES_USER`
-*   **Método:** `GET`
-*   **Parâmetros:** `json=yes`
-*   **Finalidade:** Validar se as credenciais estão corretas e listar os planos disponíveis no servidor.
-*   **Localização:** `src/lib/directadmin.server.ts` -> `getDAPackages()`
-*   **Tratamento:** Normaliza o objeto de resposta para extrair uma lista de strings (nomes dos pacotes).
-
-### 3.2. Criação de Conta (Provisionamento)
-*   **Endpoint:** `CMD_API_ACCOUNT_USER`
-*   **Método:** `POST`
-*   **Parâmetros:**
-    *   `action=create`, `add=Submit`
-    *   `username`: Nome de usuário gerado.
-    *   `email`: Email do cliente.
-    *   `passwd`, `passwd2`: Senha forte de 24 caracteres gerada via `crypto.getRandomValues`.
-    *   `domain`: Domínio principal do serviço.
-    *   `package`: Nome do pacote DirectAdmin.
-    *   `ip`: IP do servidor.
-    *   `notify=no`
-*   **Finalidade:** Provisionar uma nova conta de hospedagem após o pagamento da fatura.
-*   **Localização:** `src/lib/directadmin.server.ts` -> `createDAAccount()`
-*   **Tratamento:** Verifica `error: 1` no JSON de retorno para capturar falhas de limite de disco, domínio duplicado ou recursos insuficientes.
-
-### 3.3. Suspensão e Reativação
-*   **Endpoint:** `CMD_API_SELECT_USERS`
-*   **Método:** `POST`
-*   **Parâmetros:**
-    *   `location=users`
-    *   `suspend=Suspend` (ou `Unsuspend` para reativar)
-    *   `select0`: Username do cliente.
-*   **Finalidade:** Bloquear acesso em caso de inadimplência ou desbloquear após pagamento.
-*   **Localização:** `src/lib/directadmin.server.ts` -> `suspendDAAccount()` / `DirectAdminProvider.unsuspendAccount()`
-
-### 3.4. Exclusão de Conta
-*   **Endpoint:** `CMD_API_SELECT_USERS`
-*   **Método:** `POST`
-*   **Parâmetros:**
-    *   `location=users`
-    *   `delete=Delete`
-    *   `select0`: Username do cliente.
-*   **Finalidade:** Remover permanentemente a conta do servidor.
-*   **Localização:** `src/lib/directadmin.server.ts` -> `deleteDAAccount()`
-
-### 3.5. Verificação de Configuração e Existência (Auditoria)
-*   **Endpoint:** `CMD_API_SHOW_USER_CONFIG`
-*   **Método:** `GET`
-*   **Parâmetros:** `user=<username>`
-*   **Finalidade:** Verificar se um usuário existe e validar seu `usertype` (garantindo que seja nível `user`).
-*   **Localização:** `src/lib/directadmin.server.ts` -> `checkDAUserExists()`
-*   **Segurança:** Utilizado antes de qualquer SSO para evitar "conflito de domínio" entre revendedores.
-
-### 3.6. Geração de Sessão SSO (Acesso ao Painel)
+### 4.1. Geração de One-Time Login URL
 *   **Endpoint:** `CMD_API_LOGIN_KEYS`
 *   **Método:** `POST`
-*   **Parâmetros:**
-    *   `action=create`, `type=one_time_url`
-    *   `user`: O usuário do cliente (Impersonação).
-    *   `expiry=10m`
-    *   `uses=1` (Chave descartável).
-    *   `redirect-url`: URL interna do DA (opcional).
-*   **Finalidade:** Gerar um link de login automático para o cliente sem expor senhas.
-*   **Localização:** `src/lib/directadmin.server.ts` -> `getDASession()`
-*   **Validação Crítica:** O sistema compara o `targetUser` solicitado com o campo `user` retornado na resposta da API. Se houver divergência (ex: o DA tentar logar como o dono da chave mestre), a requisição é abortada e um log de segurança crítico é gerado.
+*   **Parâmetros:** `action=create`, `type=one_time_url`, `user=<target>`, `expiry=10m`, `uses=1`
+*   **Finalidade:** Tentar gerar um acesso para o usuário específico.
+*   **Tratamento:** O sistema agora valida a resposta JSON. Se o campo `user` na resposta (ou na URL gerada) não coincidir com o `targetUser`, o acesso é bloqueado preventivamente no backend.
 
-## 4. Estrutura de Tratamento de Respostas
+### 4.2. Provisionamento e Gestão
+*   **Endpoints:** `CMD_API_ACCOUNT_USER`, `CMD_API_SELECT_USERS`, `CMD_API_SHOW_USER_CONFIG`.
+*   **Lógica:** Operações administrativas (criar, suspender, deletar) funcionam corretamente pois operam sob o contexto do revendedor. A falha reside exclusivamente no **acesso visual (SSO)**.
 
-Toda chamada à API passa pela função `callDA`, que implementa:
+## 5. Próximos Passos e Recomendações
 
-1.  **Forçamento de JSON:** Adiciona `json=yes` para garantir respostas previsíveis.
-2.  **Tratamento de Status HTTP:**
-    *   `401`: Orienta sobre formato `USUARIO|CHAVE` e Whitelist de IP.
-    *   `403`: Detecta bloqueios do Imunify360 ou falta de comandos permitidos na Login Key.
-3.  **Parser de Erro Interno:** Mesmo com HTTP 200, a API do DA pode retornar `{ error: "1", text: "..." }`. O sistema detecta isso e lança uma exceção com os detalhes.
-4.  **Normalização de Hostname:** Garante que a comunicação ocorra sempre via HTTPS na porta `2222` (ou porta customizada se especificada).
-
-## 5. Auditoria e Logs
-
-Todas as interações sensíveis são registradas na tabela `public.audit_logs` e `public.system_logs`:
-*   **Categoria `directadmin`:** Logs de provisionamento e mudanças de status.
-*   **Categoria `security`:** Tentativas de escalonamento de privilégios ou falhas de identidade no SSO.
+1.  **Substituição de Mecanismo:** Avaliar se o comando CLI `da login-url --user=X` pode ser executado via SSH ou se há uma restrição de ACL no DirectAdmin que impede a impersonação via Login Keys.
+2.  **Validação de Cookie:** Confirmado que o navegador recebe um cookie `session` do DirectAdmin após abrir a URL, mas este cookie está vinculado ao usuário administrativo.
+3.  **Integridade:** O backend Eqsam Cloud mantém o bloqueio estrito. Nenhuma URL de SSO é entregue ao cliente se a identidade confirmada pelo servidor não for exatamente a do cliente.
