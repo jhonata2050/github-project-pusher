@@ -14,7 +14,7 @@ import {
   updateSystemSettings
 } from "@/lib/support.functions";
 
-import { Plus, Server, Globe, Shield, Activity, Trash2, RefreshCw, CheckCircle2, Pencil, Wallet, ExternalLink, Save } from "lucide-react";
+import { Plus, Server, Globe, Shield, Activity, Trash2, RefreshCw, CheckCircle2, Pencil, Wallet, ExternalLink, Save, AlertCircle, Copy, Check } from "lucide-react";
 import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
