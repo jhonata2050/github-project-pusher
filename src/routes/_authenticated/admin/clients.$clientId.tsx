@@ -782,12 +782,12 @@ function ClientDetailPage() {
                 />
               </div>
               <div className="grid gap-2">
-                <Label htmlFor="server_id">Servidor Vinculado</Label>
+                <Label htmlFor="server_id" className="text-xs">Servidor Vinculado</Label>
                 <Select 
                   name="server_id" 
                   defaultValue={editingService.server_id || ""}
                 >
-                  <SelectTrigger id="server_id" className="h-11 rounded-xl border-input bg-background shadow-sm">
+                  <SelectTrigger id="server_id" className="h-9 rounded-xl border-input bg-background shadow-sm text-xs">
                     <SelectValue placeholder="Nenhum" />
                   </SelectTrigger>
                   <SelectContent className="rounded-xl border-border/40 shadow-xl">
