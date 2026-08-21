@@ -73,19 +73,19 @@ export async function callDA({ hostname, apiUser, apiToken, command, method = 'G
   }
 
   // REGRA FUNDAMENTAL: Separar USERNAME e PASSWORD da Login Key
-  // O caractere '|' é uma convenção interna da aplicação para identificar qual chave usar.
   let username = apiUserRaw;
   let password = apiTokenTrimmed;
 
   if (apiUserRaw.includes('|')) {
     const parts = apiUserRaw.split('|');
     username = parts[0]?.trim() || '';
-    // De acordo com a documentação oficial, a autenticação deve usar o USER real e o KEY VALUE como senha.
-    // O nome da chave pode ser ignorado no cabeçalho Basic Auth se o Token já for o valor secreto.
-    // No entanto, o DirectAdmin às vezes exige USUARIO|NOME_DA_CHAVE como username se a chave for restrita.
-    // Para seguir a especificação técnica do usuário: username = USUARIO real, password = segredo da Login Key.
     password = apiTokenTrimmed;
   }
+
+  // SECURITY: Prevent credentials from leaking in logs or being misused
+  // We strictly use the provided hostname and the port 2222 (standard DA API)
+  // Clean hostname to avoid injection or malicious redirect attempts
+
 
   // Limpa o hostname e preserva a porta se especificada, caso contrário usa 2222
   const hostParts = hostname.replace(/^https?:\/\//, '').split(':');

@@ -500,8 +500,9 @@ export const getDASSOUrl = createServerFn({ method: "POST" })
     const { validateDASSORequest } = await import("./security.server");
     const { targetUsername } = await validateDASSORequest(context.userId, data.username, data.serverId);
 
-    const { getDASession } = await import("./directadmin.server");
-    return await getDASession(data.serverId, targetUsername, data.redirectUrl);
+    const { getHostingProvider } = await import("./hosting-provider-factory.server");
+    const provider = await getHostingProvider(data.serverId);
+    return await provider.generateClientLogin(targetUsername, data.redirectUrl);
   });
 
 
@@ -843,5 +844,55 @@ export const updateServiceDetails = createServerFn({ method: "POST" })
 
     return { success: true };
   });
+
+export const hostingAction = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: unknown) => 
+    z.object({
+      serviceId: z.string().uuid(),
+      action: z.enum(["suspend", "unsuspend", "delete"])
+    }).parse(data)
+  )
+  .handler(async ({ data: input, context }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    
+    // SECURITY: ALWAYS re-verify role directly
+    const { data: isAdmin } = await context.supabase.rpc("has_role", {
+      _user_id: context.userId,
+      _role: "admin",
+    });
+    if (!isAdmin) throw new Error("Unauthorized");
+
+    const { data: service } = await supabaseAdmin
+      .from("services")
+      .select("id, username, server_id")
+      .eq("id", input.serviceId)
+      .single();
+
+    if (!service || !service.server_id || !service.username) {
+      throw new Error("Serviço incompleto ou sem servidor vinculado.");
+    }
+
+    const { getHostingProvider } = await import("./hosting-provider-factory.server");
+    const provider = await getHostingProvider(service.server_id);
+
+    switch (input.action) {
+      case "suspend":
+        await provider.suspendAccount(service.username);
+        await supabaseAdmin.from("services").update({ status: "suspended" }).eq("id", service.id);
+        break;
+      case "unsuspend":
+        await provider.unsuspendAccount(service.username);
+        await supabaseAdmin.from("services").update({ status: "active" }).eq("id", service.id);
+        break;
+      case "delete":
+        await provider.deleteAccount(service.username);
+        await supabaseAdmin.from("services").update({ status: "terminated" }).eq("id", service.id);
+        break;
+    }
+
+    return { success: true };
+  });
+
 
 
