@@ -187,6 +187,20 @@ function ClientDetailPage() {
     }
   });
 
+  const hostingActionMutation = useMutation({
+    mutationFn: (vars: { serviceId: string; action: 'suspend' | 'unsuspend' | 'delete' }) => {
+      const { hostingAction } = require("@/lib/support.functions");
+      return hostingAction({ data: vars });
+    },
+    onSuccess: (_, vars) => {
+      queryClient.invalidateQueries({ queryKey: ["admin-client-dossier", clientId] });
+      toast.success(`Ação ${vars.action} executada com sucesso`);
+    },
+    onError: (err: any) => {
+      toast.error(`Erro ao executar ação: ${err.message}`);
+    }
+  });
+
   const handleUpdateService = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
@@ -809,11 +823,49 @@ function ClientDetailPage() {
                   <input type="hidden" id="block_directadmin_service_hidden" name="block_directadmin_service" value={editingService.block_directadmin ? 'true' : 'false'} />
                 </div>
               </div>
+              <div className="flex gap-2 pt-4 border-t">
+                {editingService.status === 'active' ? (
+                  <Button 
+                    type="button" 
+                    variant="outline" 
+                    className="flex-1 rounded-xl text-orange-600 border-orange-200 hover:bg-orange-50"
+                    onClick={() => hostingActionMutation.mutate({ serviceId: editingService.id, action: 'suspend' })}
+                    disabled={hostingActionMutation.isPending}
+                  >
+                    Suspender
+                  </Button>
+                ) : editingService.status === 'suspended' ? (
+                  <Button 
+                    type="button" 
+                    variant="outline" 
+                    className="flex-1 rounded-xl text-green-600 border-green-200 hover:bg-green-50"
+                    onClick={() => hostingActionMutation.mutate({ serviceId: editingService.id, action: 'unsuspend' })}
+                    disabled={hostingActionMutation.isPending}
+                  >
+                    Reativar
+                  </Button>
+                ) : null}
+                
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  className="flex-1 rounded-xl text-red-600 border-red-200 hover:bg-red-50"
+                  onClick={() => {
+                    if (confirm("Tem certeza que deseja DELETAR esta conta no servidor? Esta ação é irreversível.")) {
+                      hostingActionMutation.mutate({ serviceId: editingService.id, action: 'delete' });
+                    }
+                  }}
+                  disabled={hostingActionMutation.isPending}
+                >
+                  Deletar no Server
+                </Button>
+              </div>
+
               <DialogFooter className="pt-4">
                 <Button 
                   type="submit" 
                   disabled={updateServiceMutation.isPending} 
-                  className="bg-brand text-brand-foreground w-full rounded-2xl h-12"
+                  className="bg-brand text-brand-foreground w-full rounded-2xl h-12 font-bold"
                 >
                   {updateServiceMutation.isPending ? "Salvando..." : "Salvar Alterações"}
                 </Button>
