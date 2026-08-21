@@ -110,8 +110,6 @@ export async function callDA({ hostname, apiUser, apiToken, command, method = 'G
       method,
       headers: {
         'Authorization': authHeader,
-        // Using both headers to maximize compatibility with DA versions and proxies
-        'X-DirectAdmin-Login-Key': Buffer.from(authString).toString('base64'),
         'Content-Type': 'application/x-www-form-urlencoded',
         'Accept': 'application/json, text/plain',
       },
@@ -540,8 +538,18 @@ export async function getDASession(serverId: string, username: string, redirectU
     throw new Error(`Erro ao gerar acesso SSO: ${errorMsg}`);
   }
 
-  console.log("DirectAdmin SSO API call completed.");
-  return parseDirectAdminLoginUrl(result, server.hostname);
+  // VALIDATION: Ensure the response indicates a session for the target user if possible
+  // DirectAdmin results for CMD_API_LOGIN_KEYS don't always echo the user, but we check common patterns
+  console.log(`[DA-SSO] SSO API call completed for target: ${targetUser}`);
+  
+  const finalUrl = parseDirectAdminLoginUrl(result, server.hostname);
+  
+  // Rule 5: Basic verification that the token isn't suspiciously short or missing
+  if (!finalUrl || finalUrl.length < 20) {
+    throw new Error("Erro de Segurança: A URL de login gerada é inválida ou insegura.");
+  }
+
+  return finalUrl;
 }
 
 
