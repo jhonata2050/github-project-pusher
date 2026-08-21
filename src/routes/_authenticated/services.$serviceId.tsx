@@ -50,6 +50,17 @@ function ServiceManagementPage() {
       return;
     }
 
+    // @ts-ignore
+    const ssoSupported = service?.servers?.sso_supported;
+    
+    if (ssoSupported === false) {
+      toast.error(
+        "O provedor DirectAdmin deste servidor não permite SSO delegado. Por favor, utilize suas credenciais manuais para acessar o painel.",
+        { duration: 6000 }
+      );
+      return;
+    }
+
     // @ts-ignore - Supabase relations can be tricky with types
     if (!service?.server_id || !service?.username) {
       toast.error("O usuário ou servidor ainda não foi vinculado a este serviço. Verifique a importação.");
@@ -73,7 +84,12 @@ function ServiceManagementPage() {
     toast.promise(promise, {
       loading: 'Gerando acesso seguro ao painel...',
       success: 'Redirecionando para o DirectAdmin...',
-      error: (err) => `Erro ao acessar painel: ${err.message}`
+      error: (err) => {
+        if (err.message.includes("não permite SSO delegado")) {
+          return "SSO não disponível neste servidor.";
+        }
+        return `Erro ao acessar painel: ${err.message}`;
+      }
     });
   };
 
