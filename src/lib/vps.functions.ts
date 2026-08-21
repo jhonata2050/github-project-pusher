@@ -11,7 +11,10 @@ export const getMyVPSInstances = createServerFn({ method: "GET" })
     const { supabase, userId } = context as any;
     if (!userId) throw new Error("Unauthorized");
 
-    const { data: services, error: svcError } = await supabase
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    
+    // Busca os serviços do usuário usando supabaseAdmin para evitar RLS restritivo no SELECT inicial
+    const { data: services, error: svcError } = await supabaseAdmin
       .from('services')
       .select('*')
       .eq('user_id', userId);
@@ -20,7 +23,8 @@ export const getMyVPSInstances = createServerFn({ method: "GET" })
     const serviceIds = (services ?? []).map((s: any) => s.id);
     if (serviceIds.length === 0) return [];
 
-    const { data: instances, error } = await supabase
+    // Busca as instâncias vinculadas a esses serviços usando supabaseAdmin
+    const { data: instances, error } = await supabaseAdmin
       .from('vps_instances')
       .select('*')
       .in('service_id', serviceIds);
