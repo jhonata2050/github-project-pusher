@@ -714,7 +714,7 @@ function ClientDetailPage() {
       </div>
 
       <Dialog open={!!editingService} onOpenChange={(open) => !open && setEditingService(null)}>
-        <DialogContent className="rounded-3xl border-none shadow-2xl max-w-md">
+        <DialogContent className="rounded-3xl border-none shadow-2xl max-w-2xl">
           <DialogHeader>
             <DialogTitle className="text-xl font-bold">Gerenciar Serviço</DialogTitle>
             <DialogDescription className="text-xs">
