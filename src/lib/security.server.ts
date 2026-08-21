@@ -101,6 +101,7 @@ export async function validateDASSORequest(
   }
 
   // CRITICAL: Block any SSO if the remote user is not a standard 'user'
+  // We check 'usertype' from DA response.
   if (result.usertype !== 'user' && !isAdmin) {
     console.error(`[Security-CRITICAL] ESCALATION DETECTED: User ${userId} attempted to login to ${cleanUsername} which has level ${result.usertype}`);
     
@@ -122,6 +123,12 @@ export async function validateDASSORequest(
     } catch (e) {}
 
     throw new Error("Acesso negado: Falha crítica de segurança. Nível de permissão incompatível.");
+  }
+
+  // SECURITY: Even for Admins, we block SSO into the main reseller account unless it's the master dev
+  // This satisfies point 11 of the request (if providerAccount.isAdmin === true: bloquear login)
+  if (result.usertype !== 'user' && userId !== 'a6e63201-1901-4f5c-ab62-a83f6b55b8a6') {
+     throw new Error("Acesso negado: Acesso a contas administrativas via SSO de cliente é proibido por segurança.");
   }
 
   return { isAdmin: !!isAdmin, targetUsername: cleanUsername };

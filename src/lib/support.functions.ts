@@ -500,8 +500,9 @@ export const getDASSOUrl = createServerFn({ method: "POST" })
     const { validateDASSORequest } = await import("./security.server");
     const { targetUsername } = await validateDASSORequest(context.userId, data.username, data.serverId);
 
-    const { getDASession } = await import("./directadmin.server");
-    return await getDASession(data.serverId, targetUsername, data.redirectUrl);
+    const { getHostingProvider } = await import("./hosting-provider-factory.server");
+    const provider = await getHostingProvider(data.serverId);
+    return await provider.generateClientLogin(targetUsername, data.redirectUrl);
   });
 
 
