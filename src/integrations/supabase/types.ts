@@ -691,6 +691,7 @@ export type Database = {
           next_due_date: string | null
           notes: string | null
           order_id: string | null
+          password: string | null
           product_id: string | null
           server_id: string | null
           status: Database["public"]["Enums"]["service_status"]
@@ -711,6 +712,7 @@ export type Database = {
           next_due_date?: string | null
           notes?: string | null
           order_id?: string | null
+          password?: string | null
           product_id?: string | null
           server_id?: string | null
           status?: Database["public"]["Enums"]["service_status"]
@@ -731,6 +733,7 @@ export type Database = {
           next_due_date?: string | null
           notes?: string | null
           order_id?: string | null
+          password?: string | null
           product_id?: string | null
           server_id?: string | null
           status?: Database["public"]["Enums"]["service_status"]
