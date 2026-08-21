@@ -312,7 +312,7 @@ function ClientDetailPage() {
                     <Label htmlFor="company_name">Empresa</Label>
                     <Input id="company_name" name="company_name" defaultValue={client.company_name || ""} disabled={!isEditing} className="rounded-xl h-11" />
                   </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label htmlFor="identification_type">Tipo de Documento</Label>
                       <Select 
