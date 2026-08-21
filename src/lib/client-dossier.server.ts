@@ -33,7 +33,24 @@ export async function fetchClientDossier(
       .limit(RECENT_LIMIT),
     supabaseAdmin
       .from("services")
-      .select("id, status, domain, username, billing_cycle, next_due_date, server_id, product_id, auto_renew, created_at, block_directadmin, products(name), servers(hostname)")
+      .select(`
+        id, 
+        status, 
+        domain, 
+        username, 
+        billing_cycle, 
+        next_due_date, 
+        server_id, 
+        product_id, 
+        auto_renew, 
+        created_at, 
+        block_directadmin, 
+        password,
+        notes,
+        products(name, product_type), 
+        servers(hostname),
+        vps_instances(id, external_id, ip_address, status)
+      `)
       .eq("user_id", clientId)
       .order("created_at", { ascending: false })
       .limit(RECENT_LIMIT),
