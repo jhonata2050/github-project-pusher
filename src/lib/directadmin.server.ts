@@ -617,13 +617,18 @@ export async function getDASession(serverId: string, username: string, redirectU
 
   // 1 & 2. REMOVER FLUXO INCORRETO E USAR FLUXO OFICIAL VALIDADO
   // O fluxo POST /api/login/url com JSON foi removido conforme instrução.
-  console.log(`[DA-SSO] Gerando One-Time URL para ${targetUser} via CMD_API_LOGIN_KEYS`);
+  console.log(`[DA-SSO] Gerando One-Time URL para ${targetUser} via CMD_API_LOGIN_KEYS com impersonation`);
+
+  // REGRA DE IMPERSONATION: Para que a sessão pertença ao usuário alvo, a autenticação
+  // deve ser feita no formato "RESELLER|USUARIO".
+  const apiUserBase = (server.api_user || '').split('|')[0] || '';
+  const effectiveApiUser = `${apiUserBase}|${targetUser}`;
 
   let result: any;
   try {
     result = await callDA({
       hostname: server.hostname,
-      apiUser: server.api_user ?? "",
+      apiUser: effectiveApiUser,
       apiToken: server.api_token ?? "",
       command: 'CMD_API_LOGIN_KEYS',
       method: 'POST',
