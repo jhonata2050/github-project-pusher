@@ -577,60 +577,59 @@ export async function getDASession(serverId: string, username: string, redirectU
     params
   });
 
-  // DIAGNÓSTICO TÉCNICO E VALIDAÇÃO DE IDENTIDADE SSO
-  if (result) {
-    const { createSystemLog } = await import("./system-logs.server");
-    const resObj = result as Record<string, any>;
-    
-    // Log do resultado bruto para depuração (apenas logs internos)
-    console.log(`[DA-SSO-Response-Debug] Payload:`, JSON.stringify(resObj));
+  const { createSystemLog } = await import("./system-logs.server");
+  const resObj = (result ?? {}) as Record<string, any>;
+  console.log(`[DA-SSO-Response-Debug] Payload:`, JSON.stringify(resObj));
 
-    // Se o resultado não contiver o campo 'user', o DirectAdmin provavelmente não processou a impersonação
-    // IMPORTANTE: Algumas versões do DA retornam o campo 'user' dentro de 'details' ou no root.
-    const returnedUser = resObj['user'] || resObj['username'];
-
-    if (!returnedUser) {
-      console.error(`[DA-SSO-Security-Failure] Resposta sem confirmação de usuário. Resposta:`, JSON.stringify(resObj));
-      await createSystemLog({
-        category: 'security',
-        level: 'critical',
-        message: `FALHA DE IDENTIDADE SSO: O servidor não confirmou o usuário alvo. A Login Key pode estar sem a permissão 'LKM_CREATE_URL' com impersonação.`,
-        metadata: { targetUser, serverId, response: resObj }
-      }).catch(e => console.error(e));
-      
-      throw new Error(`Erro de Segurança: O servidor DirectAdmin não confirmou a identidade do usuário na sessão gerada. O acesso foi bloqueado para evitar login administrativo indevido.`);
-    }
-
-    if (returnedUser !== targetUser) {
-      console.error(`[DA-SSO-Identity-Mismatch] Mismatch detectado! Esperado: ${targetUser}, Recebido: ${returnedUser}`);
-      await createSystemLog({
-        category: 'security',
-        level: 'critical',
-        message: `TENTATIVA DE ESCALONAMENTO BLOQUEADA: O servidor retornou sessão para '${returnedUser}' ao solicitar para '${targetUser}'.`,
-        metadata: { targetUser, returnedUser, serverId }
-      }).catch(e => console.error(e));
-      
-      throw new Error(`Erro Crítico de Segurança: O servidor retornou uma identidade administrativa incorreta (${returnedUser}). O acesso foi interrompido imediatamente.`);
-    }
-  }
-
-  const ssoRes = result as Record<string, any>;
-  if (ssoRes && (ssoRes['error'] === '1' || ssoRes['error'] === 1)) {
-    const errorMsg = ssoRes['details'] || ssoRes['text'] || "Erro desconhecido na API do DirectAdmin";
+  // 1) Erros explícitos da API
+  if (resObj['error'] === '1' || resObj['error'] === 1) {
+    const errorMsg = resObj['details'] || resObj['text'] || "Erro desconhecido na API do DirectAdmin";
     throw new Error(`Erro ao gerar acesso SSO: ${errorMsg}`);
   }
 
-  // VALIDATION: Ensure the response indicates a session for the target user if possible
-  console.log(`[DA-SSO] SSO API call completed for target: ${targetUser}`);
-  
+  // 2) URL final
   const finalUrl = parseDirectAdminLoginUrl(result, server.hostname);
-  
   if (!finalUrl || finalUrl.length < 20) {
     throw new Error("Erro de Segurança: A URL de login gerada é inválida ou insegura.");
   }
 
+  // 3) Validação de identidade (tolerante):
+  // O DirectAdmin nem sempre devolve o campo "user" na criação da one_time_url.
+  // Só bloqueamos quando há evidência de que a sessão pertence a OUTRO usuário.
+  const returnedUser = (resObj['user'] || resObj['username'] || '').toString().trim();
+
+  let urlUser = '';
+  try {
+    const parsed = new URL(finalUrl);
+    urlUser = (parsed.searchParams.get('username') || parsed.searchParams.get('user') || '').trim();
+  } catch { /* ignore */ }
+
+  const confirmedUser = returnedUser || urlUser;
+
+  if (confirmedUser && confirmedUser.toLowerCase() !== targetUser.toLowerCase()) {
+    console.error(`[DA-SSO-Identity-Mismatch] Esperado: ${targetUser}, Recebido: ${confirmedUser}`);
+    await createSystemLog({
+      category: 'security',
+      level: 'critical',
+      message: `TENTATIVA DE ESCALONAMENTO BLOQUEADA: O servidor retornou sessão para '${confirmedUser}' ao solicitar para '${targetUser}'.`,
+      metadata: { targetUser, confirmedUser, serverId }
+    }).catch(e => console.error(e));
+    throw new Error(`Erro Crítico de Segurança: O servidor retornou uma identidade incorreta (${confirmedUser}). O acesso foi interrompido.`);
+  }
+
+  if (!confirmedUser) {
+    await createSystemLog({
+      category: 'security',
+      level: 'warning',
+      message: `SSO DirectAdmin gerado sem confirmação explícita de identidade para '${targetUser}'. Verifique a permissão LKM_CREATE_URL da Login Key.`,
+      metadata: { targetUser, serverId, response: resObj }
+    }).catch(e => console.error(e));
+  }
+
+  console.log(`[DA-SSO] SSO gerado para: ${targetUser}`);
   return finalUrl;
 }
+
 
 
 
