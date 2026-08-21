@@ -148,11 +148,15 @@ export const getContaboPlansFn = createServerFn({ method: "GET" })
     const { data: isAdmin } = await context.supabase.rpc("has_role", { _user_id: context.userId, _role: "admin" });
     if (!isAdmin) throw new Error("Unauthorized");
 
-    const { getContaboProductTypes } = await import("./contabo.server");
-    console.log("[VPS-Admin] Chamando getContaboProductTypes...");
-    const plans = await getContaboProductTypes();
-    console.log(`[VPS-Admin] Retornados ${plans?.length || 0} planos da Contabo.`);
-    return plans;
+    try {
+      const { getContaboProductTypes } = await import("./contabo.server");
+      const plans = await getContaboProductTypes();
+      return plans ?? [];
+    } catch (e) {
+      // Sem credenciais do provedor configuradas: não quebrar a tela de produtos
+      console.warn("[VPS-Admin] Planos do provedor indisponíveis:", (e as Error).message);
+      return [];
+    }
   });
 
 export const getAvailableVPSInstances = createServerFn({ method: "GET" })
