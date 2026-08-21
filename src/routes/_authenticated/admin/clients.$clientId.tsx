@@ -213,6 +213,7 @@ function ClientDetailPage() {
       next_due_date: formData.get("next_due_date") as string || null,
       status: formData.get("status") as any || null,
       block_directadmin: formData.get("block_directadmin_service") === 'true',
+      password: formData.get("da_password") as string || null,
     });
   };
 
