@@ -76,8 +76,10 @@ export const getVPSDetails = createServerFn({ method: "GET" })
     const { supabase, userId } = context as any;
     if (!userId) throw new Error("Unauthorized");
 
-    // Verificar posse
-    const { data: vps, error: instError } = await supabase
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
+    // Verificar posse usando admin para garantir leitura
+    const { data: vps, error: instError } = await supabaseAdmin
       .from('vps_instances')
       .select('*')
       .eq('id', data.instanceId)
@@ -87,7 +89,7 @@ export const getVPSDetails = createServerFn({ method: "GET" })
 
     let service: any = null;
     if (vps.service_id) {
-      const { data: svc } = await supabase
+      const { data: svc } = await supabaseAdmin
         .from('services')
         .select('*')
         .eq('id', vps.service_id)
