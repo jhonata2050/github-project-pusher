@@ -57,6 +57,7 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { getServers, updateServiceDetails, getAllProducts } from "@/lib/support.functions";
+import { getAvailableVPSInstances } from "@/lib/vps-admin.functions";
 import {
   Select,
   SelectContent,
@@ -215,6 +216,7 @@ function ClientDetailPage() {
       status: formData.get("status") as any || null,
       block_directadmin: formData.get("block_directadmin_service") === 'true',
       password: formData.get("da_password") as string || null,
+      vps_instance_id: formData.get("vps_instance_id") as string || null,
     });
   };
 
@@ -751,29 +753,86 @@ function ClientDetailPage() {
                   </SelectContent>
                 </Select>
               </div>
+
+              {editingService.products?.product_type === 'vps' || editingService.billing_cycle === 'vps' ? (
+                <>
+                  <div className="grid gap-2 sm:col-span-2">
+                    <Label htmlFor="vps_instance_id" className="text-xs font-bold text-brand">Vincular Instância VPS</Label>
+                    <VPSInstanceSelector 
+                      serviceId={editingService.id} 
+                      currentVpsId={editingService.vps_instances?.id} 
+                    />
+                  </div>
+                  
+                  {editingService.vps_instances && (
+                    <div className="sm:col-span-2 p-3 rounded-2xl bg-brand/5 border border-brand/10 space-y-2">
+                      <h4 className="text-[10px] font-bold text-brand uppercase tracking-wider flex items-center gap-1">
+                        <Monitor className="size-3" /> Detalhes da VPS Vinculada
+                      </h4>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <p className="text-[9px] text-muted-foreground">IP Principal</p>
+                          <p className="text-xs font-mono font-bold">{editingService.vps_instances.ip_address || "Aguardando..."}</p>
+                        </div>
+                        <div>
+                          <p className="text-[9px] text-muted-foreground">External ID</p>
+                          <p className="text-xs font-mono">{editingService.vps_instances.external_id || "N/A"}</p>
+                        </div>
+                        <div>
+                          <p className="text-[9px] text-muted-foreground">Status</p>
+                          <Badge variant="outline" className="text-[9px] uppercase h-4 px-1">
+                            {editingService.vps_instances.status || "Desconhecido"}
+                          </Badge>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </>
+              ) : (
+                <>
+                  <div className="grid gap-2">
+                    <Label htmlFor="username" className="text-xs">Usuário do Servidor (SSO)</Label>
+                    <Input 
+                      id="username" 
+                      name="username" 
+                      defaultValue={editingService.username || ""} 
+                      placeholder="Ex: abacap123" 
+                      className="rounded-xl h-9 text-xs" 
+                    />
+                  </div>
+                  <div className="grid gap-2">
+                    <Label htmlFor="da_password" className="text-xs">Senha do Servidor (SSO)</Label>
+                    <Input 
+                      id="da_password" 
+                      name="da_password" 
+                      defaultValue={editingService.password || ""} 
+                      placeholder="Deixe vazio para manter a atual" 
+                      className="rounded-xl h-9 text-xs" 
+                      type="password"
+                    />
+                  </div>
+                  <div className="grid gap-2">
+                    <Label htmlFor="server_id" className="text-xs">Servidor Vinculado</Label>
+                    <Select 
+                      name="server_id" 
+                      defaultValue={editingService.server_id || ""}
+                    >
+                      <SelectTrigger id="server_id" className="h-9 rounded-xl border-input bg-background shadow-sm text-xs">
+                        <SelectValue placeholder="Nenhum" />
+                      </SelectTrigger>
+                      <SelectContent className="rounded-xl border-border/40 shadow-xl">
+                        <SelectItem value="none">Nenhum</SelectItem>
+                        {servers?.map((sv) => (
+                          <SelectItem key={sv.id} value={sv.id}>{sv.hostname}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </>
+              )}
+
               <div className="grid gap-2">
-                <Label htmlFor="username" className="text-xs">Usuário do Servidor (SSO)</Label>
-                <Input 
-                  id="username" 
-                  name="username" 
-                  defaultValue={editingService.username || ""} 
-                  placeholder="Ex: abacap123" 
-                  className="rounded-xl h-9 text-xs" 
-                />
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="da_password" className="text-xs">Senha do Servidor (SSO)</Label>
-                <Input 
-                  id="da_password" 
-                  name="da_password" 
-                  defaultValue={editingService.password || ""} 
-                  placeholder="Deixe vazio para manter a atual" 
-                  className="rounded-xl h-9 text-xs" 
-                  type="password"
-                />
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="domain" className="text-xs">Domínio</Label>
+                <Label htmlFor="domain" className="text-xs">Domínio / Hostname</Label>
                 <Input 
                   id="domain" 
                   name="domain" 
@@ -793,23 +852,6 @@ function ClientDetailPage() {
                 />
               </div>
               <div className="grid gap-2">
-                <Label htmlFor="server_id" className="text-xs">Servidor Vinculado</Label>
-                <Select 
-                  name="server_id" 
-                  defaultValue={editingService.server_id || ""}
-                >
-                  <SelectTrigger id="server_id" className="h-9 rounded-xl border-input bg-background shadow-sm text-xs">
-                    <SelectValue placeholder="Nenhum" />
-                  </SelectTrigger>
-                  <SelectContent className="rounded-xl border-border/40 shadow-xl">
-                    <SelectItem value="none">Nenhum</SelectItem>
-                    {servers?.map((sv) => (
-                      <SelectItem key={sv.id} value={sv.id}>{sv.hostname}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="grid gap-2">
                 <Label htmlFor="status" className="text-xs">Status</Label>
                 <Select 
                   name="status" 
@@ -827,28 +869,31 @@ function ClientDetailPage() {
                   </SelectContent>
                 </Select>
               </div>
-              <div className="col-span-full border-t pt-4">
-                <div className="flex items-center justify-between p-4 rounded-2xl bg-destructive/5 border border-destructive/10 mb-4">
-                  <div className="space-y-0.5">
-                    <Label htmlFor="block_directadmin_service" className="text-base font-semibold text-destructive flex items-center gap-2">
-                      <ShieldAlert className="size-4" /> Bloquear Acesso
-                    </Label>
-                    <p className="text-xs text-muted-foreground">
-                      Impede o acesso ao painel deste serviço específico.
-                    </p>
+              
+              {!(editingService.products?.product_type === 'vps' || editingService.billing_cycle === 'vps') && (
+                <div className="col-span-full border-t pt-4">
+                  <div className="flex items-center justify-between p-4 rounded-2xl bg-destructive/5 border border-destructive/10 mb-4">
+                    <div className="space-y-0.5">
+                      <Label htmlFor="block_directadmin_service" className="text-base font-semibold text-destructive flex items-center gap-2">
+                        <ShieldAlert className="size-4" /> Bloquear Acesso
+                      </Label>
+                      <p className="text-xs text-muted-foreground">
+                        Impede o acesso ao painel deste serviço específico.
+                      </p>
+                    </div>
+                    <Switch 
+                      id="block_directadmin_service" 
+                      checked={editingService.block_directadmin || false} 
+                      onCheckedChange={(checked) => {
+                        setEditingService({ ...editingService, block_directadmin: checked });
+                        const el = document.getElementById('block_directadmin_service_hidden') as HTMLInputElement;
+                        if (el) el.value = checked ? 'true' : 'false';
+                      }}
+                    />
+                    <input type="hidden" id="block_directadmin_service_hidden" name="block_directadmin_service" value={editingService.block_directadmin ? 'true' : 'false'} />
                   </div>
-                  <Switch 
-                    id="block_directadmin_service" 
-                    checked={editingService.block_directadmin || false} 
-                    onCheckedChange={(checked) => {
-                      setEditingService({ ...editingService, block_directadmin: checked });
-                      const el = document.getElementById('block_directadmin_service_hidden') as HTMLInputElement;
-                      if (el) el.value = checked ? 'true' : 'false';
-                    }}
-                  />
-                  <input type="hidden" id="block_directadmin_service_hidden" name="block_directadmin_service" value={editingService.block_directadmin ? 'true' : 'false'} />
                 </div>
-              </div>
+              )}
               <div className="flex flex-col sm:flex-row gap-2 pt-4 border-t">
                 {editingService.status === 'active' ? (
                   <Button 

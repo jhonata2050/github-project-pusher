@@ -154,3 +154,27 @@ export const getContaboPlansFn = createServerFn({ method: "GET" })
     console.log(`[VPS-Admin] Retornados ${plans?.length || 0} planos da Contabo.`);
     return plans;
   });
+
+export const getAvailableVPSInstances = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data) => z.object({ serviceId: z.string().optional() }).parse(data))
+  .handler(async ({ data, context }) => {
+    const { data: isAdmin } = await context.supabase.rpc("has_role", { _user_id: context.userId, _role: "admin" });
+    if (!isAdmin) throw new Error("Unauthorized");
+
+    // Busca instâncias que não estão vinculadas a nenhum serviço OU que já estão vinculadas a este serviço específico
+    let query = supabaseAdmin
+      .from('vps_instances')
+      .select('id, external_id, ip_address, status');
+    
+    const { data: instances, error } = await query;
+    if (error) throw error;
+
+    // Se um serviceId foi passado, queremos incluir as que já estão vinculadas a ele
+    // e as que estão livres (service_id is null)
+    const { data: allInstances } = await supabaseAdmin
+      .from('vps_instances')
+      .select('id, external_id, ip_address, status, service_id');
+      
+    return (allInstances ?? []).filter(i => !i.service_id || i.service_id === data.serviceId);
+  });
