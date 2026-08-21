@@ -646,8 +646,10 @@ export type Database = {
           id: string
           ip_address: string | null
           is_active: boolean | null
+          last_capability_check: string | null
           max_accounts: number | null
           server_type: string | null
+          sso_supported: boolean | null
         }
         Insert: {
           api_token?: string | null
@@ -657,8 +659,10 @@ export type Database = {
           id?: string
           ip_address?: string | null
           is_active?: boolean | null
+          last_capability_check?: string | null
           max_accounts?: number | null
           server_type?: string | null
+          sso_supported?: boolean | null
         }
         Update: {
           api_token?: string | null
@@ -668,8 +672,10 @@ export type Database = {
           id?: string
           ip_address?: string | null
           is_active?: boolean | null
+          last_capability_check?: string | null
           max_accounts?: number | null
           server_type?: string | null
+          sso_supported?: boolean | null
         }
         Relationships: []
       }
