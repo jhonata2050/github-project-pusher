@@ -344,9 +344,9 @@ export const getServers = createServerFn({ method: "GET" })
       throw new Error("Acesso negado: Apenas administradores podem listar servidores.");
     }
 
-    const { data, error } = await context.supabase
+    const { data, error } = await supabaseAdmin
       .from("servers")
-      .select("*");
+      .select("id, hostname, ip_address, api_user, server_type, is_active, max_accounts, created_at");
 
     if (error) throw new Error(error.message);
     return data;
