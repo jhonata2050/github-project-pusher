@@ -297,7 +297,7 @@ function ClientDetailPage() {
               <CardContent>
                 <form 
                   onSubmit={handleSubmit} 
-                  className="grid grid-cols-1 md:grid-cols-2 gap-6"
+                  className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-4"
                 >
                   <div className="space-y-2">
                     <Label htmlFor="full_name">Nome Completo</Label>
