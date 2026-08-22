@@ -105,9 +105,18 @@ export const syncContaboInstancesFn = createServerFn({ method: "GET" })
     const { data: isAdmin } = await context.supabase.rpc("has_role", { _user_id: context.userId, _role: "admin" });
     if (!isAdmin) throw new Error("Unauthorized");
 
-    const { getContaboInstances } = await import("./contabo.server");
-    const response = await getContaboInstances();
-    return response.data || [];
+    try {
+      const { getContaboInstances } = await import("./contabo.server");
+      const response = await getContaboInstances();
+      return response.data || [];
+    } catch (err: any) {
+      console.error("Erro ao sincronizar instâncias Contabo:", err.message);
+      // Retornar erro descritivo para o frontend em vez de crashar
+      if (err.message.includes("401") || err.message.includes("auth")) {
+        throw new Error("Contabo recusou as credenciais (usuário/senha da API inválidos). Verifique em Admin > Financeiro.");
+      }
+      throw err;
+    }
   });
 
 export const assignInstanceToClient = createServerFn({ method: "POST" })
