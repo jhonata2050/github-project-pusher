@@ -543,6 +543,9 @@ export const getServiceServerDetails = createServerFn({ method: "GET" })
       .eq("id", serviceId)
       .maybeSingle();
 
+
+
+
     if (error) {
       console.error("[getServiceServerDetails] erro ao buscar serviço:", error.message);
       throw new Error("Serviço não encontrado");

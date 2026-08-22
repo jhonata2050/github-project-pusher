@@ -40,10 +40,19 @@ function ServiceManagementPage() {
   const { data: service, isLoading, error } = useQuery({
     queryKey: ["service-details", serviceId],
     queryFn: async () => {
-      console.log('Buscando detalhes do serviço:', serviceId);
       return getServiceServerDetails({ data: serviceId });
     },
   });
+
+
+
+
+
+
+
+
+
+
 
   const handleSSO = async (command?: string) => {
     if (service && (service as any).block_directadmin) {
@@ -147,7 +156,8 @@ function ServiceManagementPage() {
           </Button>
           <div>
             <h1 className="text-2xl font-semibold tracking-tight">
-              {(service as any)?.products?.product_type === 'vps' ? 'Gerenciar VPS' : 'Gerenciar Plano'}
+              {(service as any)?.products?.product_type === 'vps' || ((service as any)?.vps_instances && (service as any)?.vps_instances.length > 0) || (service as any)?.domain?.toLowerCase().includes('vps') || (service as any)?.domain?.toLowerCase().includes('eqsam') || (service as any)?.username?.toLowerCase().includes('vps') || !(service as any)?.server_id ? 'Gerenciar VPS' : 'Gerenciar Plano'}
+
             </h1>
             <p className="text-muted-foreground text-sm">
               {service?.domain || (isLoading ? "Carregando..." : "Sem domínio")}
@@ -280,16 +290,23 @@ function ServiceManagementPage() {
               </Card>
             </div>
 
-            {/* Quick Actions Grid */}
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 sm:gap-4">
-              {(service as any)?.products?.product_type === 'vps' || (service as any)?.billing_cycle === 'vps' || ((service as any)?.vps_instances && (service as any)?.vps_instances.length > 0) ? (
+              {((service as any)?.products?.product_type === 'vps' || 
+               (service as any)?.billing_cycle === 'vps' || 
+               ((service as any)?.vps_instances && (service as any)?.vps_instances.length > 0) ||
+               (service as any)?.domain?.toLowerCase().includes('vps') ||
+               (service as any)?.domain?.toLowerCase().includes('eqsam') ||
+               (service as any)?.username?.toLowerCase().includes('vps') ||
+               !(service as any)?.server_id) ? (
+
                 <>
                   <QuickActionCard 
                     icon={<Activity className="size-6" />} 
                     title="Monitorar VPS" 
                     onClick={() => {
-                      if ((service as any).vps_instances?.[0]?.id) {
-                         navigate({ to: "/vps/$vpsId", params: { vpsId: (service as any).vps_instances[0].id } });
+                      const vpsId = (service as any).vps_instances?.[0]?.id;
+                      if (vpsId) {
+                         navigate({ to: "/vps/$vpsId", params: { vpsId } });
                       } else {
                         toast.error("Instância VPS não encontrada.");
                       }
@@ -299,8 +316,11 @@ function ServiceManagementPage() {
                     icon={<Zap className="size-6" />} 
                     title="Recursos" 
                     onClick={() => {
-                      if ((service as any).vps_instances?.[0]?.id) {
-                         navigate({ to: "/vps/$vpsId", params: { vpsId: (service as any).vps_instances[0].id } });
+                      const vpsId = (service as any).vps_instances?.[0]?.id;
+                      if (vpsId) {
+                         navigate({ to: "/vps/$vpsId", params: { vpsId } });
+                      } else {
+                        toast.error("Instância VPS não encontrada.");
                       }
                     }} 
                   />
@@ -334,7 +354,9 @@ function ServiceManagementPage() {
                   />
                 </>
               )}
+
             </div>
+
           </>
         )}
       </div>
