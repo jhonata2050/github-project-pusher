@@ -8,16 +8,18 @@ import {
 export const getMyVPSInstances = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
-    const { supabase, userId } = context as any;
+    const { userId } = context as any;
     if (!userId) throw new Error("Unauthorized");
 
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     
-    // Busca os serviços do usuário usando supabaseAdmin para evitar RLS restritivo no SELECT inicial
+    // Busca os serviços do usuário usando supabaseAdmin para evitar RLS restritivo
+    // Incluímos o join com products para garantir que o product_type esteja disponível
     const { data: services, error: svcError } = await supabaseAdmin
       .from('services')
-      .select('*')
+      .select('*, products(product_type)')
       .eq('user_id', userId);
+    
     if (svcError) throw svcError;
 
     const serviceIds = (services ?? []).map((s: any) => s.id);
@@ -28,6 +30,7 @@ export const getMyVPSInstances = createServerFn({ method: "GET" })
       .from('vps_instances')
       .select('*')
       .in('service_id', serviceIds);
+    
     if (error) throw error;
 
     return (instances ?? []).map((i: any) => {
@@ -36,7 +39,7 @@ export const getMyVPSInstances = createServerFn({ method: "GET" })
         ...i,
         service: service ?? null,
       };
-    }).filter((i: any) => i.service !== null); // Apenas instâncias de serviços que pertencem ao usuário
+    }).filter((i: any) => i.service !== null);
   });
 
 export const contaboAction = createServerFn({ method: "POST" })
