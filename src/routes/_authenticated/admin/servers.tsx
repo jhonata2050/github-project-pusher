@@ -15,13 +15,14 @@ import {
 } from "@/lib/support.functions";
 
 import { Plus, Server, Globe, Shield, Activity, Trash2, RefreshCw, CheckCircle2, Pencil, Wallet, ExternalLink, Save, AlertCircle, Copy, Check } from "lucide-react";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { GATEWAYS, isGatewayConfigured, type GatewayDef } from "@/lib/gateways";
+import { testGatewayConnection } from "@/lib/gateway-validation.functions";
 
 export const Route = createFileRoute("/_authenticated/admin/servers")({
   component: AdminServersPage,
@@ -29,15 +30,42 @@ export const Route = createFileRoute("/_authenticated/admin/servers")({
 
 function GatewayCard({ gateway, settings }: { gateway: GatewayDef, settings: any }) {
   const [validating, setValidating] = useState(false);
+  const [testResult, setTestResult] = useState<{ success: boolean; message: string } | null>(null);
+  const cardRef = useRef<HTMLDivElement>(null);
   const configured = isGatewayConfigured(gateway.id, settings as Record<string, unknown>);
 
   const handleTest = async () => {
-    // No context of the full form here, we'll just show the state
-    toast.info("Para testar, salve as configurações primeiro.");
+    const credentials: Record<string, string> = {};
+    gateway.fields.forEach((f) => {
+      const el = cardRef.current?.querySelector<HTMLInputElement>(`input[name="${f.key}"]`);
+      credentials[f.key] = (el?.value ?? (settings?.[f.key] as string) ?? "").trim();
+    });
+
+    const missing = gateway.required.filter((k) => !credentials[k]);
+    if (missing.length > 0) {
+      setTestResult({ success: false, message: "Preencha todas as credenciais obrigatórias antes de testar." });
+      return;
+    }
+
+    setValidating(true);
+    setTestResult(null);
+    try {
+      const result = await testGatewayConnection({ data: { gatewayId: gateway.id, credentials } });
+      setTestResult(result);
+      if (result.success) toast.success(result.message);
+      else toast.error(result.message);
+    } catch (e: any) {
+      const message = e?.message || "Falha ao testar a conexão.";
+      setTestResult({ success: false, message });
+      toast.error(message);
+    } finally {
+      setValidating(false);
+    }
   };
 
+
   return (
-    <Card className="rounded-3xl border-none shadow-sm">
+    <Card ref={cardRef} className="rounded-3xl border-none shadow-sm">
       <CardHeader className="space-y-3">
         <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3">
           <div className="flex min-w-0 items-center gap-3">
@@ -80,7 +108,36 @@ function GatewayCard({ gateway, settings }: { gateway: GatewayDef, settings: any
             />
           </div>
         ))}
+
+        {testResult && (
+          <div
+            className={`flex items-start gap-2 rounded-2xl border p-3 text-xs ${
+              testResult.success
+                ? "border-brand/20 bg-brand/5 text-foreground"
+                : "border-destructive/20 bg-destructive/5 text-destructive"
+            }`}
+          >
+            {testResult.success ? (
+              <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-brand" />
+            ) : (
+              <AlertCircle className="mt-0.5 size-4 shrink-0" />
+            )}
+            <span className="break-words">{testResult.message}</span>
+          </div>
+        )}
+
+        <Button
+          type="button"
+          variant="outline"
+          onClick={handleTest}
+          disabled={validating}
+          className="w-full rounded-2xl border-brand/20 text-brand hover:bg-brand/5"
+        >
+          <Activity className={`mr-2 h-4 w-4 ${validating ? "animate-pulse" : ""}`} />
+          {validating ? "Testando..." : "Testar Conexão"}
+        </Button>
       </CardContent>
+
     </Card>
   );
 }
