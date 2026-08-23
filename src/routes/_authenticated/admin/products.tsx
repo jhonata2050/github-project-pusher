@@ -15,7 +15,6 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { updateProduct, createProduct, getServers, getDAPackagesList, getProductGroups } from "@/lib/support.functions";
-import { getContaboPlansFn } from "@/lib/vps-admin.functions";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/admin/products")({
@@ -55,6 +54,7 @@ function ProductsPage() {
         .select(
           "id, name, slug, description, directadmin_package, external_id, disk_quota_mb, is_visible, sort_order, product_type, group_id, immediate_purchase, product_groups(name), product_prices(cycle, price, is_active)",
         )
+        .neq("product_type", "vps")
         .order("sort_order");
       if (error) throw error;
       return data;
@@ -178,6 +178,10 @@ function ProductsPage() {
       }
     >
       <h1 className="text-2xl font-semibold tracking-tight">Seus produtos</h1>
+      <p className="mt-1 text-sm text-muted-foreground">
+        Hospedagem web, domínios e adicionais. Planos de VPS ficam na área exclusiva{" "}
+        <Link to="/admin/vps/plans" className="text-brand underline">Planos VPS</Link>.
+      </p>
 
       <div className="mt-6 flex flex-wrap items-center gap-3">
         <div className="relative flex-1 min-w-56">
