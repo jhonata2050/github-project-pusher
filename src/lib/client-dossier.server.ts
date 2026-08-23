@@ -49,7 +49,7 @@ export async function fetchClientDossier(
         notes,
         products(name, product_type), 
         servers(hostname),
-        vps_instances(id, external_id, ip_address, status)
+        vps_instances(id, external_id, ip_address, status, region, os_template, cpu_cores, ram_gb, disk_gb)
       `)
       .eq("user_id", clientId)
       .order("created_at", { ascending: false })

@@ -14,6 +14,11 @@ const orderInputSchema = z.object({
   ]),
   couponCode: z.string().optional(),
   domain: z.string().optional(),
+  vpsConfig: z.object({
+    hostname: z.string().trim().min(1).max(253),
+    os: z.string().trim().min(1).max(120),
+    location: z.string().trim().min(1).max(80),
+  }).optional(),
 });
 
 export const createOrder = createServerFn({ method: "POST" })

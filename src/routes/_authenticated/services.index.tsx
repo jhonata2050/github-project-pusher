@@ -12,6 +12,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 import { isVPSService, getVPSInstance } from "@/lib/service-type";
 import { getDASSOUrl } from "@/lib/support.functions";
+import { getMyVPSInstances } from "@/lib/vps.functions";
 import { useAuth } from "@/hooks/use-auth";
 
 import { toast } from "sonner";
@@ -67,8 +68,19 @@ function ClientServicesPage() {
     },
   });
 
+  const vpsInstances = useQuery({
+    queryKey: ["client-vps-instances", effectiveUserId],
+    enabled: Boolean(effectiveUserId),
+    queryFn: () => getMyVPSInstances(),
+  });
 
-  const filtered = (services.data ?? []).filter((svc: any) => {
+
+  const servicesWithVps = (services.data ?? []).map((service: any) => {
+    const linked = (vpsInstances.data ?? []).filter((instance: any) => instance.service_id === service.id);
+    return linked.length > 0 ? { ...service, vps_instances: linked } : service;
+  });
+
+  const filtered = servicesWithVps.filter((svc: any) => {
     const search = term.trim().toLowerCase();
     const domain = svc.domain?.toLowerCase() ?? "";
     const productName = svc.products?.name?.toLowerCase() ?? "";

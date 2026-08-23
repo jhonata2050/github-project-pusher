@@ -538,7 +538,7 @@ export const getServiceServerDetails = createServerFn({ method: "GET" })
           product_type
         ),
         servers(hostname, ip_address, sso_supported),
-        vps_instances(id, external_id, ip_address, status)
+        vps_instances(id, external_id, ip_address, status, region, os_template, cpu_cores, ram_gb, disk_gb)
       `)
       .eq("id", serviceId)
       .maybeSingle();
@@ -700,7 +700,7 @@ export const createProduct = createServerFn({ method: "POST" })
         description: input.description,
         product_type: input.product_type,
         directadmin_package: input.directadmin_package || null,
-        whmcs_id: input.external_id ? parseInt(input.external_id) : null,
+        external_id: input.external_id || null,
         is_visible: input.is_visible,
         sort_order: input.sort_order,
         disk_quota_mb: input.disk_quota_mb || null,
@@ -765,7 +765,7 @@ export const updateProduct = createServerFn({ method: "POST" })
         product_type: input.product_type,
         description: input.description,
         directadmin_package: input.directadmin_package || null,
-        whmcs_id: input.external_id ? parseInt(input.external_id) : null,
+        external_id: input.external_id || null,
         is_visible: input.is_visible,
         sort_order: input.sort_order,
         disk_quota_mb: input.disk_quota_mb,

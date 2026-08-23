@@ -26,8 +26,6 @@ async function getContaboToken() {
   params.append('username', apiUser);
   params.append('password', apiPass);
 
-  console.log("[Contabo] Tentando obter token para o usuário:", apiUser);
-
   const res = await fetch('https://auth.contabo.com/auth/realms/contabo/protocol/openid-connect/token', {
     method: 'POST',
     body: params,
@@ -184,7 +182,78 @@ export async function getContaboProductTypes() {
 }
 
 export async function provisionContaboVPS(serviceId: string, config: any) {
-  console.log("Provisioning Contabo VPS for service:", serviceId);
+  if (!config?.productId) throw new Error("O plano VPS não possui um produto externo vinculado");
+  if (!config?.hostname || !config?.imageId || !config?.region) {
+    throw new Error("Configuração de hostname, sistema operacional ou região incompleta");
+  }
+
+  const periodByCycle: Record<string, number> = {
+    monthly: 1,
+    quarterly: 3,
+    semiannually: 6,
+    annually: 12,
+    biennially: 12,
+  };
+  const regionAliases: Record<string, string> = {
+    "eu-ger": "EU",
+    "us-east": "US-east",
+    "us-west": "US-west",
+    "br-sp": "BR",
+  };
+
+  const token = await getContaboToken();
+  const res = await fetch('https://api.contabo.com/v1/compute/instances', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json',
+      'x-request-id': crypto.randomUUID(),
+    },
+    body: JSON.stringify({
+      productId: config.productId,
+      imageId: config.imageId,
+      region: regionAliases[config.region] || config.region,
+      period: periodByCycle[config.billingCycle] || 1,
+      displayName: config.hostname,
+    }),
+  });
+
+  if (!res.ok) {
+    const detail = await res.text().catch(() => '');
+    console.error(`[Contabo] Falha ao criar VPS (${res.status}):`, detail);
+    throw new Error(`O provedor recusou o provisionamento da VPS (${res.status})`);
+  }
+
+  const response = await res.json() as { data?: Array<Record<string, any>> | Record<string, any> };
+  const created = Array.isArray(response.data) ? response.data[0] : response.data;
+  const externalId = created?.instanceId ?? created?.id;
+  if (!externalId) throw new Error("O provedor não retornou o identificador da nova VPS");
+
+  const ipAddress = created?.ipAddress ?? created?.addOnIps?.[0]?.ip ?? null;
+  const status = String(created?.status || 'provisioning').toLowerCase();
+  const { data: instance, error } = await supabaseAdmin
+    .from('vps_instances')
+    .upsert({
+      service_id: serviceId,
+      external_id: String(externalId),
+      provider_id: String(externalId),
+      ip_address: ipAddress,
+      status,
+      region: regionAliases[config.region] || config.region,
+      os_template: config.imageId,
+    }, { onConflict: 'service_id' })
+    .select('id, external_id, status')
+    .single();
+
+  if (error || !instance) throw new Error("A VPS foi criada, mas não foi possível vinculá-la ao serviço");
+
+  await supabaseAdmin.from('services').update({
+    status: status === 'active' || status === 'running' ? 'active' : 'pending',
+    notes: 'Provisionamento automático da VPS iniciado.',
+    error_message: null,
+  }).eq('id', serviceId);
+
+  return { externalId: instance.external_id, status: instance.status };
 }
 
 export async function getContaboInstanceDetails(externalId: string) {

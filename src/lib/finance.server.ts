@@ -20,6 +20,11 @@ export async function placeOrder(
     billingCycle: BillingCycle;
     couponCode?: string | undefined;
     domain?: string | undefined;
+    vpsConfig?: {
+      hostname: string;
+      os: string;
+      location: string;
+    } | undefined;
   },
 ) {
   const { data: product, error: pError } = await supabaseAdmin
@@ -29,6 +34,11 @@ export async function placeOrder(
     .single();
 
   if (pError || !product) throw new Error("Produto não encontrado");
+
+  const isVpsProduct = product.product_type === "vps";
+  if (isVpsProduct && (!data.vpsConfig?.hostname || !data.vpsConfig.os || !data.vpsConfig.location)) {
+    throw new Error("Preencha hostname, sistema operacional e localização da VPS");
+  }
 
   const price = (product as any).product_prices?.find(
     (p: any) => p.cycle === data.billingCycle && p.is_active,
@@ -84,6 +94,9 @@ export async function placeOrder(
       status: "pending",
       domain: data.domain || null,
       billing_cycle: data.billingCycle,
+      vps_hostname: isVpsProduct ? data.vpsConfig?.hostname : null,
+      vps_os_template: isVpsProduct ? data.vpsConfig?.os : null,
+      vps_region: isVpsProduct ? data.vpsConfig?.location : null,
     })
     .select()
     .single();
@@ -312,15 +325,45 @@ export async function processProvisioning(invoiceId: string) {
 
       }
     } 
-    // 2. Caso: Instância VPS (Provisionamento Manual/Híbrido por enquanto)
-    else if (product?.category === 'vps' || product?.name?.toLowerCase().includes('vps')) {
-      console.log(`[Provisioning] Detectado produto VPS para serviço ${service.id}. Aguardando ativação manual ou vinculação externa.`);
-      
-      await supabaseAdmin.from("services").update({
-        notes: "Aguardando provisionamento da instância VPS pelo administrador."
-      }).eq("id", service.id);
-      
-      results.push({ serviceId: service.id, success: true, message: "VPS aguardando admin" });
+    // 2. Caso: Instância VPS
+    else if (product?.product_type === 'vps') {
+      console.log(`[Provisioning] Provisionando VPS para o serviço ${service.id}.`);
+
+      try {
+        const { provisionContaboVPS } = await import("./contabo.server");
+        const provisioned = await provisionContaboVPS(service.id, {
+          productId: product.external_id,
+          hostname: service.vps_hostname,
+          imageId: service.vps_os_template,
+          region: service.vps_region,
+          billingCycle: service.billing_cycle,
+        });
+
+        await logProvisioningAttempt({
+          serviceId: service.id,
+          userId: invoice.user_id,
+          status: 'success',
+          metadata: { externalId: provisioned.externalId, providerStatus: provisioned.status }
+        });
+
+        results.push({ serviceId: service.id, success: true, externalId: provisioned.externalId });
+      } catch (err: any) {
+        const errorDetail = err?.message || "Falha desconhecida ao provisionar a VPS";
+        await supabaseAdmin.from("services").update({
+          notes: `Falha no provisionamento automático da VPS: ${errorDetail}`,
+          status: "pending",
+          error_message: errorDetail,
+        }).eq("id", service.id);
+        await logProvisioningAttempt({
+          serviceId: service.id,
+          userId: invoice.user_id,
+          status: 'failure',
+          errorCode: 'VPS_API_ERROR',
+          errorMessage: errorDetail,
+          metadata: { productId: product.id, externalProductId: product.external_id }
+        });
+        results.push({ serviceId: service.id, success: false, error: errorDetail });
+      }
     }
     else {
       console.log(`[Provisioning] Produto sem regras de auto-provisionamento para serviço ${service.id}`);
