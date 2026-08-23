@@ -8,6 +8,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Power, RotateCcw, Monitor, ShieldAlert, CheckCircle2, Clock, Activity } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import { isVPSOnline, getVPSStatusLabel } from '@/lib/vps-status';
 import { useAuth } from '@/hooks/use-auth';
 
 export const Route = createFileRoute('/_authenticated/vps/')({
@@ -86,19 +87,19 @@ function VPSManagementPage() {
                     <div className="flex items-center gap-2">
                       <div className={cn(
                         "h-2 w-2 rounded-full",
-                        vps.status === 'active' ? "bg-lime-500" : "bg-orange-500"
+                        isVPSOnline(vps.status) ? "bg-lime-500" : "bg-orange-500"
                       )} />
                       <span className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
                         CLOUD SERVER
                       </span>
                     </div>
-                    {vps.status === 'active' ? (
+                    {isVPSOnline(vps.status) ? (
                       <CheckCircle2 className="h-4 w-4 text-lime-600" />
                     ) : (
                       <Clock className="h-4 w-4 text-orange-500" />
                     )}
                   </div>
-                  <CardTitle className="text-xl font-bold">{vps.ip_address || (vps.status === 'active' ? 'VPS em Operação' : 'Instância VPS')}</CardTitle>
+                  <CardTitle className="text-xl font-bold">{vps.ip_address || getVPSStatusLabel(vps.status)}</CardTitle>
                   <CardDescription className="font-mono text-xs">
                     ID Externo: {vps.external_id}
                   </CardDescription>

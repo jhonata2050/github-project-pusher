@@ -26,6 +26,7 @@ import {
   Calendar
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { normalizeVPSStatus, isVPSOnline, getVPSStatusLabel } from '@/lib/vps-status';
 import { cn } from '@/lib/utils';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { useState } from 'react';

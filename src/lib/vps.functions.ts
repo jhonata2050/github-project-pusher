@@ -1,5 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
+import { normalizeVPSStatus } from "@/lib/vps-status";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
 export const getMyVPSInstances = createServerFn({ method: "GET" })
@@ -127,8 +128,9 @@ export const getVPSDetails = createServerFn({ method: "GET" })
         if (externalDetails.ipAddress && externalDetails.ipAddress !== 'N/A' && vps.ip_address !== externalDetails.ipAddress) {
           updates.ip_address = externalDetails.ipAddress;
         }
-        if (externalDetails.status && vps.status !== String(externalDetails.status).toLowerCase()) {
-          updates.status = String(externalDetails.status).toLowerCase();
+        const normalizedStatus = normalizeVPSStatus(externalDetails.status);
+        if (externalDetails.status && vps.status !== normalizedStatus) {
+          updates.status = normalizedStatus;
         }
 
         const specs = externalDetails.specs ?? {};
