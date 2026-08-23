@@ -29,12 +29,39 @@ export const Route = createFileRoute("/_authenticated/admin/servers")({
 
 function GatewayCard({ gateway, settings }: { gateway: GatewayDef, settings: any }) {
   const [validating, setValidating] = useState(false);
+  const [testResult, setTestResult] = useState<{ success: boolean; message: string } | null>(null);
+  const cardRef = useRef<HTMLDivElement>(null);
   const configured = isGatewayConfigured(gateway.id, settings as Record<string, unknown>);
 
   const handleTest = async () => {
-    // No context of the full form here, we'll just show the state
-    toast.info("Para testar, salve as configurações primeiro.");
+    const credentials: Record<string, string> = {};
+    gateway.fields.forEach((f) => {
+      const el = cardRef.current?.querySelector<HTMLInputElement>(`input[name="${f.key}"]`);
+      credentials[f.key] = (el?.value ?? (settings?.[f.key] as string) ?? "").trim();
+    });
+
+    const missing = gateway.required.filter((k) => !credentials[k]);
+    if (missing.length > 0) {
+      setTestResult({ success: false, message: "Preencha todas as credenciais obrigatórias antes de testar." });
+      return;
+    }
+
+    setValidating(true);
+    setTestResult(null);
+    try {
+      const result = await testGatewayConnection({ data: { gatewayId: gateway.id, credentials } });
+      setTestResult(result);
+      if (result.success) toast.success(result.message);
+      else toast.error(result.message);
+    } catch (e: any) {
+      const message = e?.message || "Falha ao testar a conexão.";
+      setTestResult({ success: false, message });
+      toast.error(message);
+    } finally {
+      setValidating(false);
+    }
   };
+
 
   return (
     <Card className="rounded-3xl border-none shadow-sm">
