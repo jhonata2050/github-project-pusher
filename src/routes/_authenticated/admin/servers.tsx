@@ -64,7 +64,7 @@ function GatewayCard({ gateway, settings }: { gateway: GatewayDef, settings: any
 
 
   return (
-    <Card className="rounded-3xl border-none shadow-sm">
+    <Card ref={cardRef} className="rounded-3xl border-none shadow-sm">
       <CardHeader className="space-y-3">
         <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3">
           <div className="flex min-w-0 items-center gap-3">
@@ -107,7 +107,36 @@ function GatewayCard({ gateway, settings }: { gateway: GatewayDef, settings: any
             />
           </div>
         ))}
+
+        {testResult && (
+          <div
+            className={`flex items-start gap-2 rounded-2xl border p-3 text-xs ${
+              testResult.success
+                ? "border-brand/20 bg-brand/5 text-foreground"
+                : "border-destructive/20 bg-destructive/5 text-destructive"
+            }`}
+          >
+            {testResult.success ? (
+              <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-brand" />
+            ) : (
+              <AlertCircle className="mt-0.5 size-4 shrink-0" />
+            )}
+            <span className="break-words">{testResult.message}</span>
+          </div>
+        )}
+
+        <Button
+          type="button"
+          variant="outline"
+          onClick={handleTest}
+          disabled={validating}
+          className="w-full rounded-2xl border-brand/20 text-brand hover:bg-brand/5"
+        >
+          <Activity className={`mr-2 h-4 w-4 ${validating ? "animate-pulse" : ""}`} />
+          {validating ? "Testando..." : "Testar Conexão"}
+        </Button>
       </CardContent>
+
     </Card>
   );
 }
