@@ -88,7 +88,7 @@ function VPSDetailsPage() {
   const agentMetrics = vps.last_metrics;
   const isAgentDataFresh = agentMetrics?.last_update && (new Date().getTime() - new Date(agentMetrics.last_update).getTime() < 5 * 60 * 1000);
   
-  const displayStats = isAgentDataFresh ? {
+  const displayStats = (isAgentDataFresh ? {
     cpu: { usage: agentMetrics.cpu },
     ram: { usage: agentMetrics.ram },
     disk: { usage: agentMetrics.disk },
