@@ -87,16 +87,39 @@ RAM_USAGE=\$(echo "100 * (\$MEM_TOTAL - \$MEM_AVAIL) / \$MEM_TOTAL" | bc -l 2>/d
 
 # Coleta de Disco
 DISK_USAGE=\$(df / | tail -1 | awk '{print \$5}' | sed 's/%//')
+DISK_USED_GB=\$(df -BG / | tail -1 | awk '{print \$3}' | sed 's/G//')
+DISK_TOTAL_GB=\$(df -BG / | tail -1 | awk '{print \$2}' | sed 's/G//')
+
+# Coleta de IOPS e Rede (amostragem de 1 segundo)
+DSTAT1=\$(awk '\$3 ~ /^(sd|vd|nvme|xvd)/ && \$3 !~ /[0-9]\$/ {r+=\$4; w+=\$8} END {print r+0" "w+0}' /proc/diskstats)
+NSTAT1=\$(awk 'NR>2 {gsub(":"," ",\$0); if (\$1 != "lo") {rx+=\$2; tx+=\$10}} END {print rx+0" "tx+0}' /proc/net/dev)
+sleep 1
+DSTAT2=\$(awk '\$3 ~ /^(sd|vd|nvme|xvd)/ && \$3 !~ /[0-9]\$/ {r+=\$4; w+=\$8} END {print r+0" "w+0}' /proc/diskstats)
+NSTAT2=\$(awk 'NR>2 {gsub(":"," ",\$0); if (\$1 != "lo") {rx+=\$2; tx+=\$10}} END {print rx+0" "tx+0}' /proc/net/dev)
+
+IOPS_READ=\$(( \$(echo \$DSTAT2 | cut -d' ' -f1) - \$(echo \$DSTAT1 | cut -d' ' -f1) ))
+IOPS_WRITE=\$(( \$(echo \$DSTAT2 | cut -d' ' -f2) - \$(echo \$DSTAT1 | cut -d' ' -f2) ))
+NET_IN_B=\$(( \$(echo \$NSTAT2 | cut -d' ' -f1) - \$(echo \$NSTAT1 | cut -d' ' -f1) ))
+NET_OUT_B=\$(( \$(echo \$NSTAT2 | cut -d' ' -f2) - \$(echo \$NSTAT1 | cut -d' ' -f2) ))
+NET_IN=\$(echo "scale=2; \$NET_IN_B / 1048576" | bc -l 2>/dev/null || echo "0")
+NET_OUT=\$(echo "scale=2; \$NET_OUT_B / 1048576" | bc -l 2>/dev/null || echo "0")
+
+[ "\$IOPS_READ" -lt 0 ] 2>/dev/null && IOPS_READ=0
+[ "\$IOPS_WRITE" -lt 0 ] 2>/dev/null && IOPS_WRITE=0
 
 # Limpar valores para garantir que sejam números puros no JSON
 CPU_VAL=\$(printf "%.0f" "\$CPU_USAGE" 2>/dev/null || echo "0")
 RAM_VAL=\$(printf "%.0f" "\$RAM_USAGE" 2>/dev/null || echo "0")
 DISK_VAL=\$(printf "%.0f" "\$DISK_USAGE" 2>/dev/null || echo "0")
+NET_IN_VAL=\$(printf "%.2f" "\$NET_IN" 2>/dev/null || echo "0")
+NET_OUT_VAL=\$(printf "%.2f" "\$NET_OUT" 2>/dev/null || echo "0")
+DISK_USED_VAL=\$(printf "%.0f" "\${DISK_USED_GB:-0}" 2>/dev/null || echo "0")
+DISK_TOTAL_VAL=\$(printf "%.0f" "\${DISK_TOTAL_GB:-0}" 2>/dev/null || echo "0")
 
 # Enviar métricas com silêncio total para evitar poluição
 curl -s -X POST "\$API_URL" \\
      -H "Content-Type: application/json" \\
-     -d "{\\"vps_id\\": \\"\$VPS_ID\\", \\"cpu\\": \$CPU_VAL, \\"ram\\": \$RAM_VAL, \\"disk\\": \$DISK_VAL}" > /dev/null 2>&1
+     -d "{\\"vps_id\\": \\"\$VPS_ID\\", \\"cpu\\": \$CPU_VAL, \\"ram\\": \$RAM_VAL, \\"disk\\": \$DISK_VAL, \\"iops_read\\": \$IOPS_READ, \\"iops_write\\": \$IOPS_WRITE, \\"net_in\\": \$NET_IN_VAL, \\"net_out\\": \$NET_OUT_VAL, \\"disk_used_gb\\": \$DISK_USED_VAL, \\"disk_total_gb\\": \$DISK_TOTAL_VAL}" > /dev/null 2>&1
 EOF
 
 # Substituir placeholders

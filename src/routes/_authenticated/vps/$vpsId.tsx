@@ -92,7 +92,10 @@ function VPSDetailsPage() {
     cpu: { usage: agentMetrics.cpu },
     ram: { usage: agentMetrics.ram },
     disk: { usage: agentMetrics.disk },
-    network: stats.network,
+    iops: agentMetrics.iops ?? null,
+    network: agentMetrics.network ?? stats.network,
+    diskUsedGb: agentMetrics.disk_used_gb ?? null,
+    diskTotalGb: agentMetrics.disk_total_gb ?? null,
     lastUpdate: agentMetrics.last_update,
     isAgent: true
   } : stats) as any;
@@ -134,98 +137,109 @@ function VPSDetailsPage() {
           </Button>
         </div>
 
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-5">
-          <Card className="rounded-3xl border-2">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-xs font-medium flex items-center gap-2 text-muted-foreground uppercase tracking-wider">CPU</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-xl font-bold">{vps.cpu_cores || 'N/A'} vCPU</div>
-            </CardContent>
-          </Card>
-          <Card className="rounded-3xl border-2">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-xs font-medium flex items-center gap-2 text-muted-foreground uppercase tracking-wider">RAM</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-xl font-bold">{vps.ram_gb || 'N/A'} GB</div>
-            </CardContent>
-          </Card>
-          <Card className="rounded-3xl border-2">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-xs font-medium flex items-center gap-2 text-muted-foreground uppercase tracking-wider">Disco</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-xl font-bold">{vps.disk_gb || 'N/A'} GB</div>
-            </CardContent>
-          </Card>
-          <Card className="rounded-3xl border-2">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-xs font-medium flex items-center gap-2 text-muted-foreground uppercase tracking-wider">Uso CPU</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-xl font-bold">{displayStats.cpu?.usage ?? 'N/A'}%</div>
-              <Progress value={displayStats.cpu?.usage || 0} className="h-1.5 mt-2" />
-            </CardContent>
-          </Card>
-          <Card className="rounded-3xl border-2">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-xs font-medium flex items-center gap-2 text-muted-foreground uppercase tracking-wider">Uso RAM</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-xl font-bold">{displayStats.ram?.usage ?? 'N/A'}%</div>
-              <Progress value={displayStats.ram?.usage || 0} className="h-1.5 mt-2" />
-            </CardContent>
-          </Card>
-          <Card className="rounded-3xl border-2">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-xs font-medium flex items-center gap-2 text-muted-foreground uppercase tracking-wider">
-                <HardDrive className="h-3.5 w-3.5" /> Uso Disco
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-xl font-bold">{displayStats.disk?.usage ?? 'N/A'}%</div>
-              <Progress value={displayStats.disk?.usage || 0} className="h-1.5 mt-2" />
-              <p className="text-[10px] text-muted-foreground mt-2">
-                {vps.disk_gb ? `${Math.round(((displayStats.disk?.usage ?? 0) / 100) * vps.disk_gb)} GB de ${vps.disk_gb} GB` : 'Capacidade indisponível'}
-              </p>
-            </CardContent>
-          </Card>
-          <Card className="rounded-3xl border-2">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-xs font-medium flex items-center gap-2 text-muted-foreground uppercase tracking-wider">
-                <Database className="h-3.5 w-3.5" /> IOPS
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-xl font-bold">
-                {displayStats.iops?.total ?? displayStats.disk?.iops ?? 'N/A'}
-              </div>
-              <p className="text-[10px] text-muted-foreground mt-2">
-                {displayStats.iops
-                  ? `Leitura ${displayStats.iops.read ?? 0} / Escrita ${displayStats.iops.write ?? 0}`
-                  : 'Requer agente de monitoramento'}
-              </p>
-            </CardContent>
-          </Card>
-          <Card className="rounded-3xl border-2">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-xs font-medium flex items-center gap-2 text-muted-foreground uppercase tracking-wider">
-                <Network className="h-3.5 w-3.5" /> Rede
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-xl font-bold">
-                {displayStats.network ? `${displayStats.network.inbound ?? 0} MB` : 'N/A'}
-              </div>
-              <p className="text-[10px] text-muted-foreground mt-2">
-                {displayStats.network
-                  ? `Entrada ${displayStats.network.inbound ?? 0} MB • Saída ${displayStats.network.outbound ?? 0} MB`
-                  : 'Sem dados de tráfego disponíveis'}
-              </p>
-            </CardContent>
-          </Card>
+        {/* Especificações contratadas */}
+        <div className="space-y-3">
+          <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Especificações</h2>
+          <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
+            <Card className="rounded-3xl border-2">
+              <CardContent className="p-5">
+                <div className="flex items-center gap-2 text-[11px] font-medium text-muted-foreground uppercase tracking-wider"><Cpu className="h-3.5 w-3.5" /> CPU</div>
+                <div className="text-2xl font-bold mt-2">{vps.cpu_cores || 'N/A'} <span className="text-sm font-medium text-muted-foreground">vCPU</span></div>
+              </CardContent>
+            </Card>
+            <Card className="rounded-3xl border-2">
+              <CardContent className="p-5">
+                <div className="flex items-center gap-2 text-[11px] font-medium text-muted-foreground uppercase tracking-wider"><Activity className="h-3.5 w-3.5" /> RAM</div>
+                <div className="text-2xl font-bold mt-2">{vps.ram_gb || 'N/A'} <span className="text-sm font-medium text-muted-foreground">GB</span></div>
+              </CardContent>
+            </Card>
+            <Card className="rounded-3xl border-2">
+              <CardContent className="p-5">
+                <div className="flex items-center gap-2 text-[11px] font-medium text-muted-foreground uppercase tracking-wider"><HardDrive className="h-3.5 w-3.5" /> Disco</div>
+                <div className="text-2xl font-bold mt-2">{displayStats.diskTotalGb || vps.disk_gb || 'N/A'} <span className="text-sm font-medium text-muted-foreground">GB</span></div>
+              </CardContent>
+            </Card>
+            <Card className="rounded-3xl border-2">
+              <CardContent className="p-5">
+                <div className="flex items-center gap-2 text-[11px] font-medium text-muted-foreground uppercase tracking-wider"><Monitor className="h-3.5 w-3.5" /> Sistema</div>
+                <div className="text-base font-bold mt-2 truncate">{vps.os_template || details.imageName || 'N/A'}</div>
+              </CardContent>
+            </Card>
+          </div>
         </div>
+
+        {/* Métricas em tempo real */}
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Monitoramento em tempo real</h2>
+            {displayStats.lastUpdate && (
+              <span className="text-[11px] text-muted-foreground">
+                Atualizado {format(new Date(displayStats.lastUpdate), "dd/MM HH:mm", { locale: ptBR })}
+              </span>
+            )}
+          </div>
+          <div className="grid gap-4 grid-cols-2 lg:grid-cols-5">
+            <Card className="rounded-3xl border-2">
+              <CardContent className="p-5">
+                <div className="flex items-center gap-2 text-[11px] font-medium text-muted-foreground uppercase tracking-wider"><Cpu className="h-3.5 w-3.5" /> Uso CPU</div>
+                <div className="text-2xl font-bold mt-2">{displayStats.cpu?.usage ?? 'N/A'}%</div>
+                <Progress value={displayStats.cpu?.usage || 0} className="h-1.5 mt-3" />
+              </CardContent>
+            </Card>
+            <Card className="rounded-3xl border-2">
+              <CardContent className="p-5">
+                <div className="flex items-center gap-2 text-[11px] font-medium text-muted-foreground uppercase tracking-wider"><Activity className="h-3.5 w-3.5" /> Uso RAM</div>
+                <div className="text-2xl font-bold mt-2">{displayStats.ram?.usage ?? 'N/A'}%</div>
+                <Progress value={displayStats.ram?.usage || 0} className="h-1.5 mt-3" />
+              </CardContent>
+            </Card>
+            <Card className="rounded-3xl border-2">
+              <CardContent className="p-5">
+                <div className="flex items-center gap-2 text-[11px] font-medium text-muted-foreground uppercase tracking-wider"><HardDrive className="h-3.5 w-3.5" /> Uso Disco</div>
+                <div className="text-2xl font-bold mt-2">{displayStats.disk?.usage ?? 'N/A'}%</div>
+                <Progress value={displayStats.disk?.usage || 0} className="h-1.5 mt-3" />
+                <p className="text-[10px] text-muted-foreground mt-2">
+                  {displayStats.diskUsedGb && displayStats.diskTotalGb
+                    ? `${displayStats.diskUsedGb} GB de ${displayStats.diskTotalGb} GB`
+                    : vps.disk_gb
+                      ? `${Math.round(((displayStats.disk?.usage ?? 0) / 100) * vps.disk_gb)} GB de ${vps.disk_gb} GB`
+                      : 'Capacidade indisponível'}
+                </p>
+              </CardContent>
+            </Card>
+            <Card className="rounded-3xl border-2">
+              <CardContent className="p-5">
+                <div className="flex items-center gap-2 text-[11px] font-medium text-muted-foreground uppercase tracking-wider"><Database className="h-3.5 w-3.5" /> IOPS</div>
+                <div className="text-2xl font-bold mt-2">
+                  {displayStats.iops?.total ?? 'N/A'}
+                  {displayStats.iops && <span className="text-sm font-medium text-muted-foreground"> /s</span>}
+                </div>
+                <p className="text-[10px] text-muted-foreground mt-2">
+                  {displayStats.iops
+                    ? `Leitura ${displayStats.iops.read ?? 0} • Escrita ${displayStats.iops.write ?? 0}`
+                    : 'Requer agente de monitoramento'}
+                </p>
+              </CardContent>
+            </Card>
+            <Card className="rounded-3xl border-2">
+              <CardContent className="p-5">
+                <div className="flex items-center gap-2 text-[11px] font-medium text-muted-foreground uppercase tracking-wider"><Network className="h-3.5 w-3.5" /> Rede</div>
+                <div className="text-2xl font-bold mt-2">
+                  {displayStats.network
+                    ? `${Number(displayStats.network.inbound ?? 0).toFixed(2)}`
+                    : 'N/A'}
+                  {displayStats.network && <span className="text-sm font-medium text-muted-foreground"> MB/s</span>}
+                </div>
+                <p className="text-[10px] text-muted-foreground mt-2">
+                  {displayStats.network
+                    ? `Entrada ${Number(displayStats.network.inbound ?? 0).toFixed(2)} • Saída ${Number(displayStats.network.outbound ?? 0).toFixed(2)} MB/s`
+                    : 'Requer agente de monitoramento'}
+                </p>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+
 
 
         <div className="grid gap-6 md:grid-cols-2">
