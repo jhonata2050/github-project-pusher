@@ -23,14 +23,21 @@ export const Route = createFileRoute('/api/public/vps-metrics')({
           const body = await request.json();
           
           // Tratamento para valores que podem vir como string ou nulos do shell
+          const num = (v: any) => (v === undefined || v === null || v === '' || isNaN(Number(v)) ? null : Number(v));
           const sanitizedData = {
             vps_id: body.vps_id,
             cpu: Number(body.cpu) || 0,
             ram: Number(body.ram) || 0,
             disk: Number(body.disk) || 0,
+            iops_read: num(body.iops_read),
+            iops_write: num(body.iops_write),
+            net_in: num(body.net_in),
+            net_out: num(body.net_out),
+            disk_used_gb: num(body.disk_used_gb),
+            disk_total_gb: num(body.disk_total_gb),
           };
 
-          const { vps_id, cpu, ram, disk } = metricsSchema.parse(sanitizedData);
+          const { vps_id, cpu, ram, disk, iops_read, iops_write, net_in, net_out, disk_used_gb, disk_total_gb } = metricsSchema.parse(sanitizedData);
 
           // Monitoramento: Registrar recebimento de métricas
           try {
@@ -54,6 +61,17 @@ export const Route = createFileRoute('/api/public/vps-metrics')({
                 cpu: Math.round(cpu), 
                 ram: Math.round(ram), 
                 disk: Math.round(disk),
+                iops: (iops_read !== null || iops_write !== null) ? {
+                  read: iops_read ?? 0,
+                  write: iops_write ?? 0,
+                  total: (iops_read ?? 0) + (iops_write ?? 0),
+                } : null,
+                network: (net_in !== null || net_out !== null) ? {
+                  inbound: net_in ?? 0,
+                  outbound: net_out ?? 0,
+                } : null,
+                disk_used_gb,
+                disk_total_gb,
                 last_update: new Date().toISOString()
               } 
             })
