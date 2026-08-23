@@ -52,6 +52,7 @@ import { Route as ApiPublicWebhookRouteImport } from './routes/api/public/webhoo
 import { Route as AuthenticatedAdminClientsIndexRouteImport } from './routes/_authenticated/admin/clients.index'
 import { Route as AuthenticatedAdminClientsClientIdRouteImport } from './routes/_authenticated/admin/clients.$clientId'
 import { Route as AuthenticatedAdminVpsIndexRouteImport } from './routes/_authenticated/admin/vps/index'
+import { Route as AuthenticatedAdminVpsPlansRouteImport } from './routes/_authenticated/admin/vps/plans'
 import { Route as ApiPublicCronMaintenanceRouteImport } from './routes/api/public/cron/maintenance'
 import { Route as ApiPublicScriptsInstallAgentRouteImport } from './routes/api/public/scripts/install-agent'
 import { Route as ApiPublicScriptsUninstallAgentRouteImport } from './routes/api/public/scripts/uninstall-agent'
@@ -301,6 +302,12 @@ const AuthenticatedAdminVpsIndexRoute =
     path: '/vps/',
     getParentRoute: () => AuthenticatedAdminRouteRoute,
   } as any)
+const AuthenticatedAdminVpsPlansRoute =
+  AuthenticatedAdminVpsPlansRouteImport.update({
+    id: '/vps/plans',
+    path: '/vps/plans',
+    getParentRoute: () => AuthenticatedAdminRouteRoute,
+  } as any)
 const ApiPublicCronMaintenanceRoute =
   ApiPublicCronMaintenanceRouteImport.update({
     id: '/api/public/cron/maintenance',
@@ -400,6 +407,7 @@ export interface FileRoutesByFullPath {
   '/tickets/': typeof AuthenticatedTicketsIndexRoute
   '/vps/': typeof AuthenticatedVpsIndexRoute
   '/admin/clients/$clientId': typeof AuthenticatedAdminClientsClientIdRoute
+  '/admin/vps/plans': typeof AuthenticatedAdminVpsPlansRoute
   '/api/public/cron/maintenance': typeof ApiPublicCronMaintenanceRoute
   '/api/public/scripts/install-agent': typeof ApiPublicScriptsInstallAgentRoute
   '/api/public/scripts/uninstall-agent': typeof ApiPublicScriptsUninstallAgentRoute
@@ -449,6 +457,7 @@ export interface FileRoutesByTo {
   '/tickets': typeof AuthenticatedTicketsIndexRoute
   '/vps': typeof AuthenticatedVpsIndexRoute
   '/admin/clients/$clientId': typeof AuthenticatedAdminClientsClientIdRoute
+  '/admin/vps/plans': typeof AuthenticatedAdminVpsPlansRoute
   '/api/public/cron/maintenance': typeof ApiPublicCronMaintenanceRoute
   '/api/public/scripts/install-agent': typeof ApiPublicScriptsInstallAgentRoute
   '/api/public/scripts/uninstall-agent': typeof ApiPublicScriptsUninstallAgentRoute
@@ -505,6 +514,7 @@ export interface FileRoutesById {
   '/_authenticated/tickets/': typeof AuthenticatedTicketsIndexRoute
   '/_authenticated/vps/': typeof AuthenticatedVpsIndexRoute
   '/_authenticated/admin/clients/$clientId': typeof AuthenticatedAdminClientsClientIdRoute
+  '/_authenticated/admin/vps/plans': typeof AuthenticatedAdminVpsPlansRoute
   '/api/public/cron/maintenance': typeof ApiPublicCronMaintenanceRoute
   '/api/public/scripts/install-agent': typeof ApiPublicScriptsInstallAgentRoute
   '/api/public/scripts/uninstall-agent': typeof ApiPublicScriptsUninstallAgentRoute
@@ -561,6 +571,7 @@ export interface FileRouteTypes {
     | '/tickets/'
     | '/vps/'
     | '/admin/clients/$clientId'
+    | '/admin/vps/plans'
     | '/api/public/cron/maintenance'
     | '/api/public/scripts/install-agent'
     | '/api/public/scripts/uninstall-agent'
@@ -610,6 +621,7 @@ export interface FileRouteTypes {
     | '/tickets'
     | '/vps'
     | '/admin/clients/$clientId'
+    | '/admin/vps/plans'
     | '/api/public/cron/maintenance'
     | '/api/public/scripts/install-agent'
     | '/api/public/scripts/uninstall-agent'
@@ -665,6 +677,7 @@ export interface FileRouteTypes {
     | '/_authenticated/tickets/'
     | '/_authenticated/vps/'
     | '/_authenticated/admin/clients/$clientId'
+    | '/_authenticated/admin/vps/plans'
     | '/api/public/cron/maintenance'
     | '/api/public/scripts/install-agent'
     | '/api/public/scripts/uninstall-agent'
@@ -1003,6 +1016,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminVpsIndexRouteImport
       parentRoute: typeof AuthenticatedAdminRouteRoute
     }
+    '/_authenticated/admin/vps/plans': {
+      id: '/_authenticated/admin/vps/plans'
+      path: '/vps/plans'
+      fullPath: '/admin/vps/plans'
+      preLoaderRoute: typeof AuthenticatedAdminVpsPlansRouteImport
+      parentRoute: typeof AuthenticatedAdminRouteRoute
+    }
     '/api/public/cron/maintenance': {
       id: '/api/public/cron/maintenance'
       path: '/api/public/cron/maintenance'
@@ -1110,6 +1130,7 @@ interface AuthenticatedAdminRouteRouteChildren {
   AuthenticatedAdminTicketsRoute: typeof AuthenticatedAdminTicketsRoute
   AuthenticatedAdminWhatsappRoute: typeof AuthenticatedAdminWhatsappRoute
   AuthenticatedAdminIndexRoute: typeof AuthenticatedAdminIndexRoute
+  AuthenticatedAdminVpsPlansRoute: typeof AuthenticatedAdminVpsPlansRoute
   AuthenticatedAdminVpsIndexRoute: typeof AuthenticatedAdminVpsIndexRoute
 }
 
@@ -1131,6 +1152,7 @@ const AuthenticatedAdminRouteRouteChildren: AuthenticatedAdminRouteRouteChildren
     AuthenticatedAdminTicketsRoute: AuthenticatedAdminTicketsRoute,
     AuthenticatedAdminWhatsappRoute: AuthenticatedAdminWhatsappRoute,
     AuthenticatedAdminIndexRoute: AuthenticatedAdminIndexRoute,
+    AuthenticatedAdminVpsPlansRoute: AuthenticatedAdminVpsPlansRoute,
     AuthenticatedAdminVpsIndexRoute: AuthenticatedAdminVpsIndexRoute,
   }
 

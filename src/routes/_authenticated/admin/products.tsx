@@ -15,7 +15,6 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { updateProduct, createProduct, getServers, getDAPackagesList, getProductGroups } from "@/lib/support.functions";
-import { getContaboPlansFn } from "@/lib/vps-admin.functions";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/admin/products")({
@@ -55,6 +54,7 @@ function ProductsPage() {
         .select(
           "id, name, slug, description, directadmin_package, external_id, disk_quota_mb, is_visible, sort_order, product_type, group_id, immediate_purchase, product_groups(name), product_prices(cycle, price, is_active)",
         )
+        .neq("product_type", "vps")
         .order("sort_order");
       if (error) throw error;
       return data;
@@ -67,13 +67,8 @@ function ProductsPage() {
     staleTime: 1000 * 60 * 15,
   });
 
-  const contaboPlans = useQuery({
-    queryKey: ["contabo-plans"],
-    queryFn: () => getContaboPlansFn(),
-    // Só busca o catálogo externo quando o editor de um produto VPS está aberto
-    enabled: editingProduct?.product_type === "vps",
-    staleTime: 1000 * 60 * 30,
-  });
+  // Planos VPS são gerenciados na área exclusiva /admin/vps/plans
+
 
   const servers = useQuery({
     queryKey: ["admin-servers"],
@@ -183,6 +178,10 @@ function ProductsPage() {
       }
     >
       <h1 className="text-2xl font-semibold tracking-tight">Seus produtos</h1>
+      <p className="mt-1 text-sm text-muted-foreground">
+        Hospedagem web, domínios e adicionais. Planos de VPS ficam na área exclusiva{" "}
+        <Link to="/admin/vps/plans" className="text-brand underline">Planos VPS</Link>.
+      </p>
 
       <div className="mt-6 flex flex-wrap items-center gap-3">
         <div className="relative flex-1 min-w-56">
@@ -319,9 +318,9 @@ function ProductsPage() {
                     </SelectTrigger>
                     <SelectContent className="rounded-xl border-none shadow-xl">
                       <SelectItem value="hosting">Hospedagem (DirectAdmin)</SelectItem>
-                      <SelectItem value="vps">VPS (Contabo)</SelectItem>
                       <SelectItem value="domain">Domínio</SelectItem>
                       <SelectItem value="other">Outros / Adicionais</SelectItem>
+
                     </SelectContent>
                   </Select>
                 </div>
@@ -423,100 +422,56 @@ function ProductsPage() {
               <div className="rounded-2xl border border-border p-4 bg-muted/30">
                 <div className="flex items-center gap-2 mb-4 text-sm font-bold uppercase text-muted-foreground">
                   <Server className="size-4" />
-                  {editingProduct.product_type === 'vps' ? 'Integração Contabo' : 'Integração DirectAdmin'}
+                  Integração DirectAdmin
                 </div>
-                
-                {editingProduct.product_type === 'vps' ? (
+
+                <div className="grid gap-4 md:grid-cols-2">
                   <div className="space-y-2">
-                    <Label>Plano Contabo (Product ID)</Label>
-                    <Select 
-                      value={editingProduct.external_id || ""} 
-                      onValueChange={val => setEditingProduct({...editingProduct, external_id: val, directadmin_package: val})}
-                    >
+                    <Label>Servidor para Sincronização</Label>
+                    <Select value={selectedServer} onValueChange={setSelectedServer}>
                       <SelectTrigger className="rounded-xl">
-                        <SelectValue placeholder={
-                          contaboPlans.isLoading ? "Carregando planos da Contabo..." : 
-                          contaboPlans.error ? "Erro ao carregar (verifique API)" : 
-                          "Selecione o plano VPS"
-                        } />
+                        <SelectValue placeholder="Selecione um servidor" />
                       </SelectTrigger>
                       <SelectContent className="rounded-xl border-none shadow-xl">
-                        {contaboPlans.data?.map((cat: any) => (
-                          <div key={cat.category}>
-                            <div className="px-2 py-1.5 text-xs font-bold text-brand bg-brand/5 uppercase tracking-wider sticky top-0">
-                              {cat.category}
-                            </div>
-                            {cat.items.map((plan: any) => (
-                              <SelectItem key={plan.productId} value={plan.productId}>
-                                {plan.name} — {plan.vCpu} / {plan.ramTitle} / {plan.diskGb}
-                              </SelectItem>
-                            ))}
-                          </div>
+                        {servers.data?.map((s: any) => (
+                          <SelectItem key={s.id} value={s.id}>
+                            {s.hostname ?? s.name ?? s.ip_address ?? s.id}
+                          </SelectItem>
                         ))}
-                        {(!contaboPlans.data || contaboPlans.data.length === 0) && !contaboPlans.isLoading && (
-                          <div className="p-4 text-xs text-center text-muted-foreground">
-                            {contaboPlans.error ? (
-                              <div className="text-destructive font-medium">
-                                Falha na API Contabo. <br/>
-                                Certifique-se de que as credenciais em Sistema {"/ >"} Servidores estão corretas.
-                              </div>
-                            ) : "Nenhum plano encontrado na API"}
+                        {(!servers.data || servers.data.length === 0) && (
+                          <div className="p-2 text-xs text-center text-muted-foreground">
+                            Nenhum servidor cadastrado
                           </div>
                         )}
                       </SelectContent>
                     </Select>
-                    <p className="text-[10px] text-muted-foreground mt-1">
-                      Este ID será enviado à Contabo durante o provisionamento automático.
-                    </p>
                   </div>
-                ) : (
-                  <div className="grid gap-4 md:grid-cols-2">
-                    <div className="space-y-2">
-                      <Label>Servidor para Sincronização</Label>
-                      <Select value={selectedServer} onValueChange={setSelectedServer}>
-                        <SelectTrigger className="rounded-xl">
-                          <SelectValue placeholder="Selecione um servidor" />
-                        </SelectTrigger>
-                        <SelectContent className="rounded-xl border-none shadow-xl">
-                          {servers.data?.map((s: any) => (
-                            <SelectItem key={s.id} value={s.id}>
-                              {s.hostname ?? s.name ?? s.ip_address ?? s.id}
-                            </SelectItem>
-                          ))}
-                          {(!servers.data || servers.data.length === 0) && (
-                            <div className="p-2 text-xs text-center text-muted-foreground">
-                              Nenhum servidor cadastrado
-                            </div>
-                          )}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Pacote no Servidor</Label>
-                      <Select 
-                        value={editingProduct.directadmin_package || ""} 
-                        onValueChange={val => setEditingProduct({...editingProduct, directadmin_package: val})}
-                      >
-                        <SelectTrigger className="rounded-xl">
-                          <SelectValue placeholder={daPackages.isLoading ? "Carregando..." : "Selecione um pacote"} />
-                        </SelectTrigger>
-                        <SelectContent className="rounded-xl border-none shadow-xl">
-                          {daPackages.data?.map((pkg: string) => (
-                            <SelectItem key={pkg} value={pkg}>{pkg}</SelectItem>
-                          ))}
-                          {(!daPackages.data || daPackages.data.length === 0) && !daPackages.isLoading && (
-                            <div className="p-2 text-xs text-center text-muted-foreground">
-                              {daPackages.error
-                                ? (daPackages.error as Error).message
-                                : "Selecione um servidor para carregar os pacotes"}
-                            </div>
-                          )}
-                        </SelectContent>
-                      </Select>
-                    </div>
+                  <div className="space-y-2">
+                    <Label>Pacote no Servidor</Label>
+                    <Select
+                      value={editingProduct.directadmin_package || ""}
+                      onValueChange={val => setEditingProduct({...editingProduct, directadmin_package: val})}
+                    >
+                      <SelectTrigger className="rounded-xl">
+                        <SelectValue placeholder={daPackages.isLoading ? "Carregando..." : "Selecione um pacote"} />
+                      </SelectTrigger>
+                      <SelectContent className="rounded-xl border-none shadow-xl">
+                        {daPackages.data?.map((pkg: string) => (
+                          <SelectItem key={pkg} value={pkg}>{pkg}</SelectItem>
+                        ))}
+                        {(!daPackages.data || daPackages.data.length === 0) && !daPackages.isLoading && (
+                          <div className="p-2 text-xs text-center text-muted-foreground">
+                            {daPackages.error
+                              ? (daPackages.error as Error).message
+                              : "Selecione um servidor para carregar os pacotes"}
+                          </div>
+                        )}
+                      </SelectContent>
+                    </Select>
                   </div>
-                )}
+                </div>
               </div>
+
 
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
