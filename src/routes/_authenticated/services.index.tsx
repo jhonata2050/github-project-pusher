@@ -119,8 +119,9 @@ function ClientServicesPage() {
         ) : (
           filtered.map((svc: any) => {
             const status = STATUS_LABELS[svc.status] || { label: svc.status, color: "bg-muted" };
-            const isVPS = svc.products?.product_type === 'vps' || svc.billing_cycle === 'vps' || (svc.vps_instances && svc.vps_instances.length > 0) || (svc.domain && (svc.domain.toLowerCase().includes('vps') || svc.domain.toLowerCase().includes('eqsam'))) || (svc.username && svc.username.toLowerCase().includes('vps')) || !svc.server_id;
-            const vpsInstance = svc.vps_instances?.[0];
+            const isVPS = isVPSService(svc);
+            const vpsInstance = getVPSInstance(svc);
+
             
             return (
               <div
