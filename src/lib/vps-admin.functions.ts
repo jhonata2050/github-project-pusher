@@ -1,5 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
+import { normalizeVPSStatus } from "@/lib/vps-status";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
 export const getVPSAdminData = createServerFn({ method: "GET" })
@@ -124,7 +125,7 @@ export const syncContaboInstancesFn = createServerFn({ method: "GET" })
           external_id: String(externalId),
           provider_id: String(externalId),
           ip_address: ipAddress,
-          status: String(instance.status || 'unknown').toLowerCase(),
+          status: normalizeVPSStatus(instance.status),
           region: instance.regionName ?? instance.region ?? null,
           os_template: instance.imageName ?? instance.osType ?? instance.osTemplate ?? instance.imageId ?? null,
           ...(specs.cpu_cores ? { cpu_cores: specs.cpu_cores } : {}),

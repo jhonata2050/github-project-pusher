@@ -26,6 +26,7 @@ import {
   Calendar
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { isVPSOnline, getVPSStatusLabel } from '@/lib/vps-status';
 import { cn } from '@/lib/utils';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { useState } from 'react';
@@ -119,8 +120,8 @@ function VPSDetailsPage() {
             <div>
               <h1 className="text-3xl font-bold tracking-tight">{vps.ip_address || details.displayName || vps.os_template || 'Servidor VPS'}</h1>
               <div className="flex items-center gap-2 mt-1">
-                <Badge variant={vps.status === 'active' ? 'default' : 'secondary'} className="rounded-full">
-                  {vps.status === 'active' ? 'VPS em Operação' : 'Offline'}
+                <Badge variant={isVPSOnline(details.status ?? vps.status) ? 'default' : 'secondary'} className="rounded-full">
+                  {getVPSStatusLabel(details.status ?? vps.status)}
                 </Badge>
                 {ipAddress && <span className="text-sm text-muted-foreground italic">IP: {ipAddress}</span>}
                 {(vps.region || details.regionName) && <span className="text-sm text-muted-foreground">• {vps.region || details.regionName}</span>}
