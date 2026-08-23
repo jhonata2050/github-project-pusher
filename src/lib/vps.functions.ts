@@ -4,9 +4,16 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
 export const getMyVPSInstances = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .handler(async ({ context }) => {
-    const { userId } = context as any;
+  .inputValidator((data) => z.object({ clientId: z.string().uuid().optional() }).optional().parse(data))
+  .handler(async ({ data, context }) => {
+    const { supabase, userId } = context as any;
     if (!userId) throw new Error("Unauthorized");
+
+    const requestedUserId = data?.clientId ?? userId;
+    if (requestedUserId !== userId) {
+      const { data: isStaff, error: roleError } = await supabase.rpc('is_staff', { _user_id: userId });
+      if (roleError || !isStaff) throw new Error("Acesso negado");
+    }
 
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     
@@ -15,7 +22,7 @@ export const getMyVPSInstances = createServerFn({ method: "GET" })
     const { data: services, error: svcError } = await supabaseAdmin
       .from('services')
       .select('*, products(product_type)')
-      .eq('user_id', userId);
+      .eq('user_id', requestedUserId);
     
     if (svcError) throw svcError;
 

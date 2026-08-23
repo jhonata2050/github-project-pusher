@@ -8,15 +8,29 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Power, RotateCcw, Monitor, ShieldAlert, CheckCircle2, Clock, Activity } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import { useAuth } from '@/hooks/use-auth';
 
 export const Route = createFileRoute('/_authenticated/vps/')({
+  head: () => ({
+    meta: [
+      { title: 'Servidores VPS — Eqsam' },
+      { name: 'description', content: 'Gerencie e monitore seus servidores VPS.' },
+      { property: 'og:title', content: 'Servidores VPS — Eqsam' },
+      { property: 'og:description', content: 'Gerencie e monitore seus servidores VPS.' },
+      { property: 'og:type', content: 'website' },
+      { name: 'twitter:card', content: 'summary' },
+    ],
+  }),
   component: VPSManagementPage,
 });
 
 function VPSManagementPage() {
+  const { user, impersonatedClientId } = useAuth();
+  const effectiveUserId = impersonatedClientId || user?.id;
   const { data: instances, isLoading } = useQuery({
-    queryKey: ['vps-instances'],
-    queryFn: () => getMyVPSInstances(),
+    queryKey: ['vps-instances', effectiveUserId],
+    enabled: Boolean(effectiveUserId),
+    queryFn: () => getMyVPSInstances({ data: { clientId: effectiveUserId } }),
   });
 
   const queryClient = useQueryClient();

@@ -71,7 +71,7 @@ function ClientServicesPage() {
   const vpsInstances = useQuery({
     queryKey: ["client-vps-instances", effectiveUserId],
     enabled: Boolean(effectiveUserId),
-    queryFn: () => getMyVPSInstances(),
+    queryFn: () => getMyVPSInstances({ data: { clientId: effectiveUserId } }),
   });
 
 
