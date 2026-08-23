@@ -111,65 +111,41 @@ export const getVPSDetails = createServerFn({ method: "GET" })
     const { data: isStaff } = await supabase.rpc('is_staff', { _user_id: userId });
     if (!isStaff && service?.user_id !== userId) throw new Error("Acesso negado");
 
-    const { getContaboInstanceDetails, getContaboInstanceStats, getContaboProductTypes } = await import("./contabo.server");
+    const { getContaboInstanceDetails, getContaboInstanceStats } = await import("./contabo.server");
 
     try {
       const externalDetails = await getContaboInstanceDetails(vps.external_id);
-      
-      // Mapear dados reais da API para as colunas do banco
+
+      // Sincroniza SEMPRE com os dados reais retornados pela própria VPS
       if (externalDetails) {
         const updates: any = {};
-        
-        // Sincronizar Região e OS se estiverem disponíveis
-        if (externalDetails.region && vps.region !== externalDetails.region) {
-          updates.region = externalDetails.region;
-        }
-        if (externalDetails.osTemplate && vps.os_template !== externalDetails.osTemplate) {
-          updates.os_template = externalDetails.osTemplate;
-        }
+        const realRegion = externalDetails.regionName || externalDetails.region;
+        const realOs = externalDetails.osTemplate;
 
-        // Tentar obter specs do produto se não estiverem no banco
-        if (!vps.cpu_cores || !vps.ram_gb || !vps.disk_gb) {
-          try {
-            const products = await getContaboProductTypes();
-            const productName = (externalDetails.productName || "").toLowerCase();
-            
-            // Procura o produto no catálogo para pegar os specs reais
-            let foundProduct = null;
-            for (const cat of products) {
-              foundProduct = cat.items.find((item: any) => 
-                productName.includes(item.name.toLowerCase()) || 
-                item.productId === externalDetails.productId
-              );
-              if (foundProduct) break;
-            }
-
-            if (foundProduct) {
-              // Extrair números dos títulos (ex: "4 vCPU" -> 4)
-              const cpuMatch = foundProduct.vCpu.match(/\d+/);
-              const diskMatch = foundProduct.diskGb.match(/\d+/);
-              
-              if (cpuMatch && !vps.cpu_cores) updates.cpu_cores = parseInt(cpuMatch[0]);
-              if (foundProduct.ramMb && !vps.ram_gb) updates.ram_gb = Math.round(foundProduct.ramMb / 1024);
-              if (diskMatch && !vps.disk_gb) updates.disk_gb = parseInt(diskMatch[0]);
-            }
-          } catch (e) {
-            console.warn("Erro ao buscar specs do produto Contabo:", e);
-          }
+        if (realRegion && vps.region !== realRegion) updates.region = realRegion;
+        if (realOs && vps.os_template !== realOs) updates.os_template = realOs;
+        if (externalDetails.ipAddress && externalDetails.ipAddress !== 'N/A' && vps.ip_address !== externalDetails.ipAddress) {
+          updates.ip_address = externalDetails.ipAddress;
+        }
+        if (externalDetails.status && vps.status !== String(externalDetails.status).toLowerCase()) {
+          updates.status = String(externalDetails.status).toLowerCase();
         }
 
-        // Se houver atualizações, salvar no banco (usando admin para garantir sucesso)
+        const specs = externalDetails.specs ?? {};
+        if (specs.cpu_cores && specs.cpu_cores !== vps.cpu_cores) updates.cpu_cores = specs.cpu_cores;
+        if (specs.ram_gb && specs.ram_gb !== vps.ram_gb) updates.ram_gb = specs.ram_gb;
+        if (specs.disk_gb && specs.disk_gb !== vps.disk_gb) updates.disk_gb = specs.disk_gb;
+
         if (Object.keys(updates).length > 0) {
-          const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
           await supabaseAdmin
             .from('vps_instances')
             .update(updates)
             .eq('id', vps.id);
-          
-          // Mesclar atualizações no objeto de retorno para visualização imediata
+
           Object.assign(vps, updates);
         }
       }
+
 
       const stats = await getContaboInstanceStats(vps.external_id);
 
