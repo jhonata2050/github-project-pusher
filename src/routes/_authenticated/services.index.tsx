@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
+import { isVPSService, getVPSInstance } from "@/lib/service-type";
 import { getDASSOUrl } from "@/lib/support.functions";
 import { useAuth } from "@/hooks/use-auth";
 

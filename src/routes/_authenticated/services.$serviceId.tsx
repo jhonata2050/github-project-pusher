@@ -23,6 +23,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { getServiceServerDetails, getDASSOUrl } from "@/lib/support.functions";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { isVPSService, getVPSInstance } from "@/lib/service-type";
 
 export const Route = createFileRoute("/_authenticated/services/$serviceId")({
   head: () => ({
@@ -156,7 +157,7 @@ function ServiceManagementPage() {
           </Button>
           <div>
             <h1 className="text-2xl font-semibold tracking-tight">
-              {(service as any)?.products?.product_type === 'vps' || ((service as any)?.vps_instances && (service as any)?.vps_instances.length > 0) || (service as any)?.domain?.toLowerCase().includes('vps') || (service as any)?.domain?.toLowerCase().includes('eqsam') || (service as any)?.username?.toLowerCase().includes('vps') || !(service as any)?.server_id ? 'Gerenciar VPS' : 'Gerenciar Plano'}
+              {isVPSService(service) ? 'Gerenciar VPS' : 'Gerenciar Plano'}
 
             </h1>
             <p className="text-muted-foreground text-sm">
@@ -291,20 +292,14 @@ function ServiceManagementPage() {
             </div>
 
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 sm:gap-4">
-              {((service as any)?.products?.product_type === 'vps' || 
-               (service as any)?.billing_cycle === 'vps' || 
-               ((service as any)?.vps_instances && (service as any)?.vps_instances.length > 0) ||
-               (service as any)?.domain?.toLowerCase().includes('vps') ||
-               (service as any)?.domain?.toLowerCase().includes('eqsam') ||
-               (service as any)?.username?.toLowerCase().includes('vps') ||
-               !(service as any)?.server_id) ? (
+              {isVPSService(service) ? (
 
                 <>
                   <QuickActionCard 
                     icon={<Activity className="size-6" />} 
                     title="Monitorar VPS" 
                     onClick={() => {
-                      const vpsId = (service as any).vps_instances?.[0]?.id;
+                      const vpsId = getVPSInstance(service)?.id;
                       if (vpsId) {
                          navigate({ to: "/vps/$vpsId", params: { vpsId } });
                       } else {
@@ -316,7 +311,7 @@ function ServiceManagementPage() {
                     icon={<Zap className="size-6" />} 
                     title="Recursos" 
                     onClick={() => {
-                      const vpsId = (service as any).vps_instances?.[0]?.id;
+                      const vpsId = getVPSInstance(service)?.id;
                       if (vpsId) {
                          navigate({ to: "/vps/$vpsId", params: { vpsId } });
                       } else {
