@@ -67,13 +67,8 @@ function ProductsPage() {
     staleTime: 1000 * 60 * 15,
   });
 
-  const contaboPlans = useQuery({
-    queryKey: ["contabo-plans"],
-    queryFn: () => getContaboPlansFn(),
-    // Só busca o catálogo externo quando o editor de um produto VPS está aberto
-    enabled: editingProduct?.product_type === "vps",
-    staleTime: 1000 * 60 * 30,
-  });
+  // Planos VPS são gerenciados na área exclusiva /admin/vps/plans
+
 
   const servers = useQuery({
     queryKey: ["admin-servers"],
