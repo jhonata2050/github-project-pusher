@@ -177,7 +177,56 @@ function VPSDetailsPage() {
               <Progress value={displayStats.ram?.usage || 0} className="h-1.5 mt-2" />
             </CardContent>
           </Card>
+          <Card className="rounded-3xl border-2">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-xs font-medium flex items-center gap-2 text-muted-foreground uppercase tracking-wider">
+                <HardDrive className="h-3.5 w-3.5" /> Uso Disco
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-xl font-bold">{displayStats.disk?.usage ?? 'N/A'}%</div>
+              <Progress value={displayStats.disk?.usage || 0} className="h-1.5 mt-2" />
+              <p className="text-[10px] text-muted-foreground mt-2">
+                {vps.disk_gb ? `${Math.round(((displayStats.disk?.usage ?? 0) / 100) * vps.disk_gb)} GB de ${vps.disk_gb} GB` : 'Capacidade indisponível'}
+              </p>
+            </CardContent>
+          </Card>
+          <Card className="rounded-3xl border-2">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-xs font-medium flex items-center gap-2 text-muted-foreground uppercase tracking-wider">
+                <Database className="h-3.5 w-3.5" /> IOPS
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-xl font-bold">
+                {displayStats.iops?.total ?? displayStats.disk?.iops ?? 'N/A'}
+              </div>
+              <p className="text-[10px] text-muted-foreground mt-2">
+                {displayStats.iops
+                  ? `Leitura ${displayStats.iops.read ?? 0} / Escrita ${displayStats.iops.write ?? 0}`
+                  : 'Requer agente de monitoramento'}
+              </p>
+            </CardContent>
+          </Card>
+          <Card className="rounded-3xl border-2">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-xs font-medium flex items-center gap-2 text-muted-foreground uppercase tracking-wider">
+                <Network className="h-3.5 w-3.5" /> Rede
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-xl font-bold">
+                {displayStats.network ? `${displayStats.network.inbound ?? 0} MB` : 'N/A'}
+              </div>
+              <p className="text-[10px] text-muted-foreground mt-2">
+                {displayStats.network
+                  ? `Entrada ${displayStats.network.inbound ?? 0} MB • Saída ${displayStats.network.outbound ?? 0} MB`
+                  : 'Sem dados de tráfego disponíveis'}
+              </p>
+            </CardContent>
+          </Card>
         </div>
+
 
         <div className="grid gap-6 md:grid-cols-2">
           {/* SSH Card */}
