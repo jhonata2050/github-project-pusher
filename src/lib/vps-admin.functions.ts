@@ -1,6 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
-import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
 export const getVPSAdminData = createServerFn({ method: "GET" })
@@ -9,6 +8,7 @@ export const getVPSAdminData = createServerFn({ method: "GET" })
     const { data: isAdmin } = await context.supabase.rpc("has_role", { _user_id: context.userId, _role: "admin" });
     if (!isAdmin) throw new Error("Unauthorized");
 
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data, error } = await supabaseAdmin
       .from('vps_instances')
       .select(`
@@ -59,6 +59,7 @@ export const updateVPSInstance = createServerFn({ method: "POST" })
     const { data: isAdmin } = await context.supabase.rpc("has_role", { _user_id: context.userId, _role: "admin" });
     if (!isAdmin) throw new Error("Unauthorized");
 
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { error } = await supabaseAdmin
       .from('vps_instances')
       .update({
@@ -85,6 +86,7 @@ export const updateVPSSSHDetails = createServerFn({ method: "POST" })
     const { data: isAdmin } = await context.supabase.rpc("has_role", { _user_id: context.userId, _role: "admin" });
     if (!isAdmin) throw new Error("Unauthorized");
 
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { error } = await supabaseAdmin
       .from('vps_instances')
       .update({
@@ -106,9 +108,32 @@ export const syncContaboInstancesFn = createServerFn({ method: "GET" })
     if (!isAdmin) throw new Error("Unauthorized");
 
     try {
-      const { getContaboInstances } = await import("./contabo.server");
+      const [{ getContaboInstances }, { supabaseAdmin }] = await Promise.all([
+        import("./contabo.server"),
+        import("@/integrations/supabase/client.server"),
+      ]);
       const response = await getContaboInstances();
-      return response.data || [];
+      const externalInstances = Array.isArray(response.data) ? response.data : [];
+
+      for (const instance of externalInstances) {
+        const externalId = instance?.instanceId ?? instance?.id;
+        if (!externalId) continue;
+        const ipAddress = instance.ipAddress ?? instance.addOnIps?.[0]?.ip ?? null;
+        const payload = {
+          external_id: String(externalId),
+          provider_id: String(externalId),
+          ip_address: ipAddress,
+          status: String(instance.status || 'unknown').toLowerCase(),
+          region: instance.region ?? null,
+          os_template: instance.osTemplate ?? instance.imageName ?? instance.imageId ?? null,
+        };
+        const { error: syncError } = await supabaseAdmin
+          .from('vps_instances')
+          .upsert(payload, { onConflict: 'external_id' });
+        if (syncError) throw syncError;
+      }
+
+      return externalInstances;
     } catch (err: any) {
       console.error("Erro ao sincronizar instâncias Contabo:", err.message);
       // Retornar erro descritivo para o frontend em vez de crashar
@@ -117,6 +142,28 @@ export const syncContaboInstancesFn = createServerFn({ method: "GET" })
       }
       throw err;
     }
+  });
+
+export const performAdminVPSAction = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data) => z.object({
+    instanceId: z.string(),
+    action: z.enum(['start', 'stop', 'restart', 'reinstall'])
+  }).parse(data))
+  .handler(async ({ data, context }) => {
+    const { data: isAdmin } = await context.supabase.rpc("has_role", { _user_id: context.userId, _role: "admin" });
+    if (!isAdmin) throw new Error("Unauthorized");
+
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: instance, error } = await supabaseAdmin
+      .from('vps_instances')
+      .select('external_id')
+      .eq('id', data.instanceId)
+      .maybeSingle();
+    if (error || !instance?.external_id) throw new Error("Instância VPS não encontrada");
+
+    const { performContaboActionByExternalId } = await import("./contabo.server");
+    return performContaboActionByExternalId(instance.external_id, data.action);
   });
 
 export const assignInstanceToClient = createServerFn({ method: "POST" })
@@ -131,14 +178,27 @@ export const assignInstanceToClient = createServerFn({ method: "POST" })
     const { data: isAdmin } = await context.supabase.rpc("has_role", { _user_id: context.userId, _role: "admin" });
     if (!isAdmin) throw new Error("Unauthorized");
 
-    const { error } = await supabaseAdmin
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: existing, error: existingError } = await supabaseAdmin
       .from('vps_instances')
-      .upsert({
-        service_id: data.serviceId,
-        external_id: data.externalId,
-        ip_address: data.ipAddress || null,
-        status: 'active'
-      }, { onConflict: 'service_id' });
+      .select('id, service_id')
+      .eq('external_id', data.externalId)
+      .maybeSingle();
+    if (existingError) throw existingError;
+    if (existing?.service_id && existing.service_id !== data.serviceId) {
+      throw new Error("Esta instância já está vinculada a outro serviço");
+    }
+
+    const instancePayload = {
+      service_id: data.serviceId,
+      external_id: data.externalId,
+      provider_id: data.externalId,
+      ip_address: data.ipAddress || null,
+      status: 'active'
+    };
+    const { error } = existing
+      ? await supabaseAdmin.from('vps_instances').update(instancePayload).eq('id', existing.id)
+      : await supabaseAdmin.from('vps_instances').upsert(instancePayload, { onConflict: 'service_id' });
 
     if (error) throw error;
     
@@ -175,16 +235,7 @@ export const getAvailableVPSInstances = createServerFn({ method: "GET" })
     const { data: isAdmin } = await context.supabase.rpc("has_role", { _user_id: context.userId, _role: "admin" });
     if (!isAdmin) throw new Error("Unauthorized");
 
-    // Busca instâncias que não estão vinculadas a nenhum serviço OU que já estão vinculadas a este serviço específico
-    let query = supabaseAdmin
-      .from('vps_instances')
-      .select('id, external_id, ip_address, status');
-    
-    const { data: instances, error } = await query;
-    if (error) throw error;
-
-    // Se um serviceId foi passado, queremos incluir as que já estão vinculadas a ele
-    // e as que estão livres (service_id is null)
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data: allInstances } = await supabaseAdmin
       .from('vps_instances')
       .select('id, external_id, ip_address, status, service_id');

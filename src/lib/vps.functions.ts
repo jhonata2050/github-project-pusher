@@ -1,9 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import { 
-  performContaboAction
-} from "./contabo.server";
 
 export const getMyVPSInstances = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
@@ -28,7 +25,7 @@ export const getMyVPSInstances = createServerFn({ method: "GET" })
     // Busca as instâncias vinculadas a esses serviços usando supabaseAdmin
     const { data: instances, error } = await supabaseAdmin
       .from('vps_instances')
-      .select('*')
+      .select('id, service_id, external_id, provider_id, provider_name, ip_address, status, region, os_template, cpu_cores, ram_gb, disk_gb, last_metrics, created_at')
       .in('service_id', serviceIds);
     
     if (error) throw error;
@@ -72,6 +69,7 @@ export const contaboAction = createServerFn({ method: "POST" })
 
     if (instError || !instance) throw new Error("Acesso negado à instância VPS");
 
+    const { performContaboAction } = await import("./contabo.server");
     return performContaboAction(data.instanceId, data.action, userId);
   });
 
@@ -87,7 +85,7 @@ export const getVPSDetails = createServerFn({ method: "GET" })
     // Verificar posse usando admin para garantir leitura
     const { data: vps, error: instError } = await supabaseAdmin
       .from('vps_instances')
-      .select('*')
+      .select('id, service_id, external_id, provider_id, provider_name, ip_address, status, region, os_template, cpu_cores, ram_gb, disk_gb, last_metrics, created_at')
       .eq('id', data.instanceId)
       .maybeSingle();
 

@@ -129,6 +129,7 @@ function CheckoutPage() {
           productId,
           billingCycle: billingCycle as any,
           domain: domain || undefined,
+          vpsConfig: productType === "vps" ? vpsConfig : undefined,
         }
       });
 

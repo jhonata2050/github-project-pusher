@@ -699,6 +699,9 @@ export type Database = {
           updated_at: string
           user_id: string
           username: string | null
+          vps_hostname: string | null
+          vps_os_template: string | null
+          vps_region: string | null
           whmcs_id: string | null
         }
         Insert: {
@@ -720,6 +723,9 @@ export type Database = {
           updated_at?: string
           user_id: string
           username?: string | null
+          vps_hostname?: string | null
+          vps_os_template?: string | null
+          vps_region?: string | null
           whmcs_id?: string | null
         }
         Update: {
@@ -741,6 +747,9 @@ export type Database = {
           updated_at?: string
           user_id?: string
           username?: string | null
+          vps_hostname?: string | null
+          vps_os_template?: string | null
+          vps_region?: string | null
           whmcs_id?: string | null
         }
         Relationships: [
