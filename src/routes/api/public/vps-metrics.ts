@@ -7,6 +7,12 @@ const metricsSchema = z.object({
   cpu: z.number(),
   ram: z.number(),
   disk: z.number(),
+  iops_read: z.number().nullable(),
+  iops_write: z.number().nullable(),
+  net_in: z.number().nullable(),
+  net_out: z.number().nullable(),
+  disk_used_gb: z.number().nullable(),
+  disk_total_gb: z.number().nullable(),
 });
 
 export const Route = createFileRoute('/api/public/vps-metrics')({
