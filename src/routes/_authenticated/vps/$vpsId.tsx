@@ -92,7 +92,10 @@ function VPSDetailsPage() {
     cpu: { usage: agentMetrics.cpu },
     ram: { usage: agentMetrics.ram },
     disk: { usage: agentMetrics.disk },
-    network: stats.network,
+    iops: agentMetrics.iops ?? null,
+    network: agentMetrics.network ?? stats.network,
+    diskUsedGb: agentMetrics.disk_used_gb ?? null,
+    diskTotalGb: agentMetrics.disk_total_gb ?? null,
     lastUpdate: agentMetrics.last_update,
     isAgent: true
   } : stats) as any;
