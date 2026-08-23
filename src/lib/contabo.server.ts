@@ -260,6 +260,18 @@ export async function provisionContaboVPS(serviceId: string, config: any) {
   return { externalId: instance.external_id, status: instance.status };
 }
 
+export function mapContaboSpecs(instance: any) {
+  if (!instance) return { cpu_cores: null, ram_gb: null, disk_gb: null };
+  const cpu = Number(instance.cpuCores ?? instance.cpu ?? 0);
+  const ramMb = Number(instance.ramMb ?? instance.ram ?? 0);
+  const diskMb = Number(instance.diskMb ?? instance.disk ?? 0);
+  return {
+    cpu_cores: cpu > 0 ? Math.round(cpu) : null,
+    ram_gb: ramMb > 0 ? Math.round(ramMb / 1024) : null,
+    disk_gb: diskMb > 0 ? Math.round(diskMb / 1024) : null,
+  };
+}
+
 export async function getContaboInstanceDetails(externalId: string) {
   const token = await getContaboToken();
   const res = await fetch(`https://api.contabo.com/v1/compute/instances/${externalId}`, {
@@ -280,16 +292,20 @@ export async function getContaboInstanceDetails(externalId: string) {
   
   if (!instance) return null;
 
-  // Enriquecer com dados de imagem se disponíveis no catálogo
+  const specs = mapContaboSpecs(instance);
+
   return {
     ...instance,
     ipAddress: instance.ipAddress || (instance.addOnIps?.[0]?.ip) || 'N/A',
     displayName: instance.displayName || instance.name || `VPS ${instance.instanceId}`,
-    regionName: instance.region || 'Desconhecida',
+    regionName: instance.regionName || instance.region || 'Desconhecida',
+    osTemplate: instance.imageName || instance.osType || instance.osTemplate || instance.imageId || null,
     createdDate: instance.createdDate,
     productName: instance.productName || instance.productId,
+    specs,
   };
 }
+
 
 export async function getContaboInstanceStats(externalId: string) {
   try {

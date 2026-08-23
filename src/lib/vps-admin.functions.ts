@@ -108,7 +108,7 @@ export const syncContaboInstancesFn = createServerFn({ method: "GET" })
     if (!isAdmin) throw new Error("Unauthorized");
 
     try {
-      const [{ getContaboInstances }, { supabaseAdmin }] = await Promise.all([
+      const [{ getContaboInstances, mapContaboSpecs }, { supabaseAdmin }] = await Promise.all([
         import("./contabo.server"),
         import("@/integrations/supabase/client.server"),
       ]);
@@ -119,14 +119,19 @@ export const syncContaboInstancesFn = createServerFn({ method: "GET" })
         const externalId = instance?.instanceId ?? instance?.id;
         if (!externalId) continue;
         const ipAddress = instance.ipAddress ?? instance.addOnIps?.[0]?.ip ?? null;
+        const specs = mapContaboSpecs(instance);
         const payload = {
           external_id: String(externalId),
           provider_id: String(externalId),
           ip_address: ipAddress,
           status: String(instance.status || 'unknown').toLowerCase(),
-          region: instance.region ?? null,
-          os_template: instance.osTemplate ?? instance.imageName ?? instance.imageId ?? null,
+          region: instance.regionName ?? instance.region ?? null,
+          os_template: instance.imageName ?? instance.osType ?? instance.osTemplate ?? instance.imageId ?? null,
+          ...(specs.cpu_cores ? { cpu_cores: specs.cpu_cores } : {}),
+          ...(specs.ram_gb ? { ram_gb: specs.ram_gb } : {}),
+          ...(specs.disk_gb ? { disk_gb: specs.disk_gb } : {}),
         };
+
         const { error: syncError } = await supabaseAdmin
           .from('vps_instances')
           .upsert(payload, { onConflict: 'external_id' });
