@@ -15,13 +15,14 @@ import {
 } from "@/lib/support.functions";
 
 import { Plus, Server, Globe, Shield, Activity, Trash2, RefreshCw, CheckCircle2, Pencil, Wallet, ExternalLink, Save, AlertCircle, Copy, Check } from "lucide-react";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { GATEWAYS, isGatewayConfigured, type GatewayDef } from "@/lib/gateways";
+import { testGatewayConnection } from "@/lib/gateway-validation.functions";
 
 export const Route = createFileRoute("/_authenticated/admin/servers")({
   component: AdminServersPage,
