@@ -95,7 +95,7 @@ function VPSDetailsPage() {
     network: stats.network,
     lastUpdate: agentMetrics.last_update,
     isAgent: true
-  } : stats;
+  } : stats) as any;
 
   const chartData = (history || []).map((h: any) => ({
     time: format(new Date(h.created_at), period === '24h' ? 'HH:mm' : 'dd/MM HH:mm'),
