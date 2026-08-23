@@ -5,7 +5,8 @@ import {
   updateVPSInstance, 
   syncContaboInstancesFn, 
   assignInstanceToClient,
-  updateVPSSSHDetails 
+  updateVPSSSHDetails,
+  performAdminVPSAction,
 } from '@/lib/vps-admin.functions';
 import { AppShell } from '@/components/app/AppShell';
 import { Button } from '@/components/ui/button';
@@ -20,7 +21,6 @@ import { Monitor, Save, RefreshCw, Link as LinkIcon, Power, PowerOff, RotateCcw,
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
-import { contaboAction } from '@/lib/vps.functions';
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute('/_authenticated/admin/vps/')({
@@ -123,7 +123,7 @@ function AdminVPSPage() {
 
   const actionMutation = useMutation({
     mutationFn: (vars: { instanceId: string; action: 'start' | 'stop' | 'restart' | 'reinstall' }) => 
-      contaboAction({ data: vars }),
+      performAdminVPSAction({ data: vars }),
     onSuccess: (_, vars) => {
       toast.success(`Ação ${vars.action} enviada com sucesso!`);
       queryClient.invalidateQueries({ queryKey: ['admin-vps-instances'] });

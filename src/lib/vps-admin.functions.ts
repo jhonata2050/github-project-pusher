@@ -144,6 +144,28 @@ export const syncContaboInstancesFn = createServerFn({ method: "GET" })
     }
   });
 
+export const performAdminVPSAction = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data) => z.object({
+    instanceId: z.string(),
+    action: z.enum(['start', 'stop', 'restart', 'reinstall'])
+  }).parse(data))
+  .handler(async ({ data, context }) => {
+    const { data: isAdmin } = await context.supabase.rpc("has_role", { _user_id: context.userId, _role: "admin" });
+    if (!isAdmin) throw new Error("Unauthorized");
+
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: instance, error } = await supabaseAdmin
+      .from('vps_instances')
+      .select('external_id')
+      .eq('id', data.instanceId)
+      .maybeSingle();
+    if (error || !instance?.external_id) throw new Error("Instância VPS não encontrada");
+
+    const { performContaboActionByExternalId } = await import("./contabo.server");
+    return performContaboActionByExternalId(instance.external_id, data.action);
+  });
+
 export const assignInstanceToClient = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((data) => z.object({

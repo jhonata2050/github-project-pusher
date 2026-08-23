@@ -88,9 +88,13 @@ export async function performContaboAction(instanceId: string, action: string, u
     throw new Error("Unauthorized access to instance");
   }
 
+  return performContaboActionByExternalId(vps.external_id, action);
+}
+
+export async function performContaboActionByExternalId(externalId: string, action: string) {
   const token = await getContaboToken();
   const contaboAction = action === 'restart' ? 'reboot' : action;
-  
+
   const res = await fetch(`https://api.contabo.com/v1/compute/instances/${vps.external_id}/actions/${contaboAction}`, {
     method: 'POST',
     headers: { 
