@@ -201,13 +201,47 @@ export const getVPSMetricsHistory = createServerFn({ method: "GET" })
     const { data: isStaff } = await supabase.rpc('is_staff', { _user_id: userId });
     if (!isStaff && service?.user_id !== userId) throw new Error("Acesso negado");
 
-    const { data: metrics, error } = await supabaseAdmin
-      .from('vps_metrics_history')
-      .select('cpu, ram, disk, created_at')
-      .eq('vps_id', data.instanceId)
-      .gte('created_at', new Date(Date.now() - (interval === '24 hours' ? 24*60*60*1000 : interval === '7 days' ? 7*24*60*60*1000 : 30*24*60*60*1000)).toISOString())
-      .order('created_at', { ascending: true });
+    const since = new Date(
+      Date.now() - (data.period === '24h' ? 24 * 60 * 60 * 1000 : data.period === '7d' ? 7 * 24 * 60 * 60 * 1000 : 30 * 24 * 60 * 60 * 1000)
+    ).toISOString();
 
-    if (error) throw error;
-    return metrics;
+    // PostgREST limita a 1000 linhas por requisição: paginamos para cobrir todo o período
+    const PAGE = 1000;
+    const MAX_ROWS = 20000;
+    const rows: any[] = [];
+    for (let from = 0; from < MAX_ROWS; from += PAGE) {
+      const { data: page, error } = await supabaseAdmin
+        .from('vps_metrics_history')
+        .select('cpu, ram, disk, created_at')
+        .eq('vps_id', data.instanceId)
+        .gte('created_at', since)
+        .order('created_at', { ascending: false })
+        .range(from, from + PAGE - 1);
+
+      if (error) throw error;
+      if (!page || page.length === 0) break;
+      rows.push(...page);
+      if (page.length < PAGE) break;
+    }
+
+    // Ordem cronológica
+    rows.reverse();
+
+    // Downsample para no máximo 200 pontos (média por bucket)
+    const MAX_POINTS = 200;
+    if (rows.length <= MAX_POINTS) return rows;
+
+    const bucketSize = Math.ceil(rows.length / MAX_POINTS);
+    const result: any[] = [];
+    for (let i = 0; i < rows.length; i += bucketSize) {
+      const bucket = rows.slice(i, i + bucketSize);
+      const avg = (k: string) => Math.round(bucket.reduce((s, r) => s + (Number(r[k]) || 0), 0) / bucket.length);
+      result.push({
+        created_at: bucket[bucket.length - 1].created_at,
+        cpu: avg('cpu'),
+        ram: avg('ram'),
+        disk: avg('disk'),
+      });
+    }
+    return result;
   });
