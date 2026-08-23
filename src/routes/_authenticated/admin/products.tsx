@@ -423,100 +423,56 @@ function ProductsPage() {
               <div className="rounded-2xl border border-border p-4 bg-muted/30">
                 <div className="flex items-center gap-2 mb-4 text-sm font-bold uppercase text-muted-foreground">
                   <Server className="size-4" />
-                  {editingProduct.product_type === 'vps' ? 'Integração Contabo' : 'Integração DirectAdmin'}
+                  Integração DirectAdmin
                 </div>
-                
-                {editingProduct.product_type === 'vps' ? (
+
+                <div className="grid gap-4 md:grid-cols-2">
                   <div className="space-y-2">
-                    <Label>Plano Contabo (Product ID)</Label>
-                    <Select 
-                      value={editingProduct.external_id || ""} 
-                      onValueChange={val => setEditingProduct({...editingProduct, external_id: val, directadmin_package: val})}
-                    >
+                    <Label>Servidor para Sincronização</Label>
+                    <Select value={selectedServer} onValueChange={setSelectedServer}>
                       <SelectTrigger className="rounded-xl">
-                        <SelectValue placeholder={
-                          contaboPlans.isLoading ? "Carregando planos da Contabo..." : 
-                          contaboPlans.error ? "Erro ao carregar (verifique API)" : 
-                          "Selecione o plano VPS"
-                        } />
+                        <SelectValue placeholder="Selecione um servidor" />
                       </SelectTrigger>
                       <SelectContent className="rounded-xl border-none shadow-xl">
-                        {contaboPlans.data?.map((cat: any) => (
-                          <div key={cat.category}>
-                            <div className="px-2 py-1.5 text-xs font-bold text-brand bg-brand/5 uppercase tracking-wider sticky top-0">
-                              {cat.category}
-                            </div>
-                            {cat.items.map((plan: any) => (
-                              <SelectItem key={plan.productId} value={plan.productId}>
-                                {plan.name} — {plan.vCpu} / {plan.ramTitle} / {plan.diskGb}
-                              </SelectItem>
-                            ))}
-                          </div>
+                        {servers.data?.map((s: any) => (
+                          <SelectItem key={s.id} value={s.id}>
+                            {s.hostname ?? s.name ?? s.ip_address ?? s.id}
+                          </SelectItem>
                         ))}
-                        {(!contaboPlans.data || contaboPlans.data.length === 0) && !contaboPlans.isLoading && (
-                          <div className="p-4 text-xs text-center text-muted-foreground">
-                            {contaboPlans.error ? (
-                              <div className="text-destructive font-medium">
-                                Falha na API Contabo. <br/>
-                                Certifique-se de que as credenciais em Sistema {"/ >"} Servidores estão corretas.
-                              </div>
-                            ) : "Nenhum plano encontrado na API"}
+                        {(!servers.data || servers.data.length === 0) && (
+                          <div className="p-2 text-xs text-center text-muted-foreground">
+                            Nenhum servidor cadastrado
                           </div>
                         )}
                       </SelectContent>
                     </Select>
-                    <p className="text-[10px] text-muted-foreground mt-1">
-                      Este ID será enviado à Contabo durante o provisionamento automático.
-                    </p>
                   </div>
-                ) : (
-                  <div className="grid gap-4 md:grid-cols-2">
-                    <div className="space-y-2">
-                      <Label>Servidor para Sincronização</Label>
-                      <Select value={selectedServer} onValueChange={setSelectedServer}>
-                        <SelectTrigger className="rounded-xl">
-                          <SelectValue placeholder="Selecione um servidor" />
-                        </SelectTrigger>
-                        <SelectContent className="rounded-xl border-none shadow-xl">
-                          {servers.data?.map((s: any) => (
-                            <SelectItem key={s.id} value={s.id}>
-                              {s.hostname ?? s.name ?? s.ip_address ?? s.id}
-                            </SelectItem>
-                          ))}
-                          {(!servers.data || servers.data.length === 0) && (
-                            <div className="p-2 text-xs text-center text-muted-foreground">
-                              Nenhum servidor cadastrado
-                            </div>
-                          )}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Pacote no Servidor</Label>
-                      <Select 
-                        value={editingProduct.directadmin_package || ""} 
-                        onValueChange={val => setEditingProduct({...editingProduct, directadmin_package: val})}
-                      >
-                        <SelectTrigger className="rounded-xl">
-                          <SelectValue placeholder={daPackages.isLoading ? "Carregando..." : "Selecione um pacote"} />
-                        </SelectTrigger>
-                        <SelectContent className="rounded-xl border-none shadow-xl">
-                          {daPackages.data?.map((pkg: string) => (
-                            <SelectItem key={pkg} value={pkg}>{pkg}</SelectItem>
-                          ))}
-                          {(!daPackages.data || daPackages.data.length === 0) && !daPackages.isLoading && (
-                            <div className="p-2 text-xs text-center text-muted-foreground">
-                              {daPackages.error
-                                ? (daPackages.error as Error).message
-                                : "Selecione um servidor para carregar os pacotes"}
-                            </div>
-                          )}
-                        </SelectContent>
-                      </Select>
-                    </div>
+                  <div className="space-y-2">
+                    <Label>Pacote no Servidor</Label>
+                    <Select
+                      value={editingProduct.directadmin_package || ""}
+                      onValueChange={val => setEditingProduct({...editingProduct, directadmin_package: val})}
+                    >
+                      <SelectTrigger className="rounded-xl">
+                        <SelectValue placeholder={daPackages.isLoading ? "Carregando..." : "Selecione um pacote"} />
+                      </SelectTrigger>
+                      <SelectContent className="rounded-xl border-none shadow-xl">
+                        {daPackages.data?.map((pkg: string) => (
+                          <SelectItem key={pkg} value={pkg}>{pkg}</SelectItem>
+                        ))}
+                        {(!daPackages.data || daPackages.data.length === 0) && !daPackages.isLoading && (
+                          <div className="p-2 text-xs text-center text-muted-foreground">
+                            {daPackages.error
+                              ? (daPackages.error as Error).message
+                              : "Selecione um servidor para carregar os pacotes"}
+                          </div>
+                        )}
+                      </SelectContent>
+                    </Select>
                   </div>
-                )}
+                </div>
               </div>
+
 
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
