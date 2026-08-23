@@ -95,7 +95,7 @@ export async function performContaboActionByExternalId(externalId: string, actio
   const token = await getContaboToken();
   const contaboAction = action === 'restart' ? 'reboot' : action;
 
-  const res = await fetch(`https://api.contabo.com/v1/compute/instances/${vps.external_id}/actions/${contaboAction}`, {
+  const res = await fetch(`https://api.contabo.com/v1/compute/instances/${externalId}/actions/${contaboAction}`, {
     method: 'POST',
     headers: { 
       'Authorization': `Bearer ${token}`,
