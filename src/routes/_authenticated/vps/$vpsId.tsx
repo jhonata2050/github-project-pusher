@@ -50,12 +50,15 @@ function VPSDetailsPage() {
   const { data: vps, isLoading, error, refetch } = useQuery({
     queryKey: ['vps-details', vpsId],
     queryFn: () => getVPSDetails({ data: { instanceId: vpsId } }),
-    refetchInterval: 30000,
+    staleTime: 1000 * 60 * 5,
+    refetchOnWindowFocus: false,
   });
 
   const { data: history, refetch: refetchHistory } = useQuery({
     queryKey: ['vps-metrics-history', vpsId, period],
     queryFn: () => getVPSMetricsHistory({ data: { instanceId: vpsId, period } }),
+    staleTime: 1000 * 60 * 5,
+    refetchOnWindowFocus: false,
   });
 
   const handleSync = async () => {
@@ -94,15 +97,16 @@ function VPSDetailsPage() {
     }
   });
 
-  if (isLoading) {
+  if (isLoading && !vps) {
     return (
       <AppShell breadcrumb="EQSAM CLOUD">
-        <div className="space-y-6">
-          <Skeleton className="h-10 w-48" />
-          <div className="grid gap-6 md:grid-cols-3">
-            <Skeleton className="h-32 rounded-3xl" />
-            <Skeleton className="h-32 rounded-3xl" />
-            <Skeleton className="h-32 rounded-3xl" />
+        <div className="space-y-4 max-w-6xl mx-auto p-4">
+          <Skeleton className="h-14 w-full rounded-2xl" />
+          <div className="grid gap-3 grid-cols-2 sm:grid-cols-4">
+            <Skeleton className="h-20 rounded-2xl" />
+            <Skeleton className="h-20 rounded-2xl" />
+            <Skeleton className="h-20 rounded-2xl" />
+            <Skeleton className="h-20 rounded-2xl" />
           </div>
         </div>
       </AppShell>
