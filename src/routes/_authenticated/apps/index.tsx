@@ -457,13 +457,14 @@ function ApplicationsListPage() {
                             <span className="bg-muted px-2 py-0.5 rounded-md font-mono text-[11px] text-muted-foreground font-semibold">{tmpl.recommended_cpu} vCPU</span>
                           </div>
                         </div>
-                        <Button 
-                          size="sm" 
-                          onClick={() => handleOpenInstall(tmpl)}
-                          className="rounded-xl text-xs gap-1.5 font-bold shadow-xs px-4 h-9 shrink-0"
-                        >
-                          <Zap className="h-3.5 w-3.5 fill-current" /> Instalar
-                        </Button>
+                        <Link to="/apps/create" search={{ mode: "templates", category: tmpl.category }}>
+                          <Button 
+                            size="sm" 
+                            className="rounded-xl text-xs gap-1.5 font-bold shadow-xs px-4 h-9 shrink-0"
+                          >
+                            <Zap className="h-3.5 w-3.5 fill-current" /> Fazer Deploy
+                          </Button>
+                        </Link>
                       </div>
                     </CardContent>
                   </Card>

@@ -216,11 +216,14 @@ curl -sSL ${domainUrl}/api/public/scripts/install-agent | bash -s -- ${newVpsId}
 `;
   const userDataB64 = Buffer.from(installAgentScript).toString('base64');
 
+  const shortId = crypto.randomUUID().slice(0, 4).toUpperCase();
+  const vpsDisplayName = config.displayName || (service.domain ? `${service.domain} #${shortId}` : `${service.products?.name || "VPS Cloud"} [Cluster #${shortId}]`);
+
   const payload: any = {
     imageId: config.imageId,
     productId: config.productId,
     region: regionAliases[config.region] || config.region,
-    displayName: config.displayName || service.domain || `VPS-${service.id.slice(0, 8)}`,
+    displayName: vpsDisplayName,
     userData: userDataB64,
   };
 

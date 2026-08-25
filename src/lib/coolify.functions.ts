@@ -213,6 +213,63 @@ export const applyTemplateToApp = createServerFn({ method: "POST" })
     return applyTemplateToApplication(data.appId, data.template, context.userId);
   });
 
+export const createAndDeployApplication = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .validator((data: unknown) =>
+    z
+      .object({
+        name: z.string().optional(),
+        deployType: z.enum(["zip", "github", "templates"]),
+        template: z
+          .object({
+            name: z.string(),
+            git_repository: z.string(),
+            git_branch: z.string().default("main"),
+            build_pack: z.enum(["nixpacks", "dockerfile", "dockercompose", "static"]).default("nixpacks"),
+            default_envs: z.array(z.object({ key: z.string(), value: z.string() })).optional(),
+            default_port: z.number().optional(),
+            recommended_ram: z.number().optional(),
+            recommended_cpu: z.number().optional(),
+          })
+          .optional(),
+        github: z
+          .object({
+            gitRepo: z.string(),
+            gitBranch: z.string(),
+            buildPack: z.enum(["nixpacks", "dockerfile", "dockercompose", "static"]),
+          })
+          .optional(),
+        targetAppId: z.string().optional(),
+      })
+      .parse(data)
+  )
+  .handler(async ({ data, context }) => {
+    const { createNewIsolatedCoolifyApp, applyTemplateToApplication } = await import("./coolify.server");
+    if (data.targetAppId) {
+      return applyTemplateToApplication(
+        data.targetAppId,
+        data.template || (data.github ? {
+          git_repository: data.github.gitRepo,
+          git_branch: data.github.gitBranch,
+          build_pack: data.github.buildPack,
+        } : {
+          git_repository: "https://github.com/coollabsio/coolify-examples",
+          git_branch: "nodejs-fastify",
+          build_pack: "nixpacks",
+        }),
+        context.userId
+      );
+    }
+
+    return createNewIsolatedCoolifyApp({
+      name: data.name,
+      deployType: data.deployType,
+      template: data.template,
+      github: data.github,
+      userId: context.userId,
+    });
+  });
+
 export const getDeploymentStatus = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .validator((data: unknown) =>

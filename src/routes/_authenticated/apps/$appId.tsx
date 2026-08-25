@@ -64,6 +64,16 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { 
   getApplicationDetails, 
@@ -134,6 +144,8 @@ function AppDetailsPage() {
   const [isTemplateModalOpen, setIsTemplateModalOpen] = useState(false);
   const [templateSearch, setTemplateSearch] = useState("");
   const [templateCategory, setTemplateCategory] = useState("all");
+  const [selectedTemplateToApply, setSelectedTemplateToApply] = useState<AppTemplate | null>(null);
+  const [isConfirmTemplateOpen, setIsConfirmTemplateOpen] = useState(false);
 
   // Estados para o Modal de Deploy ao Vivo (Live Terminal & Status)
   const [isDeployModalOpen, setIsDeployModalOpen] = useState(false);
@@ -1578,11 +1590,14 @@ function AppDetailsPage() {
                         <Button
                           size="sm"
                           disabled={applyTemplateMutation.isPending}
-                          onClick={() => applyTemplateMutation.mutate(tpl)}
+                          onClick={() => {
+                            setSelectedTemplateToApply(tpl);
+                            setIsConfirmTemplateOpen(true);
+                          }}
                           className="w-full rounded-xl text-xs font-bold gap-1.5 bg-primary hover:bg-primary/90"
                         >
                           <Zap className="size-3.5" />
-                          {applyTemplateMutation.isPending ? "Iniciando..." : "Instalar Neste App"}
+                          Instalar Neste App
                         </Button>
                       </div>
                     </Card>
@@ -1591,6 +1606,53 @@ function AppDetailsPage() {
             </div>
           </DialogContent>
         </Dialog>
+
+        {/* Modal de Confirmação para Substituir Aplicação por Template */}
+        <AlertDialog open={isConfirmTemplateOpen} onOpenChange={setIsConfirmTemplateOpen}>
+          <AlertDialogContent className="rounded-3xl">
+            <AlertDialogHeader>
+              <AlertDialogTitle className="flex items-center gap-2 text-amber-600">
+                <AlertTriangle className="h-5 w-5" /> Substituir Aplicação Atual?
+              </AlertDialogTitle>
+              <AlertDialogDescription className="text-xs space-y-2">
+                <p>
+                  Você está prestes a instalar o modelo <strong>{selectedTemplateToApply?.name}</strong> na aplicação <strong>{app?.name}</strong>.
+                </p>
+                <p className="font-semibold text-rose-600">
+                  ⚠️ Esta ação é irreversível e substituirá o código-fonte, repositório e arquivos atuais desta aplicação!
+                </p>
+                <p className="text-muted-foreground">
+                  Se você deseja manter esta aplicação intacta, recomendamos criar o modelo em um novo slot isolado.
+                </p>
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter className="flex-col sm:flex-row gap-2">
+              <AlertDialogCancel className="rounded-xl text-xs">Cancelar</AlertDialogCancel>
+              <Link
+                to="/apps/create"
+                search={{ mode: "templates", category: selectedTemplateToApply?.category }}
+                className="inline-flex items-center justify-center rounded-xl text-xs font-semibold px-4 py-2 bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm"
+                onClick={() => {
+                  setIsConfirmTemplateOpen(false);
+                  setIsTemplateModalOpen(false);
+                }}
+              >
+                <Sparkles className="h-3.5 w-3.5 mr-1" /> Criar em Novo Slot Isolado
+              </Link>
+              <AlertDialogAction
+                className="rounded-xl text-xs bg-rose-600 hover:bg-rose-700 text-white font-bold"
+                onClick={() => {
+                  if (selectedTemplateToApply) {
+                    setIsConfirmTemplateOpen(false);
+                    applyTemplateMutation.mutate(selectedTemplateToApply);
+                  }
+                }}
+              >
+                Sim, Substituir Aplicação
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
 
         {/* Modal de Deploy em Tempo Real & Live Terminal */}
         <Dialog open={isDeployModalOpen} onOpenChange={setIsDeployModalOpen}>

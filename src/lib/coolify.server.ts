@@ -1342,3 +1342,161 @@ export async function getAdminCoolifyApplicationsList(): Promise<CoolifyApplicat
     user: profileMap.get(a.user_id) || null,
   }));
 }
+
+export async function createNewIsolatedCoolifyApp(params: {
+  name?: string;
+  deployType: "zip" | "github" | "templates";
+  template?: {
+    name: string;
+    git_repository: string;
+    git_branch: string;
+    build_pack: "nixpacks" | "dockerfile" | "dockercompose" | "static";
+    default_envs?: Array<{ key: string; value: string }>;
+    default_port?: number;
+    recommended_ram?: number;
+    recommended_cpu?: number;
+  };
+  github?: {
+    gitRepo: string;
+    gitBranch: string;
+    buildPack: "nixpacks" | "dockerfile" | "dockercompose" | "static";
+  };
+  userId: string;
+}): Promise<CoolifyApplicationRecord> {
+  const { name, deployType, template, github, userId } = params;
+
+  // 1. Gerar nome único e human-readable
+  const shortId = crypto.randomUUID().slice(0, 4).toUpperCase();
+  const baseName = name?.trim() || template?.name || (deployType === "github" ? "GitHub App" : "Minha Aplicação");
+  const uniqueName = `${baseName} #${shortId}`;
+
+  // 2. Obter servidor Coolify ativo
+  const server = await getActiveCoolifyServer();
+  const store = await getCoolifyApplicationsStore();
+
+  const appId = crypto.randomUUID();
+  const subdomain = `${baseName.toLowerCase().replace(/[^a-z0-9]/g, "-").replace(/-+/g, "-").slice(0, 18)}-${shortId.toLowerCase()}`;
+  const wildcard = server.wildcardDomain || "eqsam.cloud";
+  const fqdn = `https://${subdomain}.${wildcard}`;
+
+  // 3. Criar registro de serviço no Supabase
+  const { data: service } = await supabaseAdmin
+    .from("services")
+    .insert({
+      user_id: userId,
+      domain: `${subdomain}.${wildcard}`,
+      status: "active",
+      notes: `Aplicação PaaS ${uniqueName} criada em slot isolado.`,
+    })
+    .select("id")
+    .single();
+
+  const serviceId = service?.id || crypto.randomUUID();
+
+  // 4. Parâmetros de build
+  const gitRepo = deployType === "templates" 
+    ? (template?.git_repository || "") 
+    : deployType === "github" 
+      ? (github?.gitRepo || "") 
+      : "https://github.com/coollabsio/coolify-examples";
+
+  const gitBranch = deployType === "templates" 
+    ? (template?.git_branch || "main") 
+    : deployType === "github" 
+      ? (github?.gitBranch || "main") 
+      : "nodejs-fastify";
+
+  const buildPack = deployType === "templates" 
+    ? (template?.build_pack || "nixpacks") 
+    : deployType === "github" 
+      ? (github?.buildPack || "nixpacks") 
+      : "nixpacks";
+
+  const memoryLimit = template?.recommended_ram || 512;
+  const cpuLimit = template?.recommended_cpu || 1.0;
+
+  // 5. Criar registro de aplicação isolada
+  const appRecord: CoolifyApplicationRecord = {
+    id: appId,
+    service_id: serviceId,
+    user_id: userId,
+    coolify_server_id: server.id,
+    coolify_project_uuid: "default",
+    coolify_environment_name: "production",
+    coolify_app_uuid: `app_${crypto.randomUUID().slice(0, 12)}`,
+    name: uniqueName,
+    build_pack: buildPack,
+    git_repository: gitRepo,
+    git_branch: gitBranch,
+    fqdn,
+    cpu_limit: cpuLimit,
+    memory_limit: memoryLimit,
+    status: "building",
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  };
+
+  store[appId] = appRecord;
+  await saveCoolifyApplicationsStore(store);
+
+  // 6. Se Coolify remoto estiver conectado, criar e disparar deploy
+  if (server.apiToken && !server.apiToken.includes("placeholder") && gitRepo) {
+    try {
+      const { serverUuid, projectUuid } = await getCoolifyServerAndProject(server);
+      appRecord.coolify_project_uuid = projectUuid;
+      const cleanName = uniqueName.toLowerCase().replace(/[^a-z0-9-]/g, "-").replace(/--+/g, "-");
+      const payload: any = {
+        name: cleanName,
+        project_uuid: projectUuid,
+        environment_name: "production",
+        server_uuid: serverUuid,
+        build_pack: buildPack,
+        git_repository: gitRepo,
+        git_branch: gitBranch,
+        ports_exposes: String(template?.default_port || 3000),
+        limits_memory: `${memoryLimit}m`,
+        limits_cpus: String(cpuLimit),
+        fqdn,
+      };
+
+      const result = await coolifyFetch(server, "/applications/public", {
+        method: "POST",
+        body: JSON.stringify(payload),
+      });
+
+      if (result?.uuid) {
+        appRecord.coolify_app_uuid = result.uuid;
+        if (result.domains) appRecord.fqdn = result.domains;
+        
+        if (template?.default_envs && template.default_envs.length > 0) {
+          for (const env of template.default_envs) {
+            await coolifyFetch(server, `/applications/${result.uuid}/envs`, {
+              method: "POST",
+              body: JSON.stringify({
+                key: env.key,
+                value: env.value,
+                is_build_time: false,
+                is_literal: true,
+              }),
+            }).catch(() => {});
+          }
+        }
+
+        const deployRes = await coolifyFetch(server, `/applications/${result.uuid}/deploy`, {
+          method: "POST",
+        }).catch(() => null);
+
+        if (deployRes?.deployment_uuid) {
+          appRecord.status = "building";
+        }
+      }
+    } catch (e: any) {
+      console.warn("[Coolify Isolated Deploy Warning]:", e.message);
+    }
+
+    store[appId] = appRecord;
+    await saveCoolifyApplicationsStore(store);
+  }
+
+  return appRecord;
+}
