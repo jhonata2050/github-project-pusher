@@ -693,6 +693,12 @@ function AppDetailsPage() {
             <RefreshCw className="h-3 w-3 animate-spin" /> Compilando (Build em andamento)
           </Badge>
         );
+      case "error":
+        return (
+          <Badge className="bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/30 gap-1.5 py-1 px-3">
+            <XCircle className="h-3 w-3" /> Falha no Build
+          </Badge>
+        );
       case "stopped":
       default:
         return (
@@ -701,6 +707,16 @@ function AppDetailsPage() {
           </Badge>
         );
     }
+  };
+
+  const handleCopyLogs = () => {
+    if (!deploymentLogs || deploymentLogs.length === 0) {
+      toast.info("Nenhum log disponível para cópia no momento.");
+      return;
+    }
+    const logText = deploymentLogs.map((l) => l.output).join("\n");
+    navigator.clipboard.writeText(logText);
+    toast.success("Logs do terminal copiados para a área de transferência!");
   };
 
   // Filtragem de logs
@@ -727,6 +743,19 @@ function AppDetailsPage() {
             <div className="flex flex-wrap items-center gap-3">
               <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-foreground">{app.name}</h1>
               {getStatusBadge()}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  if (app.last_deployment_uuid) {
+                    setActiveDeploymentUuid(app.last_deployment_uuid);
+                  }
+                  setIsDeployModalOpen(true);
+                }}
+                className="rounded-xl h-7 text-xs gap-1.5 font-medium border-muted-foreground/30 hover:bg-muted"
+              >
+                <Terminal className="h-3.5 w-3.5" /> Ver Logs do Deploy
+              </Button>
             </div>
             {!isPendingDeploy && app.fqdn && (
               <div className="flex items-center gap-2 pt-1">
@@ -1676,7 +1705,16 @@ function AppDetailsPage() {
                     Acompanhe o build e a publicação do seu container em tempo real no cluster DK1.
                   </DialogDescription>
                 </div>
-                <div>
+                <div className="flex items-center gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={handleCopyLogs}
+                    className="rounded-xl border-zinc-700 bg-zinc-800/80 text-zinc-200 hover:bg-zinc-700 h-8 text-xs gap-1.5 shadow-sm"
+                  >
+                    <Copy className="h-3.5 w-3.5" /> Copiar Logs
+                  </Button>
                   {deploymentStatus === "finished" ? (
                     <Badge className="bg-emerald-500/20 text-emerald-400 border-emerald-500/40">Online 24/7</Badge>
                   ) : deploymentStatus === "failed" ? (
@@ -1735,7 +1773,7 @@ function AppDetailsPage() {
             </div>
 
             {/* Footer com Ações */}
-            <div className="p-4 border-t border-zinc-800 bg-zinc-900/50 flex items-center justify-between">
+            <div className="p-4 border-t border-zinc-800 bg-zinc-900/50 flex flex-col sm:flex-row items-center justify-between gap-3">
               <div className="text-xs text-zinc-400">
                 {deploymentStatus === "finished" ? (
                   <span className="text-emerald-400 font-semibold flex items-center gap-1.5">
@@ -1752,21 +1790,40 @@ function AppDetailsPage() {
                 )}
               </div>
 
-              <div className="flex gap-2">
+              <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto justify-end">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={handleCopyLogs}
+                  className="rounded-xl border-zinc-700 text-zinc-300 hover:bg-zinc-800 text-xs gap-1.5"
+                >
+                  <Copy className="h-3.5 w-3.5" /> Copiar Logs
+                </Button>
+                {deploymentStatus === "failed" && (
+                  <Button
+                    size="sm"
+                    onClick={() => actionMutation.mutate("deploy")}
+                    disabled={actionMutation.isPending}
+                    className="rounded-xl font-bold bg-amber-600 hover:bg-amber-700 text-white gap-1.5 text-xs"
+                  >
+                    <RotateCcw className="h-3.5 w-3.5" /> Tentar Novamente
+                  </Button>
+                )}
                 {deploymentStatus === "finished" && app.fqdn && (
-                  <Button asChild size="sm" className="rounded-xl font-bold bg-emerald-600 hover:bg-emerald-700 text-white gap-1.5">
+                  <Button asChild size="sm" className="rounded-xl font-bold bg-emerald-600 hover:bg-emerald-700 text-white gap-1.5 text-xs">
                     <a href={app.fqdn} target="_blank" rel="noreferrer">
-                      <ExternalLink className="h-3.5 w-3.5" /> Acessar Aplicação Online
+                      <ExternalLink className="h-3.5 w-3.5" /> Acessar Online
                     </a>
                   </Button>
                 )}
                 <Button 
-                  variant="outline" 
+                  variant="secondary" 
                   size="sm" 
                   onClick={() => setIsDeployModalOpen(false)}
-                  className="rounded-xl border-zinc-700 text-zinc-300 hover:bg-zinc-800"
+                  className="rounded-xl border-zinc-700 text-zinc-300 hover:bg-zinc-800 text-xs"
                 >
-                  {deploymentStatus === "finished" ? "Concluir" : "Fechar Modal (Manter em 2º plano)"}
+                  Fechar Janela
                 </Button>
               </div>
             </div>

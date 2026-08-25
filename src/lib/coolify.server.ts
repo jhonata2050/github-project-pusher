@@ -29,11 +29,26 @@ export interface CoolifyApplicationRecord {
   fqdn: string;
   cpu_limit: number;
   memory_limit: number;
-  status: "running" | "stopped" | "exited" | "building" | "error" | "provisioning";
+  status: "running" | "stopped" | "exited" | "building" | "error" | "provisioning" | "pending_deploy";
+  last_deployment_uuid?: string;
   created_at: string;
   updated_at?: string;
   service?: any;
   user?: any;
+}
+
+export function sanitizeGitRepoForCoolify(repo: string): string {
+  if (!repo) return "";
+  let clean = repo.trim();
+  // Limpar prefixos duplicados como https://github.com/https://github.com/
+  while (clean.includes("github.com/http://") || clean.includes("github.com/https://")) {
+    clean = clean.replace(/https?:\/\/github\.com\//gi, "");
+  }
+  // Remove https://github.com/ ou http://github.com/ para passar apenas "owner/repo" ao Coolify
+  clean = clean.replace(/^(https?:\/\/)?(www\.)?github\.com\//i, "");
+  // Remove .git do final e barras extras
+  clean = clean.replace(/\.git\/?$/i, "").replace(/^\/+|\/+$/g, "");
+  return clean;
 }
 
 export interface CoolifyEnvVar {
@@ -309,6 +324,30 @@ export async function getCoolifyDeploymentStatus(deploymentUuid: string, userId:
       }
     }
 
+    // Se o deploy terminou (finished ou failed), sincronizar status na aplicação correspondente
+    if (res.status === "finished" || res.status === "failed") {
+      try {
+        const store = await getCoolifyApplicationsStore();
+        let changed = false;
+        for (const app of Object.values(store)) {
+          if (app.last_deployment_uuid === deploymentUuid || app.status === "building") {
+            if (res.status === "finished") {
+              app.status = "running";
+              changed = true;
+            } else if (res.status === "failed") {
+              app.status = "error";
+              changed = true;
+            }
+          }
+        }
+        if (changed) {
+          await saveCoolifyApplicationsStore(store);
+        }
+      } catch (syncErr) {
+        console.warn("[Coolify Sync Deployment Status Error]:", syncErr);
+      }
+    }
+
     return {
       status: res.status, // "queued" | "in_progress" | "finished" | "failed"
       logs: parsedLogs,
@@ -341,6 +380,9 @@ export async function executeCoolifyAppAction(appId: string, action: "start" | "
       if (action === "deploy") {
         const depRes = await coolifyFetch(server, `/deploy?uuid=${app.coolify_app_uuid}&force=true`, { method: "POST" });
         deploymentUuid = depRes?.deployments?.[0]?.deployment_uuid || null;
+        if (deploymentUuid) {
+          app.last_deployment_uuid = deploymentUuid;
+        }
       } else if (action === "start") {
         await coolifyFetch(server, `/applications/${app.coolify_app_uuid}/start`, { method: "POST" });
       } else if (action === "stop") {
@@ -374,13 +416,33 @@ export async function getCoolifyApplicationDetails(appId: string, userId: string
     throw new Error("Acesso negado");
   }
 
+  // Se estiver "building", verificar se há um deploy recente e atualizar o status
+  if (app.status === "building" && app.last_deployment_uuid) {
+    try {
+      const servers = await getCoolifyServers();
+      const server = servers.find((s) => s.id === app.coolify_server_id) || (await getActiveCoolifyServer());
+      if (server.apiToken && !server.apiToken.includes("placeholder")) {
+        const dep = await coolifyFetch(server, `/deployments/${app.last_deployment_uuid}`).catch(() => null);
+        if (dep?.status === "finished") {
+          app.status = "running";
+          store[appId] = app;
+          await saveCoolifyApplicationsStore(store);
+        } else if (dep?.status === "failed") {
+          app.status = "error";
+          store[appId] = app;
+          await saveCoolifyApplicationsStore(store);
+        }
+      }
+    } catch {}
+  }
+
   const { data: service } = await supabaseAdmin
     .from("services")
     .select("*, products(name, product_type)")
     .eq("id", app.service_id)
     .maybeSingle();
 
-  const isPending = app.status === "pending_deploy" || (!app.git_repository && app.status !== "running");
+  const isPending = app.status === "pending_deploy" || (!app.git_repository && app.status !== "running" && app.status !== "error");
   if (isPending) {
     app.status = "pending_deploy";
   }
@@ -1185,6 +1247,8 @@ export async function applyTemplateToApplication(
 
   let deploymentUuid: string | null = null;
 
+  const sanitizedGit = sanitizeGitRepoForCoolify(template.git_repository);
+
   if (server.apiToken && !server.apiToken.includes("placeholder")) {
     const { serverUuid, projectUuid } = await getCoolifyServerAndProject(server);
     app.coolify_server_id = server.id;
@@ -1200,7 +1264,7 @@ export async function applyTemplateToApplication(
         environment_name: "production",
         server_uuid: serverUuid,
         build_pack: template.build_pack,
-        git_repository: template.git_repository,
+        git_repository: sanitizedGit,
         git_branch: template.git_branch || "main",
         ports_exposes: String(template.default_port || 3000),
         limits_memory: `${app.memory_limit || 512}m`,
@@ -1227,7 +1291,7 @@ export async function applyTemplateToApplication(
       try {
         const patchBody: any = {
           build_pack: template.build_pack,
-          git_repository: template.git_repository,
+          git_repository: sanitizedGit,
           git_branch: template.git_branch || "main",
           ports_exposes: String(template.default_port || 3000),
         };
@@ -1270,6 +1334,7 @@ export async function applyTemplateToApplication(
         });
         if (deployRes?.deployments?.[0]?.deployment_uuid) {
           deploymentUuid = deployRes.deployments[0].deployment_uuid;
+          app.last_deployment_uuid = deploymentUuid;
         }
       } catch (e: any) {
         console.error("[Coolify] Falha ao disparar deploy:", e.message);
@@ -1442,6 +1507,7 @@ export async function createNewIsolatedCoolifyApp(params: {
   // 6. Se Coolify remoto estiver conectado, criar e disparar deploy
   if (server.apiToken && !server.apiToken.includes("placeholder") && gitRepo) {
     try {
+      const sanitizedGit = sanitizeGitRepoForCoolify(gitRepo);
       const { serverUuid, projectUuid } = await getCoolifyServerAndProject(server);
       appRecord.coolify_project_uuid = projectUuid;
       const cleanName = uniqueName.toLowerCase().replace(/[^a-z0-9-]/g, "-").replace(/--+/g, "-");
@@ -1451,7 +1517,7 @@ export async function createNewIsolatedCoolifyApp(params: {
         environment_name: "production",
         server_uuid: serverUuid,
         build_pack: buildPack,
-        git_repository: gitRepo,
+        git_repository: sanitizedGit,
         git_branch: gitBranch,
         ports_exposes: String(template?.default_port || 3000),
         limits_memory: `${memoryLimit}m`,
@@ -1488,6 +1554,7 @@ export async function createNewIsolatedCoolifyApp(params: {
 
         if (deployRes?.deployment_uuid) {
           appRecord.status = "building";
+          appRecord.last_deployment_uuid = deployRes.deployment_uuid;
         }
       }
     } catch (e: any) {
