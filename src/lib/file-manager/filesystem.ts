@@ -3,7 +3,7 @@ import fs from "fs/promises";
 import fsSync from "fs";
 import crypto from "crypto";
 import JSZip from "jszip";
-import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import { supabaseAdmin } from "../../integrations/supabase/client.server";
 import { validateSafePath, sanitizeFileName } from "./security";
 import type {
   IFileInfo,

@@ -216,8 +216,8 @@ export async function uploadAppFilesBatch(
 
 export async function syncAppFilesToCoolify(appId: string): Promise<void> {
   try {
-    const { getCoolifyApplicationsStore, getActiveCoolifyServer } = await import("@/lib/coolify.server");
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { getCoolifyApplicationsStore, getActiveCoolifyServer } = await import("../coolify.server");
+    const { supabaseAdmin } = await import("../../integrations/supabase/client.server");
     const JSZip = (await import("jszip")).default;
     const fs = await import("fs/promises");
     const path = await import("path");

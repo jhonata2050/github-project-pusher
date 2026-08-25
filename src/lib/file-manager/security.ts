@@ -1,8 +1,8 @@
 import path from "path";
 import fs from "fs/promises";
 import fsSync from "fs";
-import { supabaseAdmin } from "@/integrations/supabase/client.server";
-import { getCoolifyApplicationsStore, type CoolifyApplicationRecord } from "@/lib/coolify.server";
+import { supabaseAdmin } from "../../integrations/supabase/client.server";
+import { getCoolifyApplicationsStore, type CoolifyApplicationRecord } from "../coolify.server";
 
 /**
  * Retorna o diretório raiz canônico e isolado no filesystem para a aplicação informada.
