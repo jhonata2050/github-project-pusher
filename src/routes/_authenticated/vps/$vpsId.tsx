@@ -86,19 +86,23 @@ function VPSDetailsPage() {
   const details = vps.externalDetails || {};
   const stats = vps.stats || { cpu: null, ram: null, disk: null, network: null, agentRequired: false };
   const agentMetrics = vps.last_metrics;
-  const isAgentDataFresh = agentMetrics?.last_update && (new Date().getTime() - new Date(agentMetrics.last_update).getTime() < 5 * 60 * 1000);
+  // Considera dados do agente válidos se reportados recentemente (ou se existentes como histórico recente)
+  const isAgentDataFresh = Boolean(agentMetrics && agentMetrics.last_update);
   
   const displayStats = (isAgentDataFresh ? {
-    cpu: { usage: agentMetrics.cpu },
-    ram: { usage: agentMetrics.ram },
-    disk: { usage: agentMetrics.disk },
+    cpu: { usage: agentMetrics.cpu ?? stats.cpu?.usage },
+    ram: { usage: agentMetrics.ram ?? stats.ram?.usage },
+    disk: { usage: agentMetrics.disk ?? stats.disk?.usage },
     iops: agentMetrics.iops ?? null,
     network: agentMetrics.network ?? stats.network,
     diskUsedGb: agentMetrics.disk_used_gb ?? null,
     diskTotalGb: agentMetrics.disk_total_gb ?? null,
     lastUpdate: agentMetrics.last_update,
     isAgent: true
-  } : stats) as any;
+  } : {
+    ...stats,
+    network: stats.network ?? null,
+  }) as any;
 
   const chartData = (history || []).map((h: any) => ({
     time: format(new Date(h.created_at), period === '24h' ? 'HH:mm' : 'dd/MM HH:mm'),

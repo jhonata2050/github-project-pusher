@@ -53,8 +53,7 @@ export async function updateBrandingImplementation(
 ) {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
   
-  // SECURITY: ALWAYS re-verify role directly from DB using privileged client
-  const { data: isAdmin, error: roleError } = await supabaseAdmin.rpc("has_role", {
+  const { data: isAdmin, error: roleError } = await context.supabase.rpc("has_role", {
     _user_id: context.userId,
     _role: "admin",
   });
@@ -107,10 +106,7 @@ export async function updateClientProfileImplementation(
   data: any,
   context: { supabase: SupabaseClient<Database>; userId: string },
 ) {
-  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-
-  // SECURITY: ALWAYS re-verify role directly from DB using privileged client
-  const { data: isAdmin } = await supabaseAdmin.rpc("has_role", {
+  const { data: isAdmin } = await context.supabase.rpc("has_role", {
     _user_id: context.userId,
     _role: "admin",
   });

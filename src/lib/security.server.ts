@@ -25,7 +25,7 @@ export async function validateDASSORequest(
     // 2. For regular users, verify they OWN the service with this username on this server
     const { data: service, error } = await supabaseAdmin
       .from("services")
-      .select("id, user_id, username, status, block_directadmin")
+      .select("id, user_id, username, status")
       .eq("user_id", userId)
       .eq("username", cleanUsername)
       .eq("server_id", serverId)
@@ -50,12 +50,6 @@ export async function validateDASSORequest(
     if (service.status === 'suspended') {
       await logSecurityEvent(userId, "suspended_service_sso_attempt", { username: cleanUsername, serviceId: service.id });
       throw new Error("DA_SERVICE_NOT_ACTIVE");
-    }
-
-
-    if (service.block_directadmin) {
-      await logSecurityEvent(userId, "blocked_sso_attempt", { username: cleanUsername, serviceId: service.id });
-      throw new Error("DA_DIRECTADMIN_BLOCKED");
     }
 
     // 3. Additional check: ensure the target username isn't a system one

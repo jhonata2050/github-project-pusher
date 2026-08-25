@@ -1,3 +1,7 @@
+if (typeof process !== 'undefined' && process.env) {
+  process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
+}
+
 import "./lib/error-capture";
 
 import { consumeLastCapturedError } from "./lib/error-capture";

@@ -201,18 +201,19 @@ function Index() {
                             Infraestrutura EQSAM CLOUD incluída
                           </li>
                         </ul>
-                        <Button 
-                          asChild 
-                          className="mt-6 rounded-xl bg-primary text-primary-foreground hover:bg-primary/90"
-                        >
-                          <Link 
-                            to={user ? "/checkout/$productId" : "/auth"} 
-                            params={user ? { productId: plan.id } : {}}
-                            search={user ? {} : { redirect: `/checkout/${plan.id}` } as any}
-                          >
-                            Contratar
-                          </Link>
-                        </Button>
+                        {user ? (
+                          <Button asChild className="mt-6 rounded-xl bg-primary text-primary-foreground hover:bg-primary/90">
+                            <Link to="/checkout/$productId" params={{ productId: plan.id }}>
+                              Contratar
+                            </Link>
+                          </Button>
+                        ) : (
+                          <Button asChild className="mt-6 rounded-xl bg-primary text-primary-foreground hover:bg-primary/90">
+                            <Link to="/auth" search={{ redirect: `/checkout/${plan.id}` }}>
+                              Contratar
+                            </Link>
+                          </Button>
+                        )}
                       </article>
                     );
                   })}

@@ -27,6 +27,7 @@ export type Profile = {
   postal_code: string | null;
   country: string | null;
   status: string;
+  account_balance?: number;
 };
 
 type AuthContextValue = {

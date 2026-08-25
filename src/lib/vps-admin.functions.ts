@@ -10,42 +10,79 @@ export const getVPSAdminData = createServerFn({ method: "GET" })
     if (!isAdmin) throw new Error("Unauthorized");
 
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { data, error } = await supabaseAdmin
+
+    // 1. Buscar instâncias VPS
+    const { data: instances, error: instError } = await supabaseAdmin
       .from('vps_instances')
-      .select(`
-        *,
-        service:services(*)
-      `);
+      .select('*')
+      .order('created_at', { ascending: false });
 
-    if (error) throw error;
+    // 2. Buscar serviços VPS
+    const { data: services, error: svcError } = await supabaseAdmin
+      .from('services')
+      .select('*, products(id, name, product_type)')
+      .order('created_at', { ascending: false });
 
-    const rows = data ?? [];
+    const allServices = services || [];
+    const allInstances = instances || [];
+
+    // 3. Buscar perfis dos usuários
     const userIds = [
-      ...new Set(
-        rows
-          .map((r: any) => r.service?.user_id)
-          .filter((id: string | undefined): id is string => Boolean(id)),
-      ),
+      ...new Set([
+        ...allServices.map((s: any) => s.user_id),
+        ...allInstances.map((i: any) => i.user_id),
+      ].filter(Boolean)),
     ];
 
     let profilesById: Record<string, { full_name: string | null; email: string | null }> = {};
     if (userIds.length > 0) {
-      const { data: profiles, error: profilesError } = await supabaseAdmin
+      const { data: profiles } = await supabaseAdmin
         .from('profiles')
         .select('id, full_name, email')
         .in('id', userIds);
-      if (profilesError) throw profilesError;
+
       profilesById = Object.fromEntries(
         (profiles ?? []).map((p: any) => [p.id, { full_name: p.full_name, email: p.email }]),
       );
     }
 
-    return rows.map((r: any) => ({
-      ...r,
-      service: r.service
-        ? { ...r.service, profile: profilesById[r.service.user_id] ?? null }
-        : null,
-    }));
+    // Associar instâncias com seus respectivos serviços e perfis
+    const rows = allInstances.map((inst: any) => {
+      const matchedService = allServices.find((s: any) => s.id === inst.service_id);
+      const targetUserId = matchedService?.user_id || inst.user_id;
+      return {
+        ...inst,
+        service: matchedService
+          ? { ...matchedService, profile: profilesById[targetUserId] ?? null }
+          : null,
+      };
+    });
+
+    // Se houver serviços de VPS sem instância criada ainda, incluir também na lista
+    const vpsServicesWithoutInstance = allServices.filter(
+      (s: any) => s.products?.product_type === 'vps' && !allInstances.some((i: any) => i.service_id === s.id)
+    );
+
+    vpsServicesWithoutInstance.forEach((s: any) => {
+      rows.push({
+        id: s.id,
+        service_id: s.id,
+        user_id: s.user_id,
+        external_id: s.domain || s.username || 'Pendente',
+        name: s.products?.name || 'Servidor VPS',
+        ip_address: s.ip_address || null,
+        status: s.status || 'pending',
+        region: s.vps_region || 'BR',
+        os_template: s.vps_os_template || 'Ubuntu',
+        created_at: s.created_at,
+        service: {
+          ...s,
+          profile: profilesById[s.user_id] ?? null,
+        },
+      });
+    });
+
+    return rows;
   });
 
 export const updateVPSInstance = createServerFn({ method: "POST" })
@@ -119,30 +156,42 @@ export const syncContaboInstancesFn = createServerFn({ method: "GET" })
       for (const instance of externalInstances) {
         const externalId = instance?.instanceId ?? instance?.id;
         if (!externalId) continue;
-        const ipAddress = instance.ipAddress ?? instance.addOnIps?.[0]?.ip ?? null;
+        const ipAddress = instance.ipConfig?.v4?.ip ?? instance.ipAddress ?? instance.addOnIps?.[0]?.ip ?? null;
         const specs = mapContaboSpecs(instance);
-        const payload = {
+        const payload: any = {
+          user_id: context.userId,
           external_id: String(externalId),
-          provider_id: String(externalId),
+          name: instance.displayName || instance.name || `VPS #${externalId}`,
           ip_address: ipAddress,
           status: normalizeVPSStatus(instance.status),
           region: instance.regionName ?? instance.region ?? null,
           os_template: instance.imageName ?? instance.osType ?? instance.osTemplate ?? instance.imageId ?? null,
-          ...(specs.cpu_cores ? { cpu_cores: specs.cpu_cores } : {}),
-          ...(specs.ram_gb ? { ram_gb: specs.ram_gb } : {}),
-          ...(specs.disk_gb ? { disk_gb: specs.disk_gb } : {}),
         };
 
-        const { error: syncError } = await supabaseAdmin
+        const { data: existing } = await supabaseAdmin
           .from('vps_instances')
-          .upsert(payload, { onConflict: 'external_id' });
-        if (syncError) throw syncError;
+          .select('id')
+          .eq('external_id', String(externalId))
+          .maybeSingle();
+
+        if (existing) {
+          await supabaseAdmin.from('vps_instances').update(payload).eq('id', existing.id);
+        } else {
+          await supabaseAdmin.from('vps_instances').insert(payload);
+        }
       }
 
-      return externalInstances;
+      return externalInstances.map((instance: any) => {
+        const ipAddress = instance.ipConfig?.v4?.ip ?? instance.ipAddress ?? instance.addOnIps?.[0]?.ip ?? 'N/A';
+        return {
+          ...instance,
+          instanceId: instance.instanceId ?? instance.id,
+          displayName: instance.displayName || instance.name || `VPS #${instance.instanceId}`,
+          ipAddress: ipAddress,
+        };
+      });
     } catch (err: any) {
       console.error("Erro ao sincronizar instâncias Contabo:", err.message);
-      // Retornar erro descritivo para o frontend em vez de crashar
       if (err.message.includes("401") || err.message.includes("auth")) {
         throw new Error("Contabo recusou as credenciais (usuário/senha da API inválidos). Verifique em Admin > Financeiro.");
       }
@@ -185,33 +234,42 @@ export const assignInstanceToClient = createServerFn({ method: "POST" })
     if (!isAdmin) throw new Error("Unauthorized");
 
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { data: existing, error: existingError } = await supabaseAdmin
+    const { data: service, error: svcError } = await supabaseAdmin
+      .from('services')
+      .select('id, user_id')
+      .eq('id', data.serviceId)
+      .single();
+
+    if (svcError || !service) throw new Error("Serviço não encontrado");
+
+    const { data: existing } = await supabaseAdmin
       .from('vps_instances')
-      .select('id, service_id')
+      .select('id')
       .eq('external_id', data.externalId)
       .maybeSingle();
-    if (existingError) throw existingError;
-    if (existing?.service_id && existing.service_id !== data.serviceId) {
-      throw new Error("Esta instância já está vinculada a outro serviço");
-    }
 
-    const instancePayload = {
-      service_id: data.serviceId,
+    const instancePayload: any = {
+      user_id: service.user_id,
       external_id: data.externalId,
-      provider_id: data.externalId,
+      name: data.name || 'Servidor VPS',
       ip_address: data.ipAddress || null,
       status: 'active'
     };
-    const { error } = existing
-      ? await supabaseAdmin.from('vps_instances').update(instancePayload).eq('id', existing.id)
-      : await supabaseAdmin.from('vps_instances').upsert(instancePayload, { onConflict: 'service_id' });
 
-    if (error) throw error;
-    
-    // Update service status to active if not already
+    if (existing) {
+      await supabaseAdmin.from('vps_instances').update(instancePayload).eq('id', existing.id);
+    } else {
+      await supabaseAdmin.from('vps_instances').insert(instancePayload);
+    }
+
+    // Update service status and domain/hostname
     await supabaseAdmin
       .from('services')
-      .update({ status: 'active' })
+      .update({
+        status: 'active',
+        domain: data.name || data.ipAddress || 'vps-server',
+        vps_hostname: data.name || null,
+      })
       .eq('id', data.serviceId);
 
     return { success: true };
@@ -228,7 +286,6 @@ export const getContaboPlansFn = createServerFn({ method: "GET" })
       const plans = await getContaboProductTypes();
       return plans ?? [];
     } catch (e) {
-      // Sem credenciais do provedor configuradas: não quebrar a tela de produtos
       console.warn("[VPS-Admin] Planos do provedor indisponíveis:", (e as Error).message);
       return [];
     }
@@ -242,9 +299,17 @@ export const getAvailableVPSInstances = createServerFn({ method: "GET" })
     if (!isAdmin) throw new Error("Unauthorized");
 
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { data: allInstances } = await supabaseAdmin
+    const { data: allInstances, error } = await supabaseAdmin
       .from('vps_instances')
-      .select('id, external_id, ip_address, status, service_id');
+      .select('id, external_id, name, ip_address, status, user_id, region, os_template');
       
-    return (allInstances ?? []).filter((i: any) => !i.service_id || i.service_id === data.serviceId);
+    if (error) {
+      console.warn("[getAvailableVPSInstances] Warning:", error.message);
+      return [];
+    }
+
+    return (allInstances ?? []).map((i: any) => ({
+      ...i,
+      displayName: i.name || `VPS ${i.external_id}`,
+    }));
   });

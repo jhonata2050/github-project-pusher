@@ -1,12 +1,13 @@
 import { createFileRoute } from '@tanstack/react-router';
 
-const scriptContent = `#!/bin/bash
+function getAgentScript(origin: string) {
+  return `#!/bin/bash
 
-# Agente de monitoramento robusto para EQSAM CLOUD
-# Uso: curl -sSL https://easy-push1231231sa1d131dscxsc.lovable.app/api/public/scripts/install-agent | bash -s -- <VPS_ID>
+# Agente de monitoramento para EQSAM CLOUD
+# Uso: curl -sSL ${origin}/api/public/scripts/install-agent | bash -s -- <VPS_ID>
 
 VPS_ID=$1
-API_URL="https://easy-push1231231sa1d131dscxsc.lovable.app/api/public/vps-metrics"
+API_URL="${origin}/api/public/vps-metrics"
 
 if [ -z "$VPS_ID" ]; then
     echo "Erro: VPS_ID não fornecido."
@@ -29,7 +30,7 @@ if [ -f /etc/motd ]; then
 |                      BEM-VINDO A EQSAM CLOUD                       |
 |____________________________________________________________________|
 
-Este servidor e gerenciado via painel EQSAM (eqsam.com).
+Este servidor e gerenciado via painel EQSAM.
 Para suporte, entre em contato via area do cliente.
 BANNER
 fi
@@ -37,12 +38,10 @@ fi
 # Remover scripts de MOTD dinâmicos que podem conter branding
 rm -f /etc/update-motd.d/10-help-text 2>/dev/null
 rm -f /etc/update-motd.d/50-landscape-sysinfo 2>/dev/null
-rm -f /etc/update-motd.d/99-contabo-branding 2>/dev/null # Específico do provedor
+rm -f /etc/update-motd.d/99-contabo-branding 2>/dev/null
 [ -f /etc/legal ] && truncate -s 0 /etc/legal
 
 # Criar o script de coleta
-
-# Usamos um heredoc simples para evitar problemas com o compilador TS
 cat << 'EOF' > /usr/local/bin/eqsam-agent.sh
 #!/bin/bash
 VPS_ID="REPLACE_VPS_ID"
@@ -61,7 +60,7 @@ sleep 1
 CPU_STATS2=($(grep 'cpu ' /proc/stat))
 IDLE2=\${CPU_STATS2[4]}
 TOTAL2=0
-for i in \${!CPU_STATS2[@]}; do
+for i in \${!CPU_STATS2[@]}; do 
   if [ \$i -gt 0 ]; then TOTAL2=\$((TOTAL2 + \${CPU_STATS2[\$i]})); fi
 done
 
@@ -77,7 +76,6 @@ fi
 MEM_TOTAL=\$(grep MemTotal /proc/meminfo | awk '{print \$2}')
 MEM_AVAIL=\$(grep MemAvailable /proc/meminfo | awk '{print \$2}')
 if [ -z "\$MEM_AVAIL" ]; then
-    # Fallback para kernels antigos
     MEM_FREE=\$(grep MemFree /proc/meminfo | awk '{print \$2}')
     MEM_BUFF=\$(grep Buffers /proc/meminfo | awk '{print \$2}')
     MEM_CACH=\$(grep ^Cached /proc/meminfo | awk '{print \$2}')
@@ -116,7 +114,7 @@ NET_OUT_VAL=\$(printf "%.2f" "\$NET_OUT" 2>/dev/null || echo "0")
 DISK_USED_VAL=\$(printf "%.0f" "\${DISK_USED_GB:-0}" 2>/dev/null || echo "0")
 DISK_TOTAL_VAL=\$(printf "%.0f" "\${DISK_TOTAL_GB:-0}" 2>/dev/null || echo "0")
 
-# Enviar métricas com silêncio total para evitar poluição
+# Enviar métricas para a API
 curl -s -X POST "\$API_URL" \\
      -H "Content-Type: application/json" \\
      -d "{\\"vps_id\\": \\"\$VPS_ID\\", \\"cpu\\": \$CPU_VAL, \\"ram\\": \$RAM_VAL, \\"disk\\": \$DISK_VAL, \\"iops_read\\": \$IOPS_READ, \\"iops_write\\": \$IOPS_WRITE, \\"net_in\\": \$NET_IN_VAL, \\"net_out\\": \$NET_OUT_VAL, \\"disk_used_gb\\": \$DISK_USED_VAL, \\"disk_total_gb\\": \$DISK_TOTAL_VAL}" > /dev/null 2>&1
@@ -128,23 +126,33 @@ sed -i "s|REPLACE_API_URL|$API_URL|g" /usr/local/bin/eqsam-agent.sh
 
 chmod +x /usr/local/bin/eqsam-agent.sh
 
-# Configurar Cron
+# Configurar Cron para rodar a cada 1 minuto
 (crontab -l 2>/dev/null | grep -v "eqsam-agent.sh") > /tmp/cron_tmp
 echo "* * * * * /usr/local/bin/eqsam-agent.sh > /dev/null 2>&1" >> /tmp/cron_tmp
 crontab /tmp/cron_tmp
-rm /tmp/cron_tmp
+rm -f /tmp/cron_tmp
 
 echo "Enviando primeira coleta de teste..."
 /usr/local/bin/eqsam-agent.sh
 
-echo "Agente instalado com sucesso!"
+echo "Agente EQSAM instalado com sucesso! As metricas serao atualizadas a cada 1 minuto."
 `;
+}
 
 export const Route = createFileRoute('/api/public/scripts/install-agent')({
   server: {
     handlers: {
-      GET: async () => {
-        return new Response(scriptContent, {
+      GET: async ({ request }) => {
+        let origin = "http://localhost:8080";
+        try {
+          const url = new URL(request.url);
+          origin = `${url.protocol}//${url.host}`;
+        } catch {
+          // fallback
+        }
+        
+        const content = getAgentScript(origin);
+        return new Response(content, {
           headers: {
             'Content-Type': 'text/x-shellscript',
             'Cache-Control': 'no-cache, no-store, must-revalidate',

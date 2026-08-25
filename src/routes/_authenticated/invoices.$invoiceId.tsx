@@ -9,12 +9,13 @@ import {
   Info, 
   QrCode, 
   Receipt, 
-  Store 
+  Store,
+  AlertTriangle,
+  FileCheck,
+  Wallet
 } from "lucide-react";
-import { useState, useRef } from "react";
+import { useState } from "react";
 import { toast } from "sonner";
-import html2canvas from "html2canvas";
-import { jsPDF } from "jspdf";
 
 import { AppShell } from "@/components/app/AppShell";
 import { Badge } from "@/components/ui/badge";
@@ -23,6 +24,9 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import { getInvoiceDetails } from "@/lib/finance.functions";
 import { GATEWAYS, METHOD_LABELS, type PaymentMethod } from "@/lib/gateways";
+import { generateInvoicePDF } from "@/lib/invoice-pdf";
+import { useBranding } from "@/hooks/use-branding";
+import { getMyWallet, payWithWalletBalance } from "@/lib/wallet.functions";
 
 import { initializePayment } from "@/lib/payments.functions";
 import { useServerFn } from "@tanstack/react-start";
@@ -38,12 +42,11 @@ export const Route = createFileRoute("/_authenticated/invoices/$invoiceId")({
 
 const brl = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" });
 
-const METHOD_OPTIONS: { id: PaymentMethod; hint: string; icon: typeof QrCode }[] = [
+const METHOD_OPTIONS: { id: "pix" | "credit_card" | "boleto" | "wallet"; hint: string; icon: typeof QrCode }[] = [
   { id: "pix", hint: "Aprovação imediata", icon: QrCode },
   { id: "credit_card", hint: "Renovação automática", icon: CreditCard },
   { id: "boleto", hint: "Vence em 3 dias", icon: FileText },
 ];
-
 
 const STATUS_LABELS: Record<string, { label: string; color: string }> = {
   pending: { label: "Pendente", color: "bg-warning text-warning-foreground" },
@@ -55,29 +58,43 @@ const STATUS_LABELS: Record<string, { label: string; color: string }> = {
 
 function InvoiceDetailsPage() {
   const { invoiceId } = Route.useParams();
+  const branding = useBranding();
   const fetchInvoice = useServerFn(getInvoiceDetails);
   const startPayment = useServerFn(initializePayment);
   
-  const [paymentMethod, setPaymentMethod] = useState<"pix" | "credit_card" | "boleto">("pix");
-  const [gateway, setGateway] = useState<string>("abacatepay");
+  const [paymentMethod, setPaymentMethod] = useState<"pix" | "credit_card" | "boleto" | "wallet">("pix");
   const [paymentResult, setPaymentResult] = useState<any>(null);
-  const receiptRef = useRef<HTMLDivElement>(null);
-  const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
 
   const invoice = useQuery({
     queryKey: ["invoice", invoiceId],
     queryFn: () => fetchInvoice({ data: { id: invoiceId } }),
   });
 
+  const { data: walletData } = useQuery({
+    queryKey: ["client-my-wallet"],
+    queryFn: () => getMyWallet(),
+  });
+
+  const walletBalance = Number(walletData?.balance || 0);
+
+  const walletPayMutation = useMutation({
+    mutationFn: () => payWithWalletBalance({ data: { invoiceId } }),
+    onSuccess: (res) => {
+      toast.success("Fatura liquidada com sucesso utilizando o saldo da sua carteira!");
+      window.location.reload();
+    },
+    onError: (err: any) => {
+      toast.error(`Falha no pagamento com saldo: ${err.message}`);
+    }
+  });
+
   const paymentMutation = useMutation({
     mutationFn: async (method: "pix" | "credit_card" | "boleto") => {
-      console.log(`[Invoice] Iniciando pagamento ${method} para fatura ${invoiceId}`);
       const data = await startPayment({ data: { invoiceId, method } });
       
       if (data.method === "pix" || data.method === "boleto") {
         setPaymentResult(data);
       } else if (data.checkoutUrl) {
-        console.log(`[Invoice] Redirecionando para ${data.checkoutUrl}`);
         window.location.href = data.checkoutUrl;
       } else {
         throw new Error("Não foi possível gerar o link de pagamento. Tente novamente.");
@@ -97,41 +114,47 @@ function InvoiceDetailsPage() {
   if (invoice.isLoading) return <AppShell breadcrumb={<span>Carregando fatura...</span>}><Skeleton className="h-96 rounded-3xl" /></AppShell>;
   if (!invoice.data) return <AppShell breadcrumb={<span>Fatura não encontrada</span>}>Fatura não encontrada</AppShell>;
 
-  const inv = invoice.data;
-  const status = STATUS_LABELS[inv.status] || { label: inv.status, color: "bg-muted" };
+  const inv = invoice.data as any;
+  const isOverdue = inv.status === "pending" && inv.due_date && new Date(inv.due_date) < new Date();
+  const statusKey = isOverdue ? "overdue" : inv.status;
+  const status = STATUS_LABELS[statusKey] || { label: inv.status, color: "bg-muted" };
 
-  const handleDownloadReceipt = async () => {
-    if (!receiptRef.current) return;
-    
-    setIsGeneratingPdf(true);
-    const toastId = toast.loading("Gerando recibo em PDF...");
-    
+  const handleDownloadPDF = async (isReceipt = false) => {
     try {
-      // Pequeno delay para garantir que o elemento oculto esteja no DOM
-      await new Promise(resolve => setTimeout(resolve, 100));
-      
-      const canvas = await html2canvas(receiptRef.current, {
-        scale: 2,
-        useCORS: true,
-        logging: false,
-        backgroundColor: "#ffffff"
-      });
-      
-      const imgData = canvas.toDataURL("image/png");
-      const pdf = new jsPDF("p", "mm", "a4");
-      const imgProps = pdf.getImageProperties(imgData);
-      const pdfWidth = pdf.internal.pageSize.getWidth();
-      const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
-      
-      pdf.addImage(imgData, "PNG", 0, 0, pdfWidth, pdfHeight);
-      pdf.save(`recibo-${inv.id.slice(0, 8)}.pdf`);
-      
-      toast.success("Recibo baixado com sucesso!", { id: toastId });
-    } catch (error) {
-      console.error("Erro ao gerar PDF:", error);
-      toast.error("Erro ao gerar PDF do recibo.", { id: toastId });
-    } finally {
-      setIsGeneratingPdf(false);
+      await generateInvoicePDF({
+        invoice: {
+          id: inv.id,
+          total_amount: Number(inv.total_amount || 0),
+          status: inv.status,
+          due_date: inv.due_date,
+          paid_at: inv.paid_at,
+          payment_method: inv.payment_method,
+          created_at: inv.created_at,
+          items: inv.invoice_items?.map((it: any) => ({
+            id: it.id,
+            description: it.description,
+            amount: Number(it.amount),
+          })),
+        },
+        client: inv.profiles || null,
+        branding: {
+          app_name: branding.app_name,
+          company_name: branding.app_name,
+          support_email: "suporte@eqsam.com",
+          website: window.location.origin,
+          logo_url: branding.logo_url || null,
+          primary_color: branding.primary_color,
+          brand_color: branding.brand_color,
+        },
+        financialSummary: {
+          originalAmount: Number(inv.subtotal || inv.total_amount),
+          discount: Number(inv.discount_amount || 0),
+          finalAmount: Number(inv.total_amount),
+        }
+      }, isReceipt);
+      toast.success(isReceipt ? "Recibo baixado com sucesso!" : "Fatura baixada em PDF!");
+    } catch (e: any) {
+      toast.error("Erro ao gerar documento PDF: " + e.message);
     }
   };
 
@@ -152,17 +175,37 @@ function InvoiceDetailsPage() {
       <div className="flex flex-col gap-6 lg:flex-row">
         <div className="flex-1 space-y-6">
           <div className="rounded-2xl border border-border bg-card p-6">
-            <div className="flex items-start justify-between">
+            <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
               <div>
                 <h1 className="text-2xl font-bold">Fatura #{inv.id.slice(0, 8)}</h1>
                 <p className="mt-1 text-sm text-muted-foreground">
-                  Emitida em {new Date(inv.created_at).toLocaleDateString("pt-BR")}
+                  Emitida em {new Date(inv.created_at).toLocaleDateString("pt-BR")} • Vencimento: {new Date(inv.due_date).toLocaleDateString("pt-BR")}
                 </p>
               </div>
-              <Badge className={cn("rounded-full border-none px-4 py-1 text-xs font-bold uppercase", status.color)}>
-                {status.label}
-              </Badge>
+              <div className="flex items-center gap-2">
+                <Badge className={cn("rounded-full border-none px-4 py-1 text-xs font-bold uppercase", status.color)}>
+                  {status.label}
+                </Badge>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={() => handleDownloadPDF(inv.status === "paid")}
+                  className="rounded-xl flex gap-1.5 text-xs"
+                >
+                  <Download className="size-3.5" />
+                  {inv.status === "paid" ? "Baixar Recibo (PDF)" : "Baixar Fatura (PDF)"}
+                </Button>
+              </div>
             </div>
+
+            {isOverdue && (
+              <div className="mt-4 rounded-xl border border-red-200 bg-red-50 p-4 text-xs text-red-700 flex items-center gap-3">
+                <AlertTriangle className="size-5 shrink-0 text-red-600" />
+                <span>
+                  Esta fatura está vencida desde <strong>{new Date(inv.due_date).toLocaleDateString("pt-BR")}</strong>. Efetue o pagamento para evitar a suspensão dos serviços.
+                </span>
+              </div>
+            )}
 
             <div className="mt-8 overflow-hidden rounded-xl border border-border">
               <table className="w-full text-left text-[13px] sm:text-sm">
@@ -186,7 +229,7 @@ function InvoiceDetailsPage() {
             <div className="mt-6 flex flex-col items-end gap-2 text-sm">
               <div className="flex w-full max-w-[200px] justify-between">
                 <span className="text-muted-foreground">Subtotal</span>
-                <span className="font-medium">{brl.format(Number(inv.subtotal))}</span>
+                <span className="font-medium">{brl.format(Number(inv.subtotal || inv.total_amount))}</span>
               </div>
               {Number(inv.discount_amount) > 0 && (
                 <div className="flex w-full max-w-[200px] justify-between text-success">
@@ -207,7 +250,7 @@ function InvoiceDetailsPage() {
               Observações
             </h2>
             <p className="mt-2 text-sm text-muted-foreground italic">
-              {inv.notes || "Nenhuma observação disponível para esta fatura."}
+              {inv.notes || "Após a confirmação do pagamento, seu serviço é liberado ou renovado automaticamente pelo sistema."}
             </p>
           </div>
         </div>
@@ -227,7 +270,7 @@ function InvoiceDetailsPage() {
                         </div>
                         <div className="space-y-2">
                           <p className="text-center text-xs text-muted-foreground">
-                            Escaneie o código acima ou copie a chave PIX abaixo:
+                            Escaneie o QR Code ou copie o código Pix Copia e Cola:
                           </p>
                           <div className="rounded-lg bg-secondary/50 p-2 font-mono text-[10px] break-all border border-border">
                             {paymentResult.pixCode}
@@ -264,7 +307,7 @@ function InvoiceDetailsPage() {
                             </div>
                             <Button 
                               variant="outline" 
-                              size="sm"
+                              size="sm" 
                               className="w-full rounded-xl gap-2"
                               onClick={() => {
                                 navigator.clipboard.writeText(paymentResult.digitableLine);
@@ -301,22 +344,46 @@ function InvoiceDetailsPage() {
                     <div className="space-y-2">
                       <p className="text-xs font-medium uppercase text-muted-foreground">Forma de pagamento</p>
                       <div className="space-y-2">
+                        {walletBalance > 0 && (
+                          <button
+                            key="wallet"
+                            onClick={() => setPaymentMethod("wallet")}
+                            className={cn(
+                              "flex w-full items-center gap-3 rounded-xl border p-4 text-left transition-all",
+                              paymentMethod === "wallet"
+                                ? "border-emerald-500 bg-emerald-500/10 ring-1 ring-emerald-500"
+                                : "border-border hover:border-emerald-500/50 bg-card",
+                            )}
+                          >
+                            <Wallet className="size-5 shrink-0 text-emerald-600" />
+                            <div className="min-w-0 flex-1">
+                              <div className="flex items-center justify-between">
+                                <p className="text-sm font-semibold text-foreground">Saldo da Carteira</p>
+                                <span className="text-xs font-bold text-emerald-600">{brl.format(walletBalance)}</span>
+                              </div>
+                              <p className="text-[10px] uppercase text-muted-foreground">
+                                {walletBalance >= Number(inv.total_amount) ? "Disponível • Liquidação imediata" : "Saldo insuficiente para o total"}
+                              </p>
+                            </div>
+                          </button>
+                        )}
+
                         {METHOD_OPTIONS.map((opt) => {
                           const Icon = opt.icon;
                           return (
                             <button
                               key={opt.id}
-                              onClick={() => setPaymentMethod(opt.id)}
+                              onClick={() => setPaymentMethod(opt.id as any)}
                               className={cn(
                                 "flex w-full items-center gap-3 rounded-xl border p-4 text-left transition-all",
                                 paymentMethod === opt.id
                                   ? "border-brand bg-brand/5 ring-1 ring-brand"
-                                  : "border-border hover:border-brand/50",
+                                  : "border-border hover:border-brand/50 bg-card",
                               )}
                             >
                               <Icon className="size-5 shrink-0 text-brand" />
                               <div className="min-w-0">
-                                <p className="text-sm font-semibold">{METHOD_LABELS[opt.id]}</p>
+                                <p className="text-sm font-semibold">{METHOD_LABELS[opt.id as PaymentMethod]}</p>
                                 <p className="text-[10px] uppercase text-muted-foreground">{opt.hint}</p>
                               </div>
                             </button>
@@ -325,15 +392,22 @@ function InvoiceDetailsPage() {
                       </div>
                     </div>
 
-                    <Button
-                      className="mt-2 h-12 w-full rounded-xl text-lg font-semibold"
-                      onClick={() => paymentMutation.mutate(paymentMethod)}
-                      disabled={paymentMutation.isPending}
+                    <Button 
+                      className="w-full rounded-xl h-11"
+                      disabled={paymentMethod === "wallet" ? (walletPayMutation.isPending || walletBalance < Number(inv.total_amount)) : paymentMutation.isPending}
+                      onClick={() => {
+                        if (paymentMethod === "wallet") {
+                          walletPayMutation.mutate();
+                        } else {
+                          paymentMutation.mutate(paymentMethod as PaymentMethod);
+                        }
+                      }}
                     >
-                      {paymentMutation.isPending ? "Processando..." : "Pagar agora"}
+                      {paymentMethod === "wallet" 
+                        ? (walletPayMutation.isPending ? "Debitando Saldo..." : "Pagar com Saldo da Carteira")
+                        : (paymentMutation.isPending ? "Processando..." : `Pagar com ${METHOD_LABELS[paymentMethod as PaymentMethod]}`)}
                     </Button>
                   </div>
-
                 )}
               </div>
             ) : (
@@ -343,85 +417,16 @@ function InvoiceDetailsPage() {
                 </div>
                 <h2 className="mt-4 text-lg font-bold text-success">Fatura Paga</h2>
                 <p className="mt-2 text-sm text-muted-foreground">
-                  Esta fatura foi liquidada em {inv.paid_at ? new Date(inv.paid_at).toLocaleDateString("pt-BR") : "data desconhecida"}.
+                  Esta fatura foi liquidada em {inv.paid_at ? new Date(inv.paid_at).toLocaleDateString("pt-BR") : "data confirmada"}.
                 </p>
                 <Button 
                   variant="outline" 
                   className="mt-6 w-full rounded-xl gap-2" 
-                  onClick={handleDownloadReceipt}
-                  disabled={isGeneratingPdf}
+                  onClick={() => handleDownloadPDF(true)}
                 >
-                  <Download className="size-4" />
-                  {isGeneratingPdf ? "Gerando..." : "Baixar Recibo (PDF)"}
+                  <FileCheck className="size-4 text-green-600" />
+                  Baixar Recibo de Quitação
                 </Button>
-
-                {/* Hidden Receipt Template for PDF Generation */}
-                <div className="hidden">
-                  <div 
-                    ref={receiptRef}
-                    className="p-10 text-slate-900 bg-white"
-                    style={{ width: "800px", fontFamily: "sans-serif" }}
-                  >
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <h1 className="text-2xl font-bold">Recibo de Pagamento</h1>
-                        <p className="text-slate-500 text-sm mt-1">Fatura #{inv.id.slice(0, 8)}</p>
-                      </div>
-                      <div className="bg-green-100 text-green-700 px-4 py-1 rounded-full text-xs font-bold uppercase">
-                        Paga
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-8 mt-8 pb-8 border-b border-slate-200">
-                      <div>
-                        <p className="text-xs font-semibold uppercase text-slate-400">Dados da Fatura</p>
-                        <div className="mt-2 space-y-1 text-sm">
-                          <p><span className="text-slate-500">Emitida em:</span> {new Date(inv.created_at).toLocaleDateString("pt-BR")}</p>
-                          <p><span className="text-slate-500">Paga em:</span> {inv.paid_at ? new Date(inv.paid_at).toLocaleDateString("pt-BR") : "—"}</p>
-                        </div>
-                      </div>
-                      <div>
-                        <p className="text-xs font-semibold uppercase text-slate-400">Cliente</p>
-                        <div className="mt-2 text-sm">
-                          <p className="font-medium">{(inv as any).profiles?.full_name || "Cliente"}</p>
-                          <p className="text-slate-500">{(inv as any).profiles?.email || ""}</p>
-                        </div>
-                      </div>
-                    </div>
-
-                    <table className="w-full mt-8 text-sm">
-                      <thead>
-                        <tr className="border-b border-slate-200 text-slate-400 font-semibold uppercase text-[10px]">
-                          <th className="py-3 text-left">Descrição</th>
-                          <th className="py-3 text-right">Valor</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-slate-100">
-                        {inv.invoice_items?.map((item: any) => (
-                          <tr key={item.id}>
-                            <td className="py-4 font-medium">{item.description}</td>
-                            <td className="py-4 text-right font-bold text-slate-900">{brl.format(Number(item.amount))}</td>
-                          </tr>
-                        )) || (
-                          <tr>
-                            <td className="py-4 font-medium">Serviço</td>
-                            <td className="py-4 text-right font-bold text-slate-900">{brl.format(Number(inv.total_amount))}</td>
-                          </tr>
-                        )}
-                      </tbody>
-                    </table>
-
-                    <div className="mt-8 pt-6 border-t border-slate-200 flex flex-col items-end">
-                      <div className="flex w-64 justify-between items-center text-lg font-bold">
-                        <span className="text-slate-500">Total Pago:</span>
-                        <span className="text-brand">{brl.format(Number(inv.total_amount))}</span>
-                      </div>
-                      <p className="mt-12 text-center w-full text-xs text-slate-400 italic">
-                        Este é um recibo gerado automaticamente pelo sistema Eqsam.
-                      </p>
-                    </div>
-                  </div>
-                </div>
               </div>
             )}
             

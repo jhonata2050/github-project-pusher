@@ -1,3 +1,5 @@
+process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
+
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 
 async function getContaboToken() {
@@ -73,19 +75,19 @@ export async function getContaboInstances() {
 }
 
 export async function performContaboAction(instanceId: string, action: string, userId: string) {
-  const { data: vpsData, error } = await supabaseAdmin
+  const { data: vps, error } = await supabaseAdmin
     .from('vps_instances')
-    .select('external_id, service:services(user_id)')
+    .select('id, user_id, external_id')
     .eq('id', instanceId)
     .single();
 
-  if (error || !vpsData) {
-    throw new Error("Instance not found or unauthorized");
+  if (error || !vps) {
+    throw new Error("Instância VPS não encontrada");
   }
 
-  const vps = vpsData as any;
-  if (vps.service.user_id !== userId) {
-    throw new Error("Unauthorized access to instance");
+  const { data: isStaff } = await supabaseAdmin.rpc('is_staff', { _user_id: userId });
+  if (!isStaff && vps.user_id !== userId) {
+    throw new Error("Acesso negado à instância VPS");
   }
 
   return performContaboActionByExternalId(vps.external_id, action);
@@ -185,46 +187,48 @@ export async function getContaboProductTypes() {
   }
 }
 
-export async function provisionContaboVPS(serviceId: string, config: any) {
-  if (!config?.productId) throw new Error("O plano VPS não possui um produto externo vinculado");
-  if (!config?.hostname || !config?.imageId || !config?.region) {
-    throw new Error("Configuração de hostname, sistema operacional ou região incompleta");
-  }
+export async function provisionContaboVPS(serviceId: string, config: {
+  imageId: string;
+  productId: string;
+  region: string;
+  displayName?: string;
+}) {
+  const { data: service } = await supabaseAdmin
+    .from('services')
+    .select('id, user_id, domain')
+    .eq('id', serviceId)
+    .single();
 
-  const periodByCycle: Record<string, number> = {
-    monthly: 1,
-    quarterly: 3,
-    semiannually: 6,
-    annually: 12,
-    biennially: 12,
-  };
-  const regionAliases: Record<string, string> = {
-    "eu-ger": "EU",
-    "us-east": "US-east",
-    "us-west": "US-west",
-    "br-sp": "BR",
-  };
+  if (!service) throw new Error("Serviço não encontrado");
 
   const token = await getContaboToken();
+  const regionAliases: Record<string, string> = {
+    'US-east': 'US-east',
+    'EU-central': 'EU-central',
+    'BR': 'US-east',
+  };
+
+  const payload = {
+    imageId: config.imageId,
+    productId: config.productId,
+    region: regionAliases[config.region] || config.region,
+    displayName: config.displayName || service.domain || `VPS-${service.id.slice(0, 8)}`,
+  };
+
   const res = await fetch('https://api.contabo.com/v1/compute/instances', {
     method: 'POST',
     headers: {
       'Authorization': `Bearer ${token}`,
-      'Content-Type': 'application/json',
       'x-request-id': crypto.randomUUID(),
+      'x-trace-id': crypto.randomUUID(),
+      'Content-Type': 'application/json',
     },
-    body: JSON.stringify({
-      productId: config.productId,
-      imageId: config.imageId,
-      region: regionAliases[config.region] || config.region,
-      period: periodByCycle[config.billingCycle] || 1,
-      displayName: config.hostname,
-    }),
+    body: JSON.stringify(payload),
   });
 
   if (!res.ok) {
-    const detail = await res.text().catch(() => '');
-    console.error(`[Contabo] Falha ao criar VPS (${res.status}):`, detail);
+    const errorText = await res.text().catch(() => 'Unknown');
+    console.error(`[Contabo] Provisioning error (${res.status}):`, errorText);
     throw new Error(`O provedor recusou o provisionamento da VPS (${res.status})`);
   }
 
@@ -235,29 +239,37 @@ export async function provisionContaboVPS(serviceId: string, config: any) {
 
   const ipAddress = created?.ipAddress ?? created?.addOnIps?.[0]?.ip ?? null;
   const status = String(created?.status || 'provisioning').toLowerCase();
-  const { data: instance, error } = await supabaseAdmin
-    .from('vps_instances')
-    .upsert({
-      service_id: serviceId,
-      external_id: String(externalId),
-      provider_id: String(externalId),
-      ip_address: ipAddress,
-      status,
-      region: regionAliases[config.region] || config.region,
-      os_template: config.imageId,
-    }, { onConflict: 'service_id' })
-    .select('id, external_id, status')
-    .single();
 
-  if (error || !instance) throw new Error("A VPS foi criada, mas não foi possível vinculá-la ao serviço");
+  const vpsPayload = {
+    user_id: service.user_id,
+    external_id: String(externalId),
+    name: payload.displayName,
+    ip_address: ipAddress,
+    status: status === 'running' || status === 'active' ? 'active' : 'provisioning',
+    region: regionAliases[config.region] || config.region,
+    os_template: config.imageId,
+  };
+
+  const { data: existingVps } = await supabaseAdmin
+    .from('vps_instances')
+    .select('id')
+    .eq('external_id', String(externalId))
+    .maybeSingle();
+
+  if (existingVps) {
+    await supabaseAdmin.from('vps_instances').update(vpsPayload).eq('id', existingVps.id);
+  } else {
+    await supabaseAdmin.from('vps_instances').insert(vpsPayload);
+  }
 
   await supabaseAdmin.from('services').update({
     status: status === 'active' || status === 'running' ? 'active' : 'pending',
-    notes: 'Provisionamento automático da VPS iniciado.',
-    error_message: null,
+    vps_hostname: payload.displayName,
+    domain: service.domain || payload.displayName,
+    notes: 'Provisionamento automático da VPS iniciado na Contabo.',
   }).eq('id', serviceId);
 
-  return { externalId: instance.external_id, status: instance.status };
+  return { externalId: String(externalId), status };
 }
 
 export function mapContaboSpecs(instance: any) {

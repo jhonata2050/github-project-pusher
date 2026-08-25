@@ -101,6 +101,19 @@ export const GATEWAYS: GatewayDef[] = [
     ],
   },
   {
+    id: "misticpay",
+    name: "MisticPay",
+    docs: "https://misticpay.com",
+    required: ["misticpay_api_key"],
+    methods: ["pix"],
+    fields: [
+      { key: "misticpay_api_key", label: "API Key / Token", placeholder: "mst_...", secret: true },
+      { key: "misticpay_client_id", label: "Client ID (Opcional)", optional: true },
+      { key: "misticpay_client_secret", label: "Client Secret (Opcional)", secret: true, optional: true },
+      { key: "misticpay_base_url", label: "Base URL da API", placeholder: "https://api.misticpay.com", optional: true },
+    ],
+  },
+  {
     id: "contabo",
     name: "Contabo VPS",
     docs: "https://api.contabo.com",

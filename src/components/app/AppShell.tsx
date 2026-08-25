@@ -31,6 +31,9 @@ import {
   Menu,
   Palette,
   ShieldAlert,
+  Search,
+  Share2,
+  Box,
 } from "lucide-react";
 
 import { useState, useEffect, type ReactNode } from "react";
@@ -88,8 +91,10 @@ const ADMIN_SECTIONS: NavSection[] = [
     label: "Sistema",
     icon: Cog,
     links: [
-      { label: "Servidores", to: "/admin/servers", icon: Server },
+      { label: "Servidores DirectAdmin", to: "/admin/servers", icon: Server },
+      { label: "Servidores Coolify (PaaS)", to: "/admin/coolify", icon: Box },
       { label: "Financeiro e Gateways", to: "/admin/finance", icon: Wallet },
+      { label: "Gestão de Afiliados", to: "/admin/affiliates", icon: Share2 },
       { label: "E-mails e SMTP", to: "/admin/emails", icon: Mail },
       { label: "Domínios", to: "/admin/domains", icon: Globe },
       { label: "Logs do Sistema", to: "/admin/logs", icon: History },
@@ -108,12 +113,19 @@ const CLIENT_SECTIONS: NavSection[] = [
     links: [
       { label: "Serviços", to: "/services", icon: LayoutPanelLeft },
       { label: "Servidores VPS", to: "/vps", icon: Server },
+      { label: "Aplicações & Bots", to: "/apps", icon: Box },
+      { label: "Meus domínios", to: "/domains", icon: Globe },
+      { label: "Registrar domínio", to: "/domains/search", icon: Search },
     ],
   },
   {
     label: "Financeiro",
     icon: Wallet,
-    links: [{ label: "Minhas faturas", to: "/invoices", icon: Receipt }],
+    links: [
+      { label: "Minha carteira", to: "/wallet", icon: Wallet },
+      { label: "Minhas faturas", to: "/invoices", icon: Receipt },
+      { label: "Indique e Ganhe (Afiliados)", to: "/affiliates", icon: Share2 },
+    ],
   },
   {
     label: "Minha conta",
@@ -388,8 +400,13 @@ export function AppShell({
                     </Link>
                     {!isAdminArea && (
                       <Link
-                        to="/"
-                        className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-sidebar-foreground transition-colors hover:bg-sidebar-accent"
+                        to="/plans"
+                        className={cn(
+                          "flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition-colors",
+                          pathname === "/plans"
+                            ? "bg-primary font-medium text-primary-foreground"
+                            : "text-sidebar-foreground hover:bg-sidebar-accent",
+                        )}
                       >
                         <Store className="size-4" />
                         Contratar planos
@@ -440,18 +457,27 @@ export function AppShell({
               <span className="text-lg font-semibold">{branding.app_name}</span>
             )}
           </div>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="size-11 rounded-full text-muted-foreground relative hover:bg-brand/10 hover:text-brand transition-all flex items-center justify-center">
-                <Bell className="size-6 text-brand" style={{ filter: 'drop-shadow(0 0 8px oklch(0.72 0.19 148 / 0.5))' }} />
-                {(hasOverdue || unreadCount > 0) && (
-                  <span 
-                    className="absolute top-2 right-2 size-3 bg-destructive rounded-full border-2 border-background animate-bounce"
-                    style={{ boxShadow: '0 0 10px oklch(0.6 0.2 25 / 0.6)' }}
-                  />
-                )}
-              </Button>
-            </DropdownMenuTrigger>
+          <div className="flex items-center gap-2">
+            {!isAdminArea && (
+              <Link to="/wallet">
+                <Button variant="outline" size="sm" className="rounded-xl h-8 px-2.5 gap-1.5 border-emerald-500/30 bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500/20 font-bold text-xs">
+                  <Wallet className="size-3.5 text-emerald-600" />
+                  <span>R$ {Number(profile?.account_balance || 0).toFixed(2)}</span>
+                </Button>
+              </Link>
+            )}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon" className="size-11 rounded-full text-muted-foreground relative hover:bg-brand/10 hover:text-brand transition-all flex items-center justify-center">
+                  <Bell className="size-6 text-brand" style={{ filter: 'drop-shadow(0 0 8px oklch(0.72 0.19 148 / 0.5))' }} />
+                  {(hasOverdue || unreadCount > 0) && (
+                    <span 
+                      className="absolute top-2 right-2 size-3 bg-destructive rounded-full border-2 border-background animate-bounce"
+                      style={{ boxShadow: '0 0 10px oklch(0.6 0.2 25 / 0.6)' }}
+                    />
+                  )}
+                </Button>
+              </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-80 p-0 overflow-hidden rounded-2xl">
               <div className="p-4 border-b border-border bg-muted/30">
                 <h3 className="font-semibold text-sm">Notificações</h3>
@@ -513,6 +539,7 @@ export function AppShell({
               )}
             </DropdownMenuContent>
           </DropdownMenu>
+        </div>
       </header>
 
       <div className="flex min-h-0 flex-1">
@@ -554,6 +581,13 @@ export function AppShell({
                     {profile?.company_name ?? profile?.full_name ?? "Minha conta"}
                   </p>
                   <p className="text-xs text-muted-foreground">{profile?.email}</p>
+                  <Link to="/wallet" className="mt-2.5 flex items-center justify-between bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/20 px-2.5 py-1.5 rounded-xl transition-colors">
+                    <div className="flex items-center gap-1.5">
+                      <Wallet className="size-3.5 text-emerald-600" />
+                      <span className="text-[11px] font-semibold text-muted-foreground">Saldo em conta:</span>
+                    </div>
+                    <span className="text-xs font-extrabold text-emerald-600">R$ {Number(profile?.account_balance || 0).toFixed(2)}</span>
+                  </Link>
                 </>
               )}
             </div>
@@ -574,8 +608,13 @@ export function AppShell({
             </Link>
             {!isAdminArea && (
               <Link
-                to="/"
-                className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-sidebar-foreground transition-colors hover:bg-sidebar-accent"
+                to="/plans"
+                className={cn(
+                  "flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition-colors",
+                  pathname === "/plans"
+                    ? "bg-primary font-medium text-primary-foreground"
+                    : "text-sidebar-foreground hover:bg-sidebar-accent",
+                )}
               >
                 <Store className="size-4" />
                 Contratar planos
@@ -649,7 +688,16 @@ export function AppShell({
         <main className="min-w-0 flex-1 px-3 py-4 lg:px-6 lg:py-6 overflow-y-auto">
           <header className="hidden items-center justify-between gap-4 pb-4 lg:flex">
             <div className="flex items-center gap-2 text-sm text-muted-foreground">{breadcrumb}</div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-3">
+              {!isAdminArea && (
+                <Link to="/wallet">
+                  <Button variant="outline" size="sm" className="rounded-xl h-9 px-3 gap-2 border-emerald-500/30 bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500/20 font-bold text-xs transition-all shadow-xs">
+                    <Wallet className="size-4 text-emerald-600" />
+                    <span>Saldo: R$ {Number(profile?.account_balance || 0).toFixed(2)}</span>
+                    <span className="text-[10px] text-emerald-600/70 font-normal ml-0.5">• Recarregar</span>
+                  </Button>
+                </Link>
+              )}
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" size="icon" className="size-11 rounded-full text-muted-foreground relative hover:bg-brand/10 hover:text-brand transition-all flex items-center justify-center">

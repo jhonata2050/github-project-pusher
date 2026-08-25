@@ -1,0 +1,37 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        VITE_SUPABASE_URL: ${VITE_SUPABASE_URL:-${SUPABASE_URL}}
+        VITE_SUPABASE_PUBLISHABLE_KEY: ${VITE_SUPABASE_PUBLISHABLE_KEY:-${SUPABASE_PUBLISHABLE_KEY}}
+    container_name: hosting_hub_app
+    restart: unless-stopped
+    ports:
+      - "${APP_PORT:-8080}:8080"
+    env_file:
+      - .env
+    environment:
+      - PORT=8080
+      - HOST=0.0.0.0
+      - NODE_ENV=production
+    volumes:
+      - ./backups:/app/backups
+      - ./.env:/app/.env:ro
+
+  # Opcional: Proxy Nginx com suporte a SSL Let's Encrypt reverso
+  # Descomente caso deseje rodar o Nginx diretamente no docker-compose
+  # nginx:
+  #   image: nginx:alpine
+  #   container_name: hosting_hub_nginx
+  #   restart: unless-stopped
+  #   ports:
+  #     - "80:80"
+  #     - "443:443"
+  #   volumes:
+  #     - ./nginx/conf.d:/etc/nginx/conf.d
+  #     - ./certbot/conf:/etc/letsencrypt
+  #     - ./certbot/www:/var/www/certbot
+  #   depends_on:
+  #     - app

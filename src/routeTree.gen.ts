@@ -13,17 +13,22 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedAdminRouteRouteImport } from './routes/_authenticated/admin/route'
+import { Route as AuthenticatedAffiliatesRouteImport } from './routes/_authenticated/affiliates'
 import { Route as AuthenticatedCompleteProfileRouteImport } from './routes/_authenticated/complete-profile'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
 import { Route as AuthenticatedInvoicesRouteImport } from './routes/_authenticated/invoices'
+import { Route as AuthenticatedPlansRouteImport } from './routes/_authenticated/plans'
 import { Route as AuthenticatedProfileRouteImport } from './routes/_authenticated/profile'
 import { Route as AuthenticatedServicesRouteImport } from './routes/_authenticated/services'
 import { Route as AuthenticatedTicketsRouteImport } from './routes/_authenticated/tickets'
+import { Route as AuthenticatedWalletRouteImport } from './routes/_authenticated/wallet'
 import { Route as AuthResetPasswordRouteImport } from './routes/auth.reset-password'
 import { Route as CheckoutProductIdRouteImport } from './routes/checkout.$productId'
 import { Route as AuthenticatedAdminIndexRouteImport } from './routes/_authenticated/admin/index'
+import { Route as AuthenticatedAdminAffiliatesRouteImport } from './routes/_authenticated/admin/affiliates'
 import { Route as AuthenticatedAdminBrandingRouteImport } from './routes/_authenticated/admin/branding'
 import { Route as AuthenticatedAdminClientsRouteImport } from './routes/_authenticated/admin/clients'
+import { Route as AuthenticatedAdminCoolifyRouteImport } from './routes/_authenticated/admin/coolify'
 import { Route as AuthenticatedAdminCouponsRouteImport } from './routes/_authenticated/admin/coupons'
 import { Route as AuthenticatedAdminDatabaseRouteImport } from './routes/_authenticated/admin/database'
 import { Route as AuthenticatedAdminDomainsRouteImport } from './routes/_authenticated/admin/domains'
@@ -37,6 +42,12 @@ import { Route as AuthenticatedAdminProductsRouteImport } from './routes/_authen
 import { Route as AuthenticatedAdminServersRouteImport } from './routes/_authenticated/admin/servers'
 import { Route as AuthenticatedAdminTicketsRouteImport } from './routes/_authenticated/admin/tickets'
 import { Route as AuthenticatedAdminWhatsappRouteImport } from './routes/_authenticated/admin/whatsapp'
+import { Route as AuthenticatedAppsIndexRouteImport } from './routes/_authenticated/apps/index'
+import { Route as AuthenticatedAppsAppIdRouteImport } from './routes/_authenticated/apps/$appId'
+import { Route as AuthenticatedAppsCreateRouteImport } from './routes/_authenticated/apps/create'
+import { Route as AuthenticatedDomainsIndexRouteImport } from './routes/_authenticated/domains.index'
+import { Route as AuthenticatedDomainsDomainIdRouteImport } from './routes/_authenticated/domains.$domainId'
+import { Route as AuthenticatedDomainsSearchRouteImport } from './routes/_authenticated/domains.search'
 import { Route as AuthenticatedInvoicesIndexRouteImport } from './routes/_authenticated/invoices.index'
 import { Route as AuthenticatedInvoicesInvoiceIdRouteImport } from './routes/_authenticated/invoices.$invoiceId'
 import { Route as AuthenticatedServicesIndexRouteImport } from './routes/_authenticated/services.index'
@@ -45,6 +56,7 @@ import { Route as AuthenticatedTicketsIndexRouteImport } from './routes/_authent
 import { Route as AuthenticatedTicketsTicketIdRouteImport } from './routes/_authenticated/tickets.$ticketId'
 import { Route as AuthenticatedVpsIndexRouteImport } from './routes/_authenticated/vps/index'
 import { Route as AuthenticatedVpsVpsIdRouteImport } from './routes/_authenticated/vps/$vpsId'
+import { Route as ApiFileManagerUploadRouteImport } from './routes/api/file-manager/upload'
 import { Route as ApiPublicBrandingRouteImport } from './routes/api/public/branding'
 import { Route as ApiPublicPasswordResetRouteImport } from './routes/api/public/password-reset'
 import { Route as ApiPublicVpsMetricsRouteImport } from './routes/api/public/vps-metrics'
@@ -53,6 +65,10 @@ import { Route as AuthenticatedAdminClientsIndexRouteImport } from './routes/_au
 import { Route as AuthenticatedAdminClientsClientIdRouteImport } from './routes/_authenticated/admin/clients.$clientId'
 import { Route as AuthenticatedAdminVpsIndexRouteImport } from './routes/_authenticated/admin/vps/index'
 import { Route as AuthenticatedAdminVpsPlansRouteImport } from './routes/_authenticated/admin/vps/plans'
+import { Route as ApiFileManagerBundleAppIdRouteImport } from './routes/api/file-manager/bundle/$appId'
+import { Route as ApiFileManagerJobsJobIdRouteImport } from './routes/api/file-manager/jobs/$jobId'
+import { Route as ApiFileManagerJobsCompressRouteImport } from './routes/api/file-manager/jobs/compress'
+import { Route as ApiFileManagerJobsExtractRouteImport } from './routes/api/file-manager/jobs/extract'
 import { Route as ApiPublicCronMaintenanceRouteImport } from './routes/api/public/cron/maintenance'
 import { Route as ApiPublicScriptsInstallAgentRouteImport } from './routes/api/public/scripts/install-agent'
 import { Route as ApiPublicScriptsUninstallAgentRouteImport } from './routes/api/public/scripts/uninstall-agent'
@@ -83,6 +99,11 @@ const AuthenticatedAdminRouteRoute = AuthenticatedAdminRouteRouteImport.update({
   path: '/admin',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedAffiliatesRoute = AuthenticatedAffiliatesRouteImport.update({
+  id: '/affiliates',
+  path: '/affiliates',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedCompleteProfileRoute =
   AuthenticatedCompleteProfileRouteImport.update({
     id: '/complete-profile',
@@ -97,6 +118,11 @@ const AuthenticatedDashboardRoute = AuthenticatedDashboardRouteImport.update({
 const AuthenticatedInvoicesRoute = AuthenticatedInvoicesRouteImport.update({
   id: '/invoices',
   path: '/invoices',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedPlansRoute = AuthenticatedPlansRouteImport.update({
+  id: '/plans',
+  path: '/plans',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedProfileRoute = AuthenticatedProfileRouteImport.update({
@@ -114,6 +140,11 @@ const AuthenticatedTicketsRoute = AuthenticatedTicketsRouteImport.update({
   path: '/tickets',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedWalletRoute = AuthenticatedWalletRouteImport.update({
+  id: '/wallet',
+  path: '/wallet',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthResetPasswordRoute = AuthResetPasswordRouteImport.update({
   id: '/reset-password',
   path: '/reset-password',
@@ -129,6 +160,12 @@ const AuthenticatedAdminIndexRoute = AuthenticatedAdminIndexRouteImport.update({
   path: '/',
   getParentRoute: () => AuthenticatedAdminRouteRoute,
 } as any)
+const AuthenticatedAdminAffiliatesRoute =
+  AuthenticatedAdminAffiliatesRouteImport.update({
+    id: '/affiliates',
+    path: '/affiliates',
+    getParentRoute: () => AuthenticatedAdminRouteRoute,
+  } as any)
 const AuthenticatedAdminBrandingRoute =
   AuthenticatedAdminBrandingRouteImport.update({
     id: '/branding',
@@ -139,6 +176,12 @@ const AuthenticatedAdminClientsRoute =
   AuthenticatedAdminClientsRouteImport.update({
     id: '/clients',
     path: '/clients',
+    getParentRoute: () => AuthenticatedAdminRouteRoute,
+  } as any)
+const AuthenticatedAdminCoolifyRoute =
+  AuthenticatedAdminCoolifyRouteImport.update({
+    id: '/coolify',
+    path: '/coolify',
     getParentRoute: () => AuthenticatedAdminRouteRoute,
   } as any)
 const AuthenticatedAdminCouponsRoute =
@@ -218,6 +261,39 @@ const AuthenticatedAdminWhatsappRoute =
     path: '/whatsapp',
     getParentRoute: () => AuthenticatedAdminRouteRoute,
   } as any)
+const AuthenticatedAppsIndexRoute = AuthenticatedAppsIndexRouteImport.update({
+  id: '/apps/',
+  path: '/apps/',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedAppsAppIdRoute = AuthenticatedAppsAppIdRouteImport.update({
+  id: '/apps/$appId',
+  path: '/apps/$appId',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedAppsCreateRoute = AuthenticatedAppsCreateRouteImport.update({
+  id: '/apps/create',
+  path: '/apps/create',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedDomainsIndexRoute =
+  AuthenticatedDomainsIndexRouteImport.update({
+    id: '/domains/',
+    path: '/domains/',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedDomainsDomainIdRoute =
+  AuthenticatedDomainsDomainIdRouteImport.update({
+    id: '/domains/$domainId',
+    path: '/domains/$domainId',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedDomainsSearchRoute =
+  AuthenticatedDomainsSearchRouteImport.update({
+    id: '/domains/search',
+    path: '/domains/search',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedInvoicesIndexRoute =
   AuthenticatedInvoicesIndexRouteImport.update({
     id: '/',
@@ -264,6 +340,11 @@ const AuthenticatedVpsVpsIdRoute = AuthenticatedVpsVpsIdRouteImport.update({
   path: '/vps/$vpsId',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const ApiFileManagerUploadRoute = ApiFileManagerUploadRouteImport.update({
+  id: '/api/file-manager/upload',
+  path: '/api/file-manager/upload',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicBrandingRoute = ApiPublicBrandingRouteImport.update({
   id: '/api/public/branding',
   path: '/api/public/branding',
@@ -307,6 +388,29 @@ const AuthenticatedAdminVpsPlansRoute =
     id: '/vps/plans',
     path: '/vps/plans',
     getParentRoute: () => AuthenticatedAdminRouteRoute,
+  } as any)
+const ApiFileManagerBundleAppIdRoute =
+  ApiFileManagerBundleAppIdRouteImport.update({
+    id: '/api/file-manager/bundle/$appId',
+    path: '/api/file-manager/bundle/$appId',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiFileManagerJobsJobIdRoute = ApiFileManagerJobsJobIdRouteImport.update({
+  id: '/api/file-manager/jobs/$jobId',
+  path: '/api/file-manager/jobs/$jobId',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiFileManagerJobsCompressRoute =
+  ApiFileManagerJobsCompressRouteImport.update({
+    id: '/api/file-manager/jobs/compress',
+    path: '/api/file-manager/jobs/compress',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiFileManagerJobsExtractRoute =
+  ApiFileManagerJobsExtractRouteImport.update({
+    id: '/api/file-manager/jobs/extract',
+    path: '/api/file-manager/jobs/extract',
+    getParentRoute: () => rootRouteImport,
   } as any)
 const ApiPublicCronMaintenanceRoute =
   ApiPublicCronMaintenanceRouteImport.update({
@@ -370,16 +474,21 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRouteWithChildren
   '/admin': typeof AuthenticatedAdminRouteRouteWithChildren
+  '/affiliates': typeof AuthenticatedAffiliatesRoute
   '/complete-profile': typeof AuthenticatedCompleteProfileRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/invoices': typeof AuthenticatedInvoicesRouteWithChildren
+  '/plans': typeof AuthenticatedPlansRoute
   '/profile': typeof AuthenticatedProfileRoute
   '/services': typeof AuthenticatedServicesRouteWithChildren
   '/tickets': typeof AuthenticatedTicketsRouteWithChildren
+  '/wallet': typeof AuthenticatedWalletRoute
   '/auth/reset-password': typeof AuthResetPasswordRoute
   '/checkout/$productId': typeof CheckoutProductIdRoute
+  '/admin/affiliates': typeof AuthenticatedAdminAffiliatesRoute
   '/admin/branding': typeof AuthenticatedAdminBrandingRoute
   '/admin/clients': typeof AuthenticatedAdminClientsRouteWithChildren
+  '/admin/coolify': typeof AuthenticatedAdminCoolifyRoute
   '/admin/coupons': typeof AuthenticatedAdminCouponsRoute
   '/admin/database': typeof AuthenticatedAdminDatabaseRoute
   '/admin/domains': typeof AuthenticatedAdminDomainsRoute
@@ -393,21 +502,32 @@ export interface FileRoutesByFullPath {
   '/admin/servers': typeof AuthenticatedAdminServersRoute
   '/admin/tickets': typeof AuthenticatedAdminTicketsRoute
   '/admin/whatsapp': typeof AuthenticatedAdminWhatsappRoute
+  '/apps/$appId': typeof AuthenticatedAppsAppIdRoute
+  '/apps/create': typeof AuthenticatedAppsCreateRoute
+  '/domains/$domainId': typeof AuthenticatedDomainsDomainIdRoute
+  '/domains/search': typeof AuthenticatedDomainsSearchRoute
   '/invoices/$invoiceId': typeof AuthenticatedInvoicesInvoiceIdRoute
   '/services/$serviceId': typeof AuthenticatedServicesServiceIdRoute
   '/tickets/$ticketId': typeof AuthenticatedTicketsTicketIdRoute
   '/vps/$vpsId': typeof AuthenticatedVpsVpsIdRoute
+  '/api/file-manager/upload': typeof ApiFileManagerUploadRoute
   '/api/public/branding': typeof ApiPublicBrandingRoute
   '/api/public/password-reset': typeof ApiPublicPasswordResetRoute
   '/api/public/vps-metrics': typeof ApiPublicVpsMetricsRoute
   '/api/public/webhook': typeof ApiPublicWebhookRoute
   '/admin/': typeof AuthenticatedAdminIndexRoute
+  '/apps/': typeof AuthenticatedAppsIndexRoute
+  '/domains/': typeof AuthenticatedDomainsIndexRoute
   '/invoices/': typeof AuthenticatedInvoicesIndexRoute
   '/services/': typeof AuthenticatedServicesIndexRoute
   '/tickets/': typeof AuthenticatedTicketsIndexRoute
   '/vps/': typeof AuthenticatedVpsIndexRoute
   '/admin/clients/$clientId': typeof AuthenticatedAdminClientsClientIdRoute
   '/admin/vps/plans': typeof AuthenticatedAdminVpsPlansRoute
+  '/api/file-manager/bundle/$appId': typeof ApiFileManagerBundleAppIdRoute
+  '/api/file-manager/jobs/$jobId': typeof ApiFileManagerJobsJobIdRoute
+  '/api/file-manager/jobs/compress': typeof ApiFileManagerJobsCompressRoute
+  '/api/file-manager/jobs/extract': typeof ApiFileManagerJobsExtractRoute
   '/api/public/cron/maintenance': typeof ApiPublicCronMaintenanceRoute
   '/api/public/scripts/install-agent': typeof ApiPublicScriptsInstallAgentRoute
   '/api/public/scripts/uninstall-agent': typeof ApiPublicScriptsUninstallAgentRoute
@@ -424,12 +544,17 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRouteWithChildren
+  '/affiliates': typeof AuthenticatedAffiliatesRoute
   '/complete-profile': typeof AuthenticatedCompleteProfileRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
+  '/plans': typeof AuthenticatedPlansRoute
   '/profile': typeof AuthenticatedProfileRoute
+  '/wallet': typeof AuthenticatedWalletRoute
   '/auth/reset-password': typeof AuthResetPasswordRoute
   '/checkout/$productId': typeof CheckoutProductIdRoute
+  '/admin/affiliates': typeof AuthenticatedAdminAffiliatesRoute
   '/admin/branding': typeof AuthenticatedAdminBrandingRoute
+  '/admin/coolify': typeof AuthenticatedAdminCoolifyRoute
   '/admin/coupons': typeof AuthenticatedAdminCouponsRoute
   '/admin/database': typeof AuthenticatedAdminDatabaseRoute
   '/admin/domains': typeof AuthenticatedAdminDomainsRoute
@@ -443,21 +568,32 @@ export interface FileRoutesByTo {
   '/admin/servers': typeof AuthenticatedAdminServersRoute
   '/admin/tickets': typeof AuthenticatedAdminTicketsRoute
   '/admin/whatsapp': typeof AuthenticatedAdminWhatsappRoute
+  '/apps/$appId': typeof AuthenticatedAppsAppIdRoute
+  '/apps/create': typeof AuthenticatedAppsCreateRoute
+  '/domains/$domainId': typeof AuthenticatedDomainsDomainIdRoute
+  '/domains/search': typeof AuthenticatedDomainsSearchRoute
   '/invoices/$invoiceId': typeof AuthenticatedInvoicesInvoiceIdRoute
   '/services/$serviceId': typeof AuthenticatedServicesServiceIdRoute
   '/tickets/$ticketId': typeof AuthenticatedTicketsTicketIdRoute
   '/vps/$vpsId': typeof AuthenticatedVpsVpsIdRoute
+  '/api/file-manager/upload': typeof ApiFileManagerUploadRoute
   '/api/public/branding': typeof ApiPublicBrandingRoute
   '/api/public/password-reset': typeof ApiPublicPasswordResetRoute
   '/api/public/vps-metrics': typeof ApiPublicVpsMetricsRoute
   '/api/public/webhook': typeof ApiPublicWebhookRoute
   '/admin': typeof AuthenticatedAdminIndexRoute
+  '/apps': typeof AuthenticatedAppsIndexRoute
+  '/domains': typeof AuthenticatedDomainsIndexRoute
   '/invoices': typeof AuthenticatedInvoicesIndexRoute
   '/services': typeof AuthenticatedServicesIndexRoute
   '/tickets': typeof AuthenticatedTicketsIndexRoute
   '/vps': typeof AuthenticatedVpsIndexRoute
   '/admin/clients/$clientId': typeof AuthenticatedAdminClientsClientIdRoute
   '/admin/vps/plans': typeof AuthenticatedAdminVpsPlansRoute
+  '/api/file-manager/bundle/$appId': typeof ApiFileManagerBundleAppIdRoute
+  '/api/file-manager/jobs/$jobId': typeof ApiFileManagerJobsJobIdRoute
+  '/api/file-manager/jobs/compress': typeof ApiFileManagerJobsCompressRoute
+  '/api/file-manager/jobs/extract': typeof ApiFileManagerJobsExtractRoute
   '/api/public/cron/maintenance': typeof ApiPublicCronMaintenanceRoute
   '/api/public/scripts/install-agent': typeof ApiPublicScriptsInstallAgentRoute
   '/api/public/scripts/uninstall-agent': typeof ApiPublicScriptsUninstallAgentRoute
@@ -477,16 +613,21 @@ export interface FileRoutesById {
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/auth': typeof AuthRouteWithChildren
   '/_authenticated/admin': typeof AuthenticatedAdminRouteRouteWithChildren
+  '/_authenticated/affiliates': typeof AuthenticatedAffiliatesRoute
   '/_authenticated/complete-profile': typeof AuthenticatedCompleteProfileRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
   '/_authenticated/invoices': typeof AuthenticatedInvoicesRouteWithChildren
+  '/_authenticated/plans': typeof AuthenticatedPlansRoute
   '/_authenticated/profile': typeof AuthenticatedProfileRoute
   '/_authenticated/services': typeof AuthenticatedServicesRouteWithChildren
   '/_authenticated/tickets': typeof AuthenticatedTicketsRouteWithChildren
+  '/_authenticated/wallet': typeof AuthenticatedWalletRoute
   '/auth/reset-password': typeof AuthResetPasswordRoute
   '/checkout/$productId': typeof CheckoutProductIdRoute
+  '/_authenticated/admin/affiliates': typeof AuthenticatedAdminAffiliatesRoute
   '/_authenticated/admin/branding': typeof AuthenticatedAdminBrandingRoute
   '/_authenticated/admin/clients': typeof AuthenticatedAdminClientsRouteWithChildren
+  '/_authenticated/admin/coolify': typeof AuthenticatedAdminCoolifyRoute
   '/_authenticated/admin/coupons': typeof AuthenticatedAdminCouponsRoute
   '/_authenticated/admin/database': typeof AuthenticatedAdminDatabaseRoute
   '/_authenticated/admin/domains': typeof AuthenticatedAdminDomainsRoute
@@ -500,21 +641,32 @@ export interface FileRoutesById {
   '/_authenticated/admin/servers': typeof AuthenticatedAdminServersRoute
   '/_authenticated/admin/tickets': typeof AuthenticatedAdminTicketsRoute
   '/_authenticated/admin/whatsapp': typeof AuthenticatedAdminWhatsappRoute
+  '/_authenticated/apps/$appId': typeof AuthenticatedAppsAppIdRoute
+  '/_authenticated/apps/create': typeof AuthenticatedAppsCreateRoute
+  '/_authenticated/domains/$domainId': typeof AuthenticatedDomainsDomainIdRoute
+  '/_authenticated/domains/search': typeof AuthenticatedDomainsSearchRoute
   '/_authenticated/invoices/$invoiceId': typeof AuthenticatedInvoicesInvoiceIdRoute
   '/_authenticated/services/$serviceId': typeof AuthenticatedServicesServiceIdRoute
   '/_authenticated/tickets/$ticketId': typeof AuthenticatedTicketsTicketIdRoute
   '/_authenticated/vps/$vpsId': typeof AuthenticatedVpsVpsIdRoute
+  '/api/file-manager/upload': typeof ApiFileManagerUploadRoute
   '/api/public/branding': typeof ApiPublicBrandingRoute
   '/api/public/password-reset': typeof ApiPublicPasswordResetRoute
   '/api/public/vps-metrics': typeof ApiPublicVpsMetricsRoute
   '/api/public/webhook': typeof ApiPublicWebhookRoute
   '/_authenticated/admin/': typeof AuthenticatedAdminIndexRoute
+  '/_authenticated/apps/': typeof AuthenticatedAppsIndexRoute
+  '/_authenticated/domains/': typeof AuthenticatedDomainsIndexRoute
   '/_authenticated/invoices/': typeof AuthenticatedInvoicesIndexRoute
   '/_authenticated/services/': typeof AuthenticatedServicesIndexRoute
   '/_authenticated/tickets/': typeof AuthenticatedTicketsIndexRoute
   '/_authenticated/vps/': typeof AuthenticatedVpsIndexRoute
   '/_authenticated/admin/clients/$clientId': typeof AuthenticatedAdminClientsClientIdRoute
   '/_authenticated/admin/vps/plans': typeof AuthenticatedAdminVpsPlansRoute
+  '/api/file-manager/bundle/$appId': typeof ApiFileManagerBundleAppIdRoute
+  '/api/file-manager/jobs/$jobId': typeof ApiFileManagerJobsJobIdRoute
+  '/api/file-manager/jobs/compress': typeof ApiFileManagerJobsCompressRoute
+  '/api/file-manager/jobs/extract': typeof ApiFileManagerJobsExtractRoute
   '/api/public/cron/maintenance': typeof ApiPublicCronMaintenanceRoute
   '/api/public/scripts/install-agent': typeof ApiPublicScriptsInstallAgentRoute
   '/api/public/scripts/uninstall-agent': typeof ApiPublicScriptsUninstallAgentRoute
@@ -534,16 +686,21 @@ export interface FileRouteTypes {
     | '/'
     | '/auth'
     | '/admin'
+    | '/affiliates'
     | '/complete-profile'
     | '/dashboard'
     | '/invoices'
+    | '/plans'
     | '/profile'
     | '/services'
     | '/tickets'
+    | '/wallet'
     | '/auth/reset-password'
     | '/checkout/$productId'
+    | '/admin/affiliates'
     | '/admin/branding'
     | '/admin/clients'
+    | '/admin/coolify'
     | '/admin/coupons'
     | '/admin/database'
     | '/admin/domains'
@@ -557,21 +714,32 @@ export interface FileRouteTypes {
     | '/admin/servers'
     | '/admin/tickets'
     | '/admin/whatsapp'
+    | '/apps/$appId'
+    | '/apps/create'
+    | '/domains/$domainId'
+    | '/domains/search'
     | '/invoices/$invoiceId'
     | '/services/$serviceId'
     | '/tickets/$ticketId'
     | '/vps/$vpsId'
+    | '/api/file-manager/upload'
     | '/api/public/branding'
     | '/api/public/password-reset'
     | '/api/public/vps-metrics'
     | '/api/public/webhook'
     | '/admin/'
+    | '/apps/'
+    | '/domains/'
     | '/invoices/'
     | '/services/'
     | '/tickets/'
     | '/vps/'
     | '/admin/clients/$clientId'
     | '/admin/vps/plans'
+    | '/api/file-manager/bundle/$appId'
+    | '/api/file-manager/jobs/$jobId'
+    | '/api/file-manager/jobs/compress'
+    | '/api/file-manager/jobs/extract'
     | '/api/public/cron/maintenance'
     | '/api/public/scripts/install-agent'
     | '/api/public/scripts/uninstall-agent'
@@ -588,12 +756,17 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/auth'
+    | '/affiliates'
     | '/complete-profile'
     | '/dashboard'
+    | '/plans'
     | '/profile'
+    | '/wallet'
     | '/auth/reset-password'
     | '/checkout/$productId'
+    | '/admin/affiliates'
     | '/admin/branding'
+    | '/admin/coolify'
     | '/admin/coupons'
     | '/admin/database'
     | '/admin/domains'
@@ -607,21 +780,32 @@ export interface FileRouteTypes {
     | '/admin/servers'
     | '/admin/tickets'
     | '/admin/whatsapp'
+    | '/apps/$appId'
+    | '/apps/create'
+    | '/domains/$domainId'
+    | '/domains/search'
     | '/invoices/$invoiceId'
     | '/services/$serviceId'
     | '/tickets/$ticketId'
     | '/vps/$vpsId'
+    | '/api/file-manager/upload'
     | '/api/public/branding'
     | '/api/public/password-reset'
     | '/api/public/vps-metrics'
     | '/api/public/webhook'
     | '/admin'
+    | '/apps'
+    | '/domains'
     | '/invoices'
     | '/services'
     | '/tickets'
     | '/vps'
     | '/admin/clients/$clientId'
     | '/admin/vps/plans'
+    | '/api/file-manager/bundle/$appId'
+    | '/api/file-manager/jobs/$jobId'
+    | '/api/file-manager/jobs/compress'
+    | '/api/file-manager/jobs/extract'
     | '/api/public/cron/maintenance'
     | '/api/public/scripts/install-agent'
     | '/api/public/scripts/uninstall-agent'
@@ -640,16 +824,21 @@ export interface FileRouteTypes {
     | '/_authenticated'
     | '/auth'
     | '/_authenticated/admin'
+    | '/_authenticated/affiliates'
     | '/_authenticated/complete-profile'
     | '/_authenticated/dashboard'
     | '/_authenticated/invoices'
+    | '/_authenticated/plans'
     | '/_authenticated/profile'
     | '/_authenticated/services'
     | '/_authenticated/tickets'
+    | '/_authenticated/wallet'
     | '/auth/reset-password'
     | '/checkout/$productId'
+    | '/_authenticated/admin/affiliates'
     | '/_authenticated/admin/branding'
     | '/_authenticated/admin/clients'
+    | '/_authenticated/admin/coolify'
     | '/_authenticated/admin/coupons'
     | '/_authenticated/admin/database'
     | '/_authenticated/admin/domains'
@@ -663,21 +852,32 @@ export interface FileRouteTypes {
     | '/_authenticated/admin/servers'
     | '/_authenticated/admin/tickets'
     | '/_authenticated/admin/whatsapp'
+    | '/_authenticated/apps/$appId'
+    | '/_authenticated/apps/create'
+    | '/_authenticated/domains/$domainId'
+    | '/_authenticated/domains/search'
     | '/_authenticated/invoices/$invoiceId'
     | '/_authenticated/services/$serviceId'
     | '/_authenticated/tickets/$ticketId'
     | '/_authenticated/vps/$vpsId'
+    | '/api/file-manager/upload'
     | '/api/public/branding'
     | '/api/public/password-reset'
     | '/api/public/vps-metrics'
     | '/api/public/webhook'
     | '/_authenticated/admin/'
+    | '/_authenticated/apps/'
+    | '/_authenticated/domains/'
     | '/_authenticated/invoices/'
     | '/_authenticated/services/'
     | '/_authenticated/tickets/'
     | '/_authenticated/vps/'
     | '/_authenticated/admin/clients/$clientId'
     | '/_authenticated/admin/vps/plans'
+    | '/api/file-manager/bundle/$appId'
+    | '/api/file-manager/jobs/$jobId'
+    | '/api/file-manager/jobs/compress'
+    | '/api/file-manager/jobs/extract'
     | '/api/public/cron/maintenance'
     | '/api/public/scripts/install-agent'
     | '/api/public/scripts/uninstall-agent'
@@ -697,10 +897,15 @@ export interface RootRouteChildren {
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   AuthRoute: typeof AuthRouteWithChildren
   CheckoutProductIdRoute: typeof CheckoutProductIdRoute
+  ApiFileManagerUploadRoute: typeof ApiFileManagerUploadRoute
   ApiPublicBrandingRoute: typeof ApiPublicBrandingRoute
   ApiPublicPasswordResetRoute: typeof ApiPublicPasswordResetRoute
   ApiPublicVpsMetricsRoute: typeof ApiPublicVpsMetricsRoute
   ApiPublicWebhookRoute: typeof ApiPublicWebhookRoute
+  ApiFileManagerBundleAppIdRoute: typeof ApiFileManagerBundleAppIdRoute
+  ApiFileManagerJobsJobIdRoute: typeof ApiFileManagerJobsJobIdRoute
+  ApiFileManagerJobsCompressRoute: typeof ApiFileManagerJobsCompressRoute
+  ApiFileManagerJobsExtractRoute: typeof ApiFileManagerJobsExtractRoute
   ApiPublicCronMaintenanceRoute: typeof ApiPublicCronMaintenanceRoute
   ApiPublicScriptsInstallAgentRoute: typeof ApiPublicScriptsInstallAgentRoute
   ApiPublicScriptsUninstallAgentRoute: typeof ApiPublicScriptsUninstallAgentRoute
@@ -743,6 +948,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminRouteRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/affiliates': {
+      id: '/_authenticated/affiliates'
+      path: '/affiliates'
+      fullPath: '/affiliates'
+      preLoaderRoute: typeof AuthenticatedAffiliatesRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/complete-profile': {
       id: '/_authenticated/complete-profile'
       path: '/complete-profile'
@@ -762,6 +974,13 @@ declare module '@tanstack/react-router' {
       path: '/invoices'
       fullPath: '/invoices'
       preLoaderRoute: typeof AuthenticatedInvoicesRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/plans': {
+      id: '/_authenticated/plans'
+      path: '/plans'
+      fullPath: '/plans'
+      preLoaderRoute: typeof AuthenticatedPlansRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/profile': {
@@ -785,6 +1004,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedTicketsRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/wallet': {
+      id: '/_authenticated/wallet'
+      path: '/wallet'
+      fullPath: '/wallet'
+      preLoaderRoute: typeof AuthenticatedWalletRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/auth/reset-password': {
       id: '/auth/reset-password'
       path: '/reset-password'
@@ -806,6 +1032,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminIndexRouteImport
       parentRoute: typeof AuthenticatedAdminRouteRoute
     }
+    '/_authenticated/admin/affiliates': {
+      id: '/_authenticated/admin/affiliates'
+      path: '/affiliates'
+      fullPath: '/admin/affiliates'
+      preLoaderRoute: typeof AuthenticatedAdminAffiliatesRouteImport
+      parentRoute: typeof AuthenticatedAdminRouteRoute
+    }
     '/_authenticated/admin/branding': {
       id: '/_authenticated/admin/branding'
       path: '/branding'
@@ -818,6 +1051,13 @@ declare module '@tanstack/react-router' {
       path: '/clients'
       fullPath: '/admin/clients'
       preLoaderRoute: typeof AuthenticatedAdminClientsRouteImport
+      parentRoute: typeof AuthenticatedAdminRouteRoute
+    }
+    '/_authenticated/admin/coolify': {
+      id: '/_authenticated/admin/coolify'
+      path: '/coolify'
+      fullPath: '/admin/coolify'
+      preLoaderRoute: typeof AuthenticatedAdminCoolifyRouteImport
       parentRoute: typeof AuthenticatedAdminRouteRoute
     }
     '/_authenticated/admin/coupons': {
@@ -911,6 +1151,48 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminWhatsappRouteImport
       parentRoute: typeof AuthenticatedAdminRouteRoute
     }
+    '/_authenticated/apps/': {
+      id: '/_authenticated/apps/'
+      path: '/apps'
+      fullPath: '/apps/'
+      preLoaderRoute: typeof AuthenticatedAppsIndexRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/apps/$appId': {
+      id: '/_authenticated/apps/$appId'
+      path: '/apps/$appId'
+      fullPath: '/apps/$appId'
+      preLoaderRoute: typeof AuthenticatedAppsAppIdRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/apps/create': {
+      id: '/_authenticated/apps/create'
+      path: '/apps/create'
+      fullPath: '/apps/create'
+      preLoaderRoute: typeof AuthenticatedAppsCreateRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/domains/': {
+      id: '/_authenticated/domains/'
+      path: '/domains'
+      fullPath: '/domains/'
+      preLoaderRoute: typeof AuthenticatedDomainsIndexRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/domains/$domainId': {
+      id: '/_authenticated/domains/$domainId'
+      path: '/domains/$domainId'
+      fullPath: '/domains/$domainId'
+      preLoaderRoute: typeof AuthenticatedDomainsDomainIdRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/domains/search': {
+      id: '/_authenticated/domains/search'
+      path: '/domains/search'
+      fullPath: '/domains/search'
+      preLoaderRoute: typeof AuthenticatedDomainsSearchRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/invoices/': {
       id: '/_authenticated/invoices/'
       path: '/'
@@ -967,6 +1249,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedVpsVpsIdRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/api/file-manager/upload': {
+      id: '/api/file-manager/upload'
+      path: '/api/file-manager/upload'
+      fullPath: '/api/file-manager/upload'
+      preLoaderRoute: typeof ApiFileManagerUploadRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/branding': {
       id: '/api/public/branding'
       path: '/api/public/branding'
@@ -1022,6 +1311,34 @@ declare module '@tanstack/react-router' {
       fullPath: '/admin/vps/plans'
       preLoaderRoute: typeof AuthenticatedAdminVpsPlansRouteImport
       parentRoute: typeof AuthenticatedAdminRouteRoute
+    }
+    '/api/file-manager/bundle/$appId': {
+      id: '/api/file-manager/bundle/$appId'
+      path: '/api/file-manager/bundle/$appId'
+      fullPath: '/api/file-manager/bundle/$appId'
+      preLoaderRoute: typeof ApiFileManagerBundleAppIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/file-manager/jobs/$jobId': {
+      id: '/api/file-manager/jobs/$jobId'
+      path: '/api/file-manager/jobs/$jobId'
+      fullPath: '/api/file-manager/jobs/$jobId'
+      preLoaderRoute: typeof ApiFileManagerJobsJobIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/file-manager/jobs/compress': {
+      id: '/api/file-manager/jobs/compress'
+      path: '/api/file-manager/jobs/compress'
+      fullPath: '/api/file-manager/jobs/compress'
+      preLoaderRoute: typeof ApiFileManagerJobsCompressRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/file-manager/jobs/extract': {
+      id: '/api/file-manager/jobs/extract'
+      path: '/api/file-manager/jobs/extract'
+      fullPath: '/api/file-manager/jobs/extract'
+      preLoaderRoute: typeof ApiFileManagerJobsExtractRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/api/public/cron/maintenance': {
       id: '/api/public/cron/maintenance'
@@ -1114,8 +1431,10 @@ const AuthenticatedAdminClientsRouteWithChildren =
   )
 
 interface AuthenticatedAdminRouteRouteChildren {
+  AuthenticatedAdminAffiliatesRoute: typeof AuthenticatedAdminAffiliatesRoute
   AuthenticatedAdminBrandingRoute: typeof AuthenticatedAdminBrandingRoute
   AuthenticatedAdminClientsRoute: typeof AuthenticatedAdminClientsRouteWithChildren
+  AuthenticatedAdminCoolifyRoute: typeof AuthenticatedAdminCoolifyRoute
   AuthenticatedAdminCouponsRoute: typeof AuthenticatedAdminCouponsRoute
   AuthenticatedAdminDatabaseRoute: typeof AuthenticatedAdminDatabaseRoute
   AuthenticatedAdminDomainsRoute: typeof AuthenticatedAdminDomainsRoute
@@ -1136,8 +1455,10 @@ interface AuthenticatedAdminRouteRouteChildren {
 
 const AuthenticatedAdminRouteRouteChildren: AuthenticatedAdminRouteRouteChildren =
   {
+    AuthenticatedAdminAffiliatesRoute: AuthenticatedAdminAffiliatesRoute,
     AuthenticatedAdminBrandingRoute: AuthenticatedAdminBrandingRoute,
     AuthenticatedAdminClientsRoute: AuthenticatedAdminClientsRouteWithChildren,
+    AuthenticatedAdminCoolifyRoute: AuthenticatedAdminCoolifyRoute,
     AuthenticatedAdminCouponsRoute: AuthenticatedAdminCouponsRoute,
     AuthenticatedAdminDatabaseRoute: AuthenticatedAdminDatabaseRoute,
     AuthenticatedAdminDomainsRoute: AuthenticatedAdminDomainsRoute,
@@ -1206,25 +1527,43 @@ const AuthenticatedTicketsRouteWithChildren =
 
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedAdminRouteRoute: typeof AuthenticatedAdminRouteRouteWithChildren
+  AuthenticatedAffiliatesRoute: typeof AuthenticatedAffiliatesRoute
   AuthenticatedCompleteProfileRoute: typeof AuthenticatedCompleteProfileRoute
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
   AuthenticatedInvoicesRoute: typeof AuthenticatedInvoicesRouteWithChildren
+  AuthenticatedPlansRoute: typeof AuthenticatedPlansRoute
   AuthenticatedProfileRoute: typeof AuthenticatedProfileRoute
   AuthenticatedServicesRoute: typeof AuthenticatedServicesRouteWithChildren
   AuthenticatedTicketsRoute: typeof AuthenticatedTicketsRouteWithChildren
+  AuthenticatedWalletRoute: typeof AuthenticatedWalletRoute
+  AuthenticatedAppsAppIdRoute: typeof AuthenticatedAppsAppIdRoute
+  AuthenticatedAppsCreateRoute: typeof AuthenticatedAppsCreateRoute
+  AuthenticatedDomainsDomainIdRoute: typeof AuthenticatedDomainsDomainIdRoute
+  AuthenticatedDomainsSearchRoute: typeof AuthenticatedDomainsSearchRoute
   AuthenticatedVpsVpsIdRoute: typeof AuthenticatedVpsVpsIdRoute
+  AuthenticatedAppsIndexRoute: typeof AuthenticatedAppsIndexRoute
+  AuthenticatedDomainsIndexRoute: typeof AuthenticatedDomainsIndexRoute
   AuthenticatedVpsIndexRoute: typeof AuthenticatedVpsIndexRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedAdminRouteRoute: AuthenticatedAdminRouteRouteWithChildren,
+  AuthenticatedAffiliatesRoute: AuthenticatedAffiliatesRoute,
   AuthenticatedCompleteProfileRoute: AuthenticatedCompleteProfileRoute,
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
   AuthenticatedInvoicesRoute: AuthenticatedInvoicesRouteWithChildren,
+  AuthenticatedPlansRoute: AuthenticatedPlansRoute,
   AuthenticatedProfileRoute: AuthenticatedProfileRoute,
   AuthenticatedServicesRoute: AuthenticatedServicesRouteWithChildren,
   AuthenticatedTicketsRoute: AuthenticatedTicketsRouteWithChildren,
+  AuthenticatedWalletRoute: AuthenticatedWalletRoute,
+  AuthenticatedAppsAppIdRoute: AuthenticatedAppsAppIdRoute,
+  AuthenticatedAppsCreateRoute: AuthenticatedAppsCreateRoute,
+  AuthenticatedDomainsDomainIdRoute: AuthenticatedDomainsDomainIdRoute,
+  AuthenticatedDomainsSearchRoute: AuthenticatedDomainsSearchRoute,
   AuthenticatedVpsVpsIdRoute: AuthenticatedVpsVpsIdRoute,
+  AuthenticatedAppsIndexRoute: AuthenticatedAppsIndexRoute,
+  AuthenticatedDomainsIndexRoute: AuthenticatedDomainsIndexRoute,
   AuthenticatedVpsIndexRoute: AuthenticatedVpsIndexRoute,
 }
 
@@ -1246,10 +1585,15 @@ const rootRouteChildren: RootRouteChildren = {
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   AuthRoute: AuthRouteWithChildren,
   CheckoutProductIdRoute: CheckoutProductIdRoute,
+  ApiFileManagerUploadRoute: ApiFileManagerUploadRoute,
   ApiPublicBrandingRoute: ApiPublicBrandingRoute,
   ApiPublicPasswordResetRoute: ApiPublicPasswordResetRoute,
   ApiPublicVpsMetricsRoute: ApiPublicVpsMetricsRoute,
   ApiPublicWebhookRoute: ApiPublicWebhookRoute,
+  ApiFileManagerBundleAppIdRoute: ApiFileManagerBundleAppIdRoute,
+  ApiFileManagerJobsJobIdRoute: ApiFileManagerJobsJobIdRoute,
+  ApiFileManagerJobsCompressRoute: ApiFileManagerJobsCompressRoute,
+  ApiFileManagerJobsExtractRoute: ApiFileManagerJobsExtractRoute,
   ApiPublicCronMaintenanceRoute: ApiPublicCronMaintenanceRoute,
   ApiPublicScriptsInstallAgentRoute: ApiPublicScriptsInstallAgentRoute,
   ApiPublicScriptsUninstallAgentRoute: ApiPublicScriptsUninstallAgentRoute,

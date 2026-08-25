@@ -718,6 +718,27 @@ export async function getDASession(serverId: string, username: string, redirectU
   return loginUrl;
 }
 
+export async function modifyDAUserPackage(serverId: string, username: string, newPackage: string) {
+  const { data: server, error } = await supabaseAdmin
+    .from('servers')
+    .select('*')
+    .eq('id', serverId)
+    .single();
 
+  if (error || !server) throw new Error('Servidor DirectAdmin não encontrado');
 
+  const result = await callDA({
+    hostname: server.hostname,
+    apiUser: server.api_user,
+    apiToken: server.api_token,
+    command: 'CMD_API_MODIFY_USER',
+    method: 'POST',
+    params: {
+      action: 'package',
+      user: username,
+      package: newPackage,
+    },
+  });
 
+  return result;
+}

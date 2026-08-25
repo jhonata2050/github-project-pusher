@@ -1,6 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useQuery, useMutation } from "@tanstack/react-query";
-import { Check, Receipt, Store, Ticket, ArrowRight, ArrowLeft } from "lucide-react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { Check, Receipt, Store, Ticket, ArrowRight, ArrowLeft, Wallet } from "lucide-react";
 import { useState, useMemo, useEffect } from "react";
 import { toast } from "sonner";
 
@@ -12,6 +12,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth, useProfile } from "@/hooks/use-auth";
 import { createOrder, getInvoiceDetails } from "@/lib/finance.functions";
 import { initializePayment } from "@/lib/payments.functions";
+import { getMyWallet, payWithWalletBalance } from "@/lib/wallet.functions";
 import { useServerFn } from "@tanstack/react-start";
 
 import { StepDomain } from "@/components/checkout/StepDomain";
@@ -39,10 +40,12 @@ const brl = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" 
 
 function CheckoutPage() {
   const { productId } = Route.useParams();
-  const { user } = useAuth();
+  const { user, impersonatedClientId } = useAuth();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const executeCreateOrder = useServerFn(createOrder);
   const startPayment = useServerFn(initializePayment);
+  const executePayWithBalance = useServerFn(payWithWalletBalance);
   
   const [step, setStep] = useState(1);
   const [pixResult, setPixResult] = useState<any>(null);
@@ -55,6 +58,20 @@ function CheckoutPage() {
   const [hasStartedAutoPix, setHasStartedAutoPix] = useState(false);
   const [isDomainValid, setIsDomainValid] = useState(false);
   const [cpfCnpj, setCpfCnpj] = useState("");
+
+  const { data: profile } = useProfile();
+
+  const walletQuery = useQuery({
+    queryKey: ["client-my-wallet"],
+    queryFn: () => getMyWallet(),
+    enabled: !!user,
+  });
+
+  const walletBalance = Number(
+    profile?.account_balance !== undefined && profile?.account_balance !== null
+      ? profile.account_balance
+      : (walletQuery.data?.balance ?? 0)
+  );
 
   const product = useQuery({
     queryKey: ["checkout-product", productId],
@@ -84,9 +101,19 @@ function CheckoutPage() {
       if (chosen?.cycle) setBillingCycle(chosen.cycle);
     }
   }, [activePrices, billingCycle]);
-  
 
-  const { data: profile } = useProfile();
+  const currentPrice = useMemo(() => {
+    return product.data?.product_prices?.find((p: any) => p.cycle === billingCycle) || product.data?.product_prices?.[0];
+  }, [product.data, billingCycle]);
+
+  // Se o cliente tiver saldo suficiente em conta, pré-seleciona a carteira como método preferencial
+  useEffect(() => {
+    const priceVal = Number(currentPrice?.price ?? 0);
+    if (walletBalance >= priceVal && priceVal > 0 && paymentMethod === "pix" && !hasStartedAutoPix && !pixResult) {
+      setPaymentMethod("wallet");
+    }
+  }, [walletBalance, currentPrice, paymentMethod, hasStartedAutoPix, pixResult]);
+  
   useEffect(() => {
     if (profile?.tax_id && !cpfCnpj) {
       setCpfCnpj(profile.tax_id);
@@ -124,15 +151,39 @@ function CheckoutPage() {
         throw new Error("SESSION_REQUIRED");
       }
       
+      const affCode = typeof window !== "undefined" ? localStorage.getItem("eqsam_aff_code") || undefined : undefined;
+
       const order = await executeCreateOrder({
         data: {
           productId,
           billingCycle: billingCycle as any,
           domain: domain || undefined,
           vpsConfig: productType === "vps" ? vpsConfig : undefined,
+          affCode: affCode || undefined,
+          clientId: impersonatedClientId || undefined,
         }
       });
 
+      // 1. Pagamento com Saldo da Carteira (Instantâneo)
+      if (paymentMethod === "wallet") {
+        setIsProcessingPix(true);
+        try {
+          await executePayWithBalance({
+            data: {
+              invoiceId: order.invoiceId,
+            },
+          });
+          queryClient.invalidateQueries();
+          return order;
+        } catch (err: any) {
+          console.error("[Checkout] Erro ao pagar com saldo:", err);
+          throw new Error(err.message || "Erro ao liquidar com saldo da conta.");
+        } finally {
+          setIsProcessingPix(false);
+        }
+      }
+
+      // 2. Pagamento com Pix
       if (paymentMethod === "pix") {
         setIsProcessingPix(true);
         try {
@@ -163,10 +214,8 @@ function CheckoutPage() {
           if (paymentData.checkoutUrl) {
             console.log(`[Checkout] Redirecionando para ${paymentData.checkoutUrl}`);
             window.location.href = paymentData.checkoutUrl;
-            // IMPORTANTE: Não resetamos o loading aqui para manter o estado visual até que a página mude
             return order; 
           } else if (paymentData.pixCode) {
-            // Caso raro onde o método mudou no meio ou fallback retornou pix
             setPixResult(paymentData);
             setIsProcessingPix(false);
           } else {
@@ -184,13 +233,22 @@ function CheckoutPage() {
 
     },
     onSuccess: (order) => {
-      // Se for Cartão ou Boleto, o redirecionamento já foi feito via window.location.href no mutationFn.
-      // Se for Pix, mostramos o resultado na mesma tela.
+      if (paymentMethod === "wallet") {
+        toast.success("Plano contratado e ativado com sucesso usando seu saldo em conta!");
+        setTimeout(() => {
+          if (productType === "apps" || product.data?.name?.includes("PaaS") || product.data?.name?.includes("MB") || product.data?.name?.includes("GB")) {
+            navigate({ to: "/apps" });
+          } else if (productType === "vps") {
+            navigate({ to: "/vps" });
+          } else {
+            navigate({ to: "/services" });
+          }
+        }, 1200);
+        return;
+      }
+
       if (paymentMethod !== "pix") {
         toast.success("Pedido realizado com sucesso!");
-        // O redirecionamento via window.location.href é mais confiável para gatways externos.
-        // Se por algum motivo o redirect falhou no mutationFn (ex: URL não gerada), 
-        // levamos o usuário para a lista de faturas.
         setTimeout(() => {
           if (window.location.pathname.includes("/checkout/")) {
             navigate({ to: "/invoices" });
@@ -226,8 +284,6 @@ function CheckoutPage() {
   if (product.isLoading) return <AppShell area="client" breadcrumb={<span>Checkout</span>}><Skeleton className="h-96 rounded-3xl" /></AppShell>;
   if (!product.data) return <AppShell area="client" breadcrumb={<span>Checkout</span>}>Produto não encontrado</AppShell>;
   if (!user) return null;
-
-  const currentPrice = product.data.product_prices?.find((p) => p.cycle === billingCycle) || product.data.product_prices?.[0];
 
   const renderStep = () => {
     let currentStepIdx = step - 1;
@@ -319,6 +375,8 @@ function CheckoutPage() {
             pixResult={pixResult}
             isProcessingPix={isProcessingPix}
             hasStartedAutoPix={hasStartedAutoPix}
+            walletBalance={walletBalance}
+            totalAmount={Number(currentPrice?.price ?? 0)}
           />
         );
       default:
@@ -331,7 +389,10 @@ function CheckoutPage() {
     if (stepName === "Domínio" && (!domain || !isDomainValid)) return true;
     if (stepName === "Configuração" && (!vpsConfig.hostname || !vpsConfig.os || !vpsConfig.location)) return true;
     if (stepName === "Conta" && !user) return true;
-    if (stepName === "Pagamento" && !cpfCnpj) return true;
+    if (stepName === "Pagamento") {
+      if (paymentMethod === "pix" && !cpfCnpj) return true;
+      if (paymentMethod === "wallet" && walletBalance < Number(currentPrice?.price ?? 0)) return true;
+    }
     return false;
   };
 

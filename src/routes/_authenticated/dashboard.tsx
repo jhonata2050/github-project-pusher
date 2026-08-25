@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { Gauge, Monitor, Receipt, Server, Store } from "lucide-react";
+import { Gauge, Monitor, Receipt, Server, Store, Wallet, Plus } from "lucide-react";
 
 import { AppShell } from "@/components/app/AppShell";
 import { Button } from "@/components/ui/button";
@@ -43,7 +43,6 @@ function ClientDashboardPage() {
         supabase.from("invoices").select("total_amount, status").eq("user_id", effectiveUserId!),
       ]);
 
-
       const pending = (invoices.data ?? []).filter((i) => i.status === "pending");
       return {
         activeServices: (services.data ?? []).filter((s) => s.status === "active").length,
@@ -53,6 +52,8 @@ function ClientDashboardPage() {
       };
     },
   });
+
+  const currentBalance = Number(profile?.account_balance || 0);
 
   return (
     <AppShell
@@ -64,14 +65,38 @@ function ClientDashboardPage() {
         </span>
       }
     >
-      <h1 className="text-2xl font-semibold tracking-tight">
-        Olá, {profile?.full_name?.split(" ")[0] ?? "bem-vindo"}
-      </h1>
-      <p className="mt-1 text-sm text-muted-foreground">
-        Aqui você acompanha seus serviços, faturas e atendimentos no painel {branding.app_name}.
-      </p>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight">
+            Olá, {profile?.full_name?.split(" ")[0] ?? "bem-vindo"}
+          </h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Aqui você acompanha seus serviços, faturas e atendimentos no painel {branding.app_name}.
+          </p>
+        </div>
+        <Link to="/wallet">
+          <Button className="rounded-2xl gap-2 font-bold bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm">
+            <Wallet className="size-4" />
+            Adicionar Saldo
+          </Button>
+        </Link>
+      </div>
 
-      <div className="mt-6 grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="mt-6 grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
+        {/* Card 1: Saldo Disponível */}
+        <div className="rounded-2xl border border-emerald-500/30 bg-emerald-500/5 p-5 flex flex-col justify-between">
+          <div className="flex items-center justify-between">
+            <p className="text-xs font-semibold text-emerald-600 uppercase tracking-wider">Saldo da Carteira</p>
+            <div className="h-7 w-7 rounded-lg bg-emerald-500/20 text-emerald-600 flex items-center justify-center">
+              <Wallet className="size-3.5" />
+            </div>
+          </div>
+          <p className="mt-2 text-2xl font-extrabold text-emerald-600">{brl.format(currentBalance)}</p>
+          <Link to="/wallet" className="text-[11px] font-semibold text-emerald-600 hover:underline mt-1">
+            + Adicionar créditos
+          </Link>
+        </div>
+
         <KpiCard
           label="Serviços ativos"
           value={stats.isLoading ? undefined : String(stats.data?.activeServices ?? 0)}
@@ -110,17 +135,24 @@ function ClientDashboardPage() {
           </div>
         </div>
 
-        <div className="rounded-2xl border border-border p-6">
-          <h2 className="flex items-center gap-2 text-sm font-medium">
-            <Receipt className="size-4 text-muted-foreground" />
-            Financeiro
-          </h2>
-          <p className="mt-2 text-sm text-muted-foreground">
-            Pague suas faturas por Pix, cartão ou boleto direto no painel.
-          </p>
-          <Button asChild variant="outline" className="mt-4 rounded-xl">
-            <Link to="/invoices">Ver minhas faturas</Link>
-          </Button>
+        <div className="rounded-2xl border border-border p-6 flex flex-col justify-between">
+          <div>
+            <h2 className="flex items-center gap-2 text-sm font-medium">
+              <Receipt className="size-4 text-muted-foreground" />
+              Financeiro & Carteira
+            </h2>
+            <p className="mt-2 text-sm text-muted-foreground">
+              Seu saldo é utilizado automaticamente para pagar e renovar seus serviços.
+            </p>
+          </div>
+          <div className="mt-4 flex flex-wrap gap-2">
+            <Button asChild className="rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white">
+              <Link to="/wallet">Minha Carteira</Link>
+            </Button>
+            <Button asChild variant="outline" className="rounded-xl">
+              <Link to="/invoices">Ver faturas</Link>
+            </Button>
+          </div>
         </div>
       </div>
     </AppShell>

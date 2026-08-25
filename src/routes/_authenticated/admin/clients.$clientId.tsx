@@ -23,14 +23,18 @@ import {
    ShieldAlert,
    Database,
    Monitor,
+   Wallet,
+   PlusCircle,
  } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useState } from "react";
 import { toast } from "sonner";
 import { useNavigate } from "@tanstack/react-router";
+import { useServerFn } from "@tanstack/react-start";
 import { useAuth } from "@/hooks/use-auth";
 import { impersonateClient, updateClientProfile } from "@/lib/admin.functions";
 import { logSessionEvent } from "@/lib/audit.functions";
+import { adminAdjustUserBalance } from "@/lib/wallet.functions";
 
 
 import { AppShell } from "@/components/app/AppShell";
@@ -56,7 +60,7 @@ import {
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
-import { getServers, updateServiceDetails, getAllProducts } from "@/lib/support.functions";
+import { getServers, updateServiceDetails, getAllProducts, adminCreateClientService } from "@/lib/support.functions";
 import { getAvailableVPSInstances } from "@/lib/vps-admin.functions";
 import {
   Select,
@@ -99,7 +103,7 @@ const clientDossierQueryOptions = (clientId: string) =>
     queryFn: async () => {
       return getClientDossier({ data: { clientId } });
     },
-    staleTime: 1000 * 60 * 2,
+    staleTime: 0,
   });
 
 function ClientDetailPage() {
@@ -113,15 +117,24 @@ function ClientDetailPage() {
   // Estado para o modal de edição de serviço
   const [editingService, setEditingService] = useState<any>(null);
 
-  function VPSInstanceSelector({ serviceId, currentVpsId }: { serviceId: string, currentVpsId?: string }) {
+  function VPSInstanceSelector({ serviceId, currentVpsId, onSelect }: { serviceId: string, currentVpsId?: string, onSelect?: (val: string) => void }) {
     const { data: vpsInstances, isLoading } = useQuery({
       queryKey: ["available-vps-instances", serviceId],
       queryFn: () => getAvailableVPSInstances({ data: { serviceId } }),
     });
 
+    const [selectedVal, setSelectedVal] = useState<string>(currentVpsId || "none");
+
     return (
       <div className="space-y-2">
-        <Select name="vps_instance_id" defaultValue={currentVpsId || "none"}>
+        <input type="hidden" name="vps_instance_id" value={selectedVal} />
+        <Select 
+          value={selectedVal} 
+          onValueChange={(val) => {
+            setSelectedVal(val);
+            if (onSelect) onSelect(val);
+          }}
+        >
           <SelectTrigger className="h-9 rounded-xl border-input bg-background shadow-sm text-xs">
             <SelectValue placeholder={isLoading ? "Carregando..." : "Selecione uma instância..."} />
           </SelectTrigger>
@@ -129,7 +142,7 @@ function ClientDetailPage() {
             <SelectItem value="none">Nenhuma vinculada</SelectItem>
             {vpsInstances?.map((vps: any) => (
               <SelectItem key={vps.id} value={vps.id}>
-                {vps.ip_address || 'Pendente'} ({vps.external_id || 'Sem ID'}) - {vps.status}
+                {vps.name || 'VPS'} — IP: {vps.ip_address || 'Pendente'} (ID: {vps.external_id})
               </SelectItem>
             ))}
           </SelectContent>
@@ -140,7 +153,8 @@ function ClientDetailPage() {
 
   const { data: client } = useSuspenseQuery(clientDossierQueryOptions(clientId));
   const { data: servers } = useSuspenseQuery(serversQueryOptions);
-  const { data: allProducts } = useSuspenseQuery(productsQueryOptions);
+  const { data: products } = useSuspenseQuery(productsQueryOptions);
+  const allProducts = products;
 
   const dossier = {
     invoices: client.invoices,
@@ -214,6 +228,31 @@ function ClientDetailPage() {
     }
   });
 
+  const [isBalanceModalOpen, setIsBalanceModalOpen] = useState(false);
+  const [balanceAmount, setBalanceAmount] = useState("");
+  const [balanceType, setBalanceType] = useState<"deposit" | "refund" | "bonus" | "adjustment">("bonus");
+  const [balanceDesc, setBalanceDesc] = useState("");
+
+  const executeAdjustBalance = useServerFn(adminAdjustUserBalance);
+
+  const adjustBalanceMutation = useMutation({
+    mutationFn: (vars: { amount: number; type: any; description: string }) =>
+      executeAdjustBalance({ data: { targetUserId: clientId, ...vars } }),
+    onSuccess: (res) => {
+      queryClient.invalidateQueries({ queryKey: ["admin-client-dossier", clientId] });
+      queryClient.invalidateQueries({ queryKey: ["profile"] });
+      queryClient.invalidateQueries({ queryKey: ["client-my-wallet"] });
+      queryClient.invalidateQueries({ queryKey: ["client-dashboard-stats"] });
+      setIsBalanceModalOpen(false);
+      setBalanceAmount("");
+      setBalanceDesc("");
+      toast.success(`Saldo ajustado com sucesso! Novo saldo: R$ ${res.newBalance.toFixed(2)}`);
+    },
+    onError: (err: any) => {
+      toast.error(`Erro ao ajustar saldo: ${err.message}`);
+    }
+  });
+
   const hostingActionMutation = useMutation({
     mutationFn: (vars: { serviceId: string; action: 'suspend' | 'unsuspend' | 'delete' }) => {
       const { hostingAction } = require("@/lib/support.functions");
@@ -227,6 +266,107 @@ function ClientDetailPage() {
       toast.error(`Erro ao executar ação: ${err.message}`);
     }
   });
+
+  // Estado para o modal de Adicionar Novo Serviço
+  const [isAddServiceModalOpen, setIsAddServiceModalOpen] = useState(false);
+  const [newServiceProduct, setNewServiceProduct] = useState("");
+  const [newServiceBillingCycle, setNewServiceBillingCycle] = useState<"monthly" | "quarterly" | "semiannually" | "annually" | "biennially">("monthly");
+  const [newServiceStatus, setNewServiceStatus] = useState<"active" | "pending" | "suspended" | "cancelled">("active");
+  const [newServiceNextDue, setNewServiceNextDue] = useState("");
+  const [newServiceInvoice, setNewServiceInvoice] = useState(false);
+  const [newServiceNotes, setNewServiceNotes] = useState("");
+
+  // Hospedagem Web
+  const [newServiceDomain, setNewServiceDomain] = useState("");
+  const [newServiceServer, setNewServiceServer] = useState("");
+  const [newServiceUsername, setNewServiceUsername] = useState("");
+  const [newServicePassword, setNewServicePassword] = useState("");
+  const [newServiceProvision, setNewServiceProvision] = useState(false);
+
+  // Servidor VPS
+  const [newVpsHostname, setNewVpsHostname] = useState("");
+  const [newVpsInstanceId, setNewVpsInstanceId] = useState("");
+  const [newVpsIpAddress, setNewVpsIpAddress] = useState("");
+  const [newVpsExternalId, setNewVpsExternalId] = useState("");
+  const [newVpsOsTemplate, setNewVpsOsTemplate] = useState("Ubuntu 24.04");
+  const [newVpsRegion, setNewVpsRegion] = useState("US-east");
+  const [newVpsSshUser, setNewVpsSshUser] = useState("root");
+  const [newVpsSshPort, setNewVpsSshPort] = useState(22);
+  const [newVpsSshPassword, setNewVpsSshPassword] = useState("");
+
+  // Buscar instâncias VPS livres para vinculação rápida
+  const { data: availableVpsInstances } = useQuery({
+    queryKey: ["admin-available-vps-instances-modal"],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('vps_instances')
+        .select('id, external_id, name, ip_address, status, region, os_template, service_id');
+      return (data || []).filter((i: any) => !i.service_id);
+    },
+    enabled: isAddServiceModalOpen,
+  });
+
+  const createServiceMutation = useMutation({
+    mutationFn: (data: any) => adminCreateClientService({ data }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin-client-dossier", clientId] });
+      queryClient.invalidateQueries({ queryKey: ["admin-available-vps-instances-modal"] });
+      queryClient.invalidateQueries({ queryKey: ["admin-vps-instances"] });
+      setIsAddServiceModalOpen(false);
+      setNewServiceProduct("");
+      setNewServiceDomain("");
+      setNewServiceServer("");
+      setNewServiceUsername("");
+      setNewServicePassword("");
+      setNewServiceNotes("");
+      setNewVpsHostname("");
+      setNewVpsInstanceId("");
+      setNewVpsIpAddress("");
+      setNewVpsExternalId("");
+      setNewVpsSshPassword("");
+      toast.success("Novo serviço adicionado com sucesso ao cliente!");
+    },
+    onError: (err: any) => {
+      toast.error("Erro ao cadastrar serviço: " + err.message);
+    }
+  });
+
+  const handleCreateServiceSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newServiceProduct) {
+      toast.error("Selecione um produto ou plano.");
+      return;
+    }
+    const selectedProd = products?.find((p: any) => p.id === newServiceProduct);
+    const isHosting = selectedProd?.product_type === 'hosting';
+    const isVPS = selectedProd?.product_type === 'vps';
+
+    createServiceMutation.mutate({
+      clientId,
+      productId: newServiceProduct,
+      billingCycle: newServiceBillingCycle,
+      status: newServiceStatus,
+      nextDueDate: newServiceNextDue ? new Date(newServiceNextDue).toISOString() : null,
+      generateInvoice: newServiceInvoice,
+      notes: newServiceNotes || null,
+      // Hospedagem
+      domain: isHosting ? (newServiceDomain || null) : (newVpsHostname || newServiceDomain || null),
+      serverId: isHosting ? (newServiceServer || null) : null,
+      username: isHosting ? (newServiceUsername || null) : (newVpsSshUser || null),
+      password: isHosting ? (newServicePassword || null) : (newVpsSshPassword || null),
+      provisionServer: isHosting ? newServiceProvision : false,
+      // VPS
+      vpsHostname: isVPS ? (newVpsHostname || null) : null,
+      vpsInstanceId: isVPS ? (newVpsInstanceId || null) : null,
+      vpsIpAddress: isVPS ? (newVpsIpAddress || null) : null,
+      vpsExternalId: isVPS ? (newVpsExternalId || null) : null,
+      vpsOsTemplate: isVPS ? (newVpsOsTemplate || null) : null,
+      vpsRegion: isVPS ? (newVpsRegion || null) : null,
+      vpsSshUser: isVPS ? (newVpsSshUser || 'root') : null,
+      vpsSshPort: isVPS ? (Number(newVpsSshPort) || 22) : null,
+      vpsSshPassword: isVPS ? (newVpsSshPassword || null) : null,
+    });
+  };
 
   const handleUpdateService = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -266,7 +406,16 @@ function ClientDetailPage() {
             <h1 className="text-xl sm:text-2xl font-bold tracking-tight">{client.full_name || "Sem Nome"}</h1>
             <p className="text-sm text-muted-foreground">{client.email}</p>
           </div>
-          <div className="flex flex-wrap gap-3">
+          <div className="flex flex-wrap items-center gap-3">
+            <Button
+              onClick={() => setIsBalanceModalOpen(true)}
+              variant="outline"
+              className="rounded-xl flex items-center gap-2 h-9 text-xs border-emerald-500/40 bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500/20 font-bold"
+            >
+              <Wallet className="size-4 text-emerald-600" />
+              <span>Saldo: R$ {Number(client.account_balance || 0).toFixed(2)}</span>
+              <span className="text-[10px] text-emerald-700 bg-emerald-500/20 px-1.5 py-0.5 rounded-md font-semibold">+ Ajustar Saldo</span>
+            </Button>
             <Button 
               variant="outline" 
               className="rounded-xl flex gap-2 h-9 text-xs flex-1 sm:flex-none"
@@ -465,9 +614,23 @@ function ClientDetailPage() {
 
           <TabsContent value="services" className="mt-6">
             <Card className="rounded-3xl border-none shadow-sm">
-              <CardHeader className="py-4">
-                <CardTitle className="text-lg">Serviços Contratados</CardTitle>
-                <CardDescription className="text-xs">Hospedagem, domínios e outros</CardDescription>
+              <CardHeader className="py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div>
+                  <CardTitle className="text-lg">Serviços Contratados</CardTitle>
+                  <CardDescription className="text-xs">Hospedagem, servidores VPS, domínios e outros</CardDescription>
+                </div>
+                <Button
+                  size="sm"
+                  onClick={() => {
+                    const nextDate = new Date();
+                    nextDate.setDate(nextDate.getDate() + 30);
+                    setNewServiceNextDue(nextDate.toISOString().split("T")[0]);
+                    setIsAddServiceModalOpen(true);
+                  }}
+                  className="rounded-xl h-9 gap-1.5 bg-brand text-brand-foreground hover:bg-brand/90 shrink-0 font-medium"
+                >
+                  <PlusCircle className="size-4" /> Adicionar Serviço
+                </Button>
               </CardHeader>
               <CardContent>
                 {dossiersQuery.isLoading ? <Skeleton className="h-40" /> : (
@@ -530,9 +693,11 @@ function ClientDetailPage() {
                                      to="/admin/vps" 
                                      className="text-xs font-medium text-brand hover:underline flex items-center gap-1"
                                    >
-                                     <Monitor className="size-3" /> {s.vps_instances[0].ip_address || "Instância VPS"}
+                                     <Monitor className="size-3" /> {s.vps_instances[0].name || s.vps_instances[0].ip_address || "Instância VPS"}
                                    </Link>
-                                   <span className="text-[10px] text-muted-foreground font-mono">ID: {s.vps_instances[0].external_id}</span>
+                                   <span className="text-[10px] text-muted-foreground font-mono">
+                                     IP: {s.vps_instances[0].ip_address || "Pendente"} (ID: {s.vps_instances[0].external_id})
+                                   </span>
                                  </div>
                                ) : (s.products?.product_type === 'vps' || s.billing_cycle === 'vps') ? (
                                  <Link 
@@ -619,7 +784,112 @@ function ClientDetailPage() {
             </Card>
           </TabsContent>
 
-          <TabsContent value="finance" className="mt-6">
+          <TabsContent value="finance" className="mt-6 space-y-6">
+            {/* Card de Saldo da Carteira */}
+            <Card className="rounded-3xl border-none shadow-sm bg-gradient-to-r from-emerald-500/10 via-teal-500/5 to-transparent border border-emerald-500/20 p-6">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div className="flex items-center gap-4">
+                  <div className="p-3.5 bg-emerald-500/20 text-emerald-600 rounded-2xl">
+                    <Wallet className="size-6" />
+                  </div>
+                  <div>
+                    <p className="text-xs uppercase font-semibold text-muted-foreground tracking-wider">Saldo da Carteira do Cliente</p>
+                    <h3 className="text-2xl sm:text-3xl font-extrabold text-foreground mt-0.5">
+                      R$ {Number(client.account_balance || 0).toFixed(2)}
+                    </h3>
+                  </div>
+                </div>
+                <div>
+                  <Button 
+                    onClick={() => setIsBalanceModalOpen(true)}
+                    className="rounded-2xl gap-2 bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm"
+                  >
+                    <PlusCircle className="size-4" /> Ajustar Saldo / Conceder Crédito
+                  </Button>
+                </div>
+              </div>
+            </Card>
+
+            {/* Modal de Ajuste de Saldo */}
+            <Dialog open={isBalanceModalOpen} onOpenChange={setIsBalanceModalOpen}>
+              <DialogContent className="rounded-3xl max-w-md">
+                <DialogHeader>
+                  <DialogTitle className="flex items-center gap-2">
+                    <Wallet className="size-5 text-emerald-600" /> Ajustar Saldo do Cliente
+                  </DialogTitle>
+                  <DialogDescription>
+                    Adicione créditos, estornos ou bônus diretamente na carteira deste cliente.
+                  </DialogDescription>
+                </DialogHeader>
+
+                <div className="space-y-4 py-2">
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-semibold">Tipo de Ajuste</Label>
+                    <select
+                      value={balanceType}
+                      onChange={(e: any) => setBalanceType(e.target.value)}
+                      className="flex h-10 w-full rounded-xl border border-input bg-background px-3 py-2 text-sm text-foreground"
+                    >
+                      <option value="bonus">Bônus / Cortesia (+)</option>
+                      <option value="deposit">Depósito Manual (+)</option>
+                      <option value="refund">Estorno de Fatura / Reembolso (+)</option>
+                      <option value="adjustment">Ajuste / Correção</option>
+                    </select>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-semibold">Valor (R$)</Label>
+                    <Input 
+                      type="number"
+                      step="0.01"
+                      placeholder="Ex: 50.00 (ou negativo para debitar)"
+                      value={balanceAmount}
+                      onChange={(e) => setBalanceAmount(e.target.value)}
+                      className="rounded-xl font-bold"
+                    />
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-semibold">Motivo / Descrição</Label>
+                    <Input 
+                      placeholder="Ex: Crédito concedido pelo suporte técnico"
+                      value={balanceDesc}
+                      onChange={(e) => setBalanceDesc(e.target.value)}
+                      className="rounded-xl text-xs"
+                    />
+                  </div>
+                </div>
+
+                <DialogFooter>
+                  <Button 
+                    variant="outline" 
+                    onClick={() => setIsBalanceModalOpen(false)}
+                    className="rounded-xl"
+                  >
+                    Cancelar
+                  </Button>
+                  <Button 
+                    disabled={adjustBalanceMutation.isPending || !balanceAmount}
+                    onClick={() => {
+                      const amount = parseFloat(balanceAmount);
+                      if (isNaN(amount) || amount === 0) {
+                        toast.error("Informe um valor válido.");
+                        return;
+                      }
+                      adjustBalanceMutation.mutate({
+                        amount,
+                        type: balanceType,
+                        description: balanceDesc || "Ajuste manual de saldo",
+                      });
+                    }}
+                    className="rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white"
+                  >
+                    {adjustBalanceMutation.isPending ? "Salvando..." : "Confirmar Ajuste"}
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+
             <Card className="rounded-3xl border-none shadow-sm">
               <CardHeader>
                 <CardTitle>Histórico Financeiro</CardTitle>
@@ -803,33 +1073,40 @@ function ClientDetailPage() {
                     <Label htmlFor="vps_instance_id" className="text-xs font-bold text-brand">Vincular Instância VPS</Label>
                     <VPSInstanceSelector 
                       serviceId={editingService.id} 
-                      currentVpsId={editingService.vps_instances?.id} 
+                      currentVpsId={Array.isArray(editingService.vps_instances) ? editingService.vps_instances[0]?.id : editingService.vps_instances?.id} 
                     />
                   </div>
                   
-                  {editingService.vps_instances && (
-                    <div className="sm:col-span-2 p-3 rounded-2xl bg-brand/5 border border-brand/10 space-y-2">
-                      <h4 className="text-[10px] font-bold text-brand uppercase tracking-wider flex items-center gap-1">
-                        <Monitor className="size-3" /> Detalhes da VPS Vinculada
-                      </h4>
-                      <div className="grid grid-cols-2 gap-3">
-                        <div>
-                          <p className="text-[9px] text-muted-foreground">IP Principal</p>
-                          <p className="text-xs font-mono font-bold">{editingService.vps_instances.ip_address || "Aguardando..."}</p>
-                        </div>
-                        <div>
-                          <p className="text-[9px] text-muted-foreground">External ID</p>
-                          <p className="text-xs font-mono">{editingService.vps_instances.external_id || "N/A"}</p>
-                        </div>
-                        <div>
-                          <p className="text-[9px] text-muted-foreground">Status</p>
-                          <Badge variant="outline" className="text-[9px] uppercase h-4 px-1">
-                            {editingService.vps_instances.status || "Desconhecido"}
-                          </Badge>
+                  {editingService.vps_instances && (Array.isArray(editingService.vps_instances) ? editingService.vps_instances.length > 0 : true) && (() => {
+                    const vps = Array.isArray(editingService.vps_instances) ? editingService.vps_instances[0] : editingService.vps_instances;
+                    return (
+                      <div className="sm:col-span-2 p-3 rounded-2xl bg-brand/5 border border-brand/10 space-y-2">
+                        <h4 className="text-[10px] font-bold text-brand uppercase tracking-wider flex items-center gap-1">
+                          <Monitor className="size-3" /> Detalhes da VPS Vinculada: {vps.name || 'VPS'}
+                        </h4>
+                        <div className="grid grid-cols-2 gap-3">
+                          <div>
+                            <p className="text-[9px] text-muted-foreground">IP Principal</p>
+                            <p className="text-xs font-mono font-bold text-brand">{vps.ip_address || "Aguardando..."}</p>
+                          </div>
+                          <div>
+                            <p className="text-[9px] text-muted-foreground">External ID</p>
+                            <p className="text-xs font-mono">{vps.external_id || "N/A"}</p>
+                          </div>
+                          <div>
+                            <p className="text-[9px] text-muted-foreground">Status</p>
+                            <Badge variant="outline" className="text-[9px] uppercase h-4 px-1 border-emerald-500/30 text-emerald-600 bg-emerald-500/10">
+                              {vps.status || "Ativo"}
+                            </Badge>
+                          </div>
+                          <div>
+                            <p className="text-[9px] text-muted-foreground">Região / SO</p>
+                            <p className="text-[10px] font-medium">{vps.region || "US"} · {vps.os_template || "Linux"}</p>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  )}
+                    );
+                  })()}
                 </>
               ) : (
                 <>
@@ -986,6 +1263,409 @@ function ClientDetailPage() {
               </DialogFooter>
             </form>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal: Adicionar Novo Serviço ao Cliente */}
+      <Dialog open={isAddServiceModalOpen} onOpenChange={setIsAddServiceModalOpen}>
+        <DialogContent className="max-w-xl rounded-3xl border-none p-6 sm:p-8 max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-bold flex items-center gap-2">
+              <PlusCircle className="size-5 text-brand" /> Adicionar Serviço ao Cliente
+            </DialogTitle>
+            <DialogDescription className="text-xs text-muted-foreground">
+              Cadastre um novo plano de hospedagem, servidor VPS ou outro serviço para <strong>{client.full_name || client.email}</strong>.
+            </DialogDescription>
+          </DialogHeader>
+
+          <form onSubmit={handleCreateServiceSubmit} className="space-y-4 pt-2">
+            {/* Seleção de Produto / Plano */}
+            <div className="space-y-1.5">
+              <Label className="text-xs font-semibold">Produto / Plano *</Label>
+              <Select
+                value={newServiceProduct}
+                onValueChange={(val) => {
+                  setNewServiceProduct(val);
+                  const prod = products?.find((p: any) => p.id === val);
+                  if (prod?.product_type === 'vps') {
+                    if (!newVpsHostname) setNewVpsHostname(`vps-${client.full_name?.toLowerCase().replace(/\s+/g, '') || 'instancia'}`);
+                  }
+                }}
+                required
+              >
+                <SelectTrigger className="rounded-xl h-10">
+                  <SelectValue placeholder="Selecione o plano..." />
+                </SelectTrigger>
+                <SelectContent className="rounded-xl">
+                  {products?.map((prod: any) => (
+                    <SelectItem key={prod.id} value={prod.id}>
+                      {prod.name} — {prod.product_type === 'vps' ? 'Servidor VPS' : 'Hospedagem Web'}{prod.directadmin_package ? ` (Pacote: ${prod.directadmin_package})` : ''}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* SEÇÃO DINÂMICA: HOSPEDAGEM WEB */}
+            {(() => {
+              const selectedProd = products?.find((p: any) => p.id === newServiceProduct);
+              const isHosting = !selectedProd || selectedProd.product_type === 'hosting';
+              const isVPS = selectedProd?.product_type === 'vps';
+
+              if (isHosting) {
+                return (
+                  <div className="space-y-4 p-4 rounded-2xl bg-muted/30 border">
+                    <div className="flex items-center gap-2 text-xs font-semibold text-brand">
+                      <Server className="size-4" /> Configurações da Hospedagem Web
+                    </div>
+                    
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      {/* Domínio */}
+                      <div className="space-y-1.5">
+                        <Label className="text-xs font-semibold">Domínio Principal *</Label>
+                        <Input
+                          placeholder="ex: meusite.com.br"
+                          value={newServiceDomain}
+                          onChange={(e) => {
+                            const dom = e.target.value;
+                            setNewServiceDomain(dom);
+                            if (!newServiceUsername && dom.includes(".")) {
+                              const cleanUser = dom.split(".")[0].replace(/[^a-zA-Z0-9]/g, "").slice(0, 8).toLowerCase();
+                              setNewServiceUsername(cleanUser);
+                            }
+                          }}
+                          className="rounded-xl h-10"
+                          required={isHosting}
+                        />
+                      </div>
+
+                      {/* Servidor */}
+                      <div className="space-y-1.5">
+                        <Label className="text-xs font-semibold">Servidor DirectAdmin</Label>
+                        <Select value={newServiceServer} onValueChange={setNewServiceServer}>
+                          <SelectTrigger className="rounded-xl h-10">
+                            <SelectValue placeholder="Selecione o servidor..." />
+                          </SelectTrigger>
+                          <SelectContent className="rounded-xl">
+                            {servers?.map((srv: any) => (
+                              <SelectItem key={srv.id} value={srv.id}>
+                                {srv.name || srv.hostname} ({srv.type?.toUpperCase() || 'DA'})
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      {/* Usuário */}
+                      <div className="space-y-1.5">
+                        <div className="flex items-center justify-between">
+                          <Label className="text-xs font-semibold">Usuário cPanel/DA</Label>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const rand = "usr" + Math.floor(1000 + Math.random() * 9000);
+                              setNewServiceUsername(rand);
+                            }}
+                            className="text-[10px] text-brand hover:underline"
+                          >
+                            Gerar
+                          </button>
+                        </div>
+                        <Input
+                          placeholder="ex: cliente01"
+                          value={newServiceUsername}
+                          onChange={(e) => setNewServiceUsername(e.target.value)}
+                          className="rounded-xl h-10 font-mono text-xs"
+                        />
+                      </div>
+
+                      {/* Senha */}
+                      <div className="space-y-1.5">
+                        <div className="flex items-center justify-between">
+                          <Label className="text-xs font-semibold">Senha de Acesso</Label>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const pass = "Eqsam#" + Math.random().toString(36).slice(-8) + "!";
+                              setNewServicePassword(pass);
+                            }}
+                            className="text-[10px] text-brand hover:underline"
+                          >
+                            Gerar Forte
+                          </button>
+                        </div>
+                        <Input
+                          placeholder="ex: Senha#Forte123"
+                          value={newServicePassword}
+                          onChange={(e) => setNewServicePassword(e.target.value)}
+                          className="rounded-xl h-10 font-mono text-xs"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="flex items-center justify-between p-3 rounded-xl bg-background border">
+                      <div className="space-y-0.5">
+                        <Label className="text-xs font-semibold cursor-pointer">Provisionar Imediatamente no Servidor</Label>
+                        <p className="text-[10px] text-muted-foreground">
+                          Cria a conta no DirectAdmin agora via API no servidor selecionado.
+                        </p>
+                      </div>
+                      <Switch
+                        checked={newServiceProvision}
+                        onCheckedChange={setNewServiceProvision}
+                      />
+                    </div>
+                  </div>
+                );
+              }
+
+              if (isVPS) {
+                return (
+                  <div className="space-y-4 p-4 rounded-2xl bg-muted/30 border">
+                    <div className="flex items-center gap-2 text-xs font-semibold text-brand">
+                      <Monitor className="size-4" /> Configurações do Servidor VPS
+                    </div>
+
+                    {/* Opção de Vincular Instância Contabo Existente */}
+                    {availableVpsInstances && availableVpsInstances.length > 0 && (
+                      <div className="space-y-1.5 p-3 rounded-xl bg-brand/5 border border-brand/20">
+                        <Label className="text-xs font-semibold text-brand">Vincular Instância Sincronizada da Contabo (Opcional)</Label>
+                        <Select
+                          value={newVpsInstanceId}
+                          onValueChange={(instId) => {
+                            setNewVpsInstanceId(instId);
+                            if (instId && instId !== 'manual') {
+                              const match = availableVpsInstances.find((i: any) => i.id === instId);
+                              if (match) {
+                                setNewVpsHostname(match.name || `VPS ${match.external_id}`);
+                                setNewVpsIpAddress(match.ip_address || '');
+                                setNewVpsExternalId(match.external_id || '');
+                                if (match.region) setNewVpsRegion(match.region);
+                                if (match.os_template) setNewVpsOsTemplate(match.os_template);
+                              }
+                            }
+                          }}
+                        >
+                          <SelectTrigger className="rounded-xl h-10 bg-background">
+                            <SelectValue placeholder="Selecione um servidor Contabo não vinculado..." />
+                          </SelectTrigger>
+                          <SelectContent className="rounded-xl">
+                            <SelectItem value="manual">Configurar Manualmente</SelectItem>
+                            {availableVpsInstances.map((inst: any) => (
+                              <SelectItem key={inst.id} value={inst.id}>
+                                {inst.name || 'VPS'} — IP: {inst.ip_address || 'Pendente'} (ID: {inst.external_id})
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    )}
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      {/* Hostname / Nome */}
+                      <div className="space-y-1.5">
+                        <Label className="text-xs font-semibold">Hostname / Nome da VPS *</Label>
+                        <Input
+                          placeholder="ex: vps-streambr.eqsam.com"
+                          value={newVpsHostname}
+                          onChange={(e) => setNewVpsHostname(e.target.value)}
+                          className="rounded-xl h-10"
+                          required
+                        />
+                      </div>
+
+                      {/* IP */}
+                      <div className="space-y-1.5">
+                        <Label className="text-xs font-semibold">Endereço IP</Label>
+                        <Input
+                          placeholder="ex: 154.53.35.8"
+                          value={newVpsIpAddress}
+                          onChange={(e) => setNewVpsIpAddress(e.target.value)}
+                          className="rounded-xl h-10 font-mono text-xs"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                      {/* External ID */}
+                      <div className="space-y-1.5">
+                        <Label className="text-xs font-semibold">External ID (Contabo)</Label>
+                        <Input
+                          placeholder="ex: 203016028"
+                          value={newVpsExternalId}
+                          onChange={(e) => setNewVpsExternalId(e.target.value)}
+                          className="rounded-xl h-10 font-mono text-xs"
+                        />
+                      </div>
+
+                      {/* SO Template */}
+                      <div className="space-y-1.5">
+                        <Label className="text-xs font-semibold">Sistema Operacional</Label>
+                        <Select value={newVpsOsTemplate} onValueChange={setNewVpsOsTemplate}>
+                          <SelectTrigger className="rounded-xl h-10 text-xs">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent className="rounded-xl">
+                            <SelectItem value="Ubuntu 24.04">Ubuntu 24.04 LTS</SelectItem>
+                            <SelectItem value="Ubuntu 22.04">Ubuntu 22.04 LTS</SelectItem>
+                            <SelectItem value="Debian 12">Debian 12</SelectItem>
+                            <SelectItem value="AlmaLinux 9">AlmaLinux 9</SelectItem>
+                            <SelectItem value="Windows Server 2022">Windows Server</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      {/* Região */}
+                      <div className="space-y-1.5">
+                        <Label className="text-xs font-semibold">Região / Datacenter</Label>
+                        <Select value={newVpsRegion} onValueChange={setNewVpsRegion}>
+                          <SelectTrigger className="rounded-xl h-10 text-xs">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent className="rounded-xl">
+                            <SelectItem value="US-east">Estados Unidos (US)</SelectItem>
+                            <SelectItem value="EU-central">Europa (Alemanha)</SelectItem>
+                            <SelectItem value="BR">Brasil (BR)</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+
+                    {/* Acesso SSH */}
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2 border-t">
+                      <div className="space-y-1.5">
+                        <Label className="text-xs font-semibold">Usuário SSH</Label>
+                        <Input
+                          value={newVpsSshUser}
+                          onChange={(e) => setNewVpsSshUser(e.target.value)}
+                          className="rounded-xl h-10 font-mono text-xs"
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label className="text-xs font-semibold">Porta SSH</Label>
+                        <Input
+                          type="number"
+                          value={newVpsSshPort}
+                          onChange={(e) => setNewVpsSshPort(Number(e.target.value))}
+                          className="rounded-xl h-10 font-mono text-xs"
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <div className="flex items-center justify-between">
+                          <Label className="text-xs font-semibold">Senha SSH</Label>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const pass = "EqsamVPS#" + Math.random().toString(36).slice(-8) + "!";
+                              setNewVpsSshPassword(pass);
+                            }}
+                            className="text-[10px] text-brand hover:underline"
+                          >
+                            Gerar
+                          </button>
+                        </div>
+                        <Input
+                          placeholder="Senha de root..."
+                          value={newVpsSshPassword}
+                          onChange={(e) => setNewVpsSshPassword(e.target.value)}
+                          className="rounded-xl h-10 font-mono text-xs"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                );
+              }
+
+              return null;
+            })()}
+
+            {/* CAMPOS COMUNS DE FATURAMENTO */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2">
+              {/* Ciclo de Faturamento */}
+              <div className="space-y-1.5">
+                <Label className="text-xs font-semibold">Ciclo</Label>
+                <Select value={newServiceBillingCycle} onValueChange={(val: any) => setNewServiceBillingCycle(val)}>
+                  <SelectTrigger className="rounded-xl h-10 text-xs">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent className="rounded-xl">
+                    <SelectItem value="monthly">Mensal</SelectItem>
+                    <SelectItem value="quarterly">Trimestral</SelectItem>
+                    <SelectItem value="semiannually">Semestral</SelectItem>
+                    <SelectItem value="annually">Anual</SelectItem>
+                    <SelectItem value="biennially">Bienal</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Status */}
+              <div className="space-y-1.5">
+                <Label className="text-xs font-semibold">Status Inicial</Label>
+                <Select value={newServiceStatus} onValueChange={(val: any) => setNewServiceStatus(val)}>
+                  <SelectTrigger className="rounded-xl h-10 text-xs">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent className="rounded-xl">
+                    <SelectItem value="active">Ativo</SelectItem>
+                    <SelectItem value="pending">Pendente</SelectItem>
+                    <SelectItem value="suspended">Suspenso</SelectItem>
+                    <SelectItem value="cancelled">Cancelado</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Próximo Vencimento */}
+              <div className="space-y-1.5">
+                <Label className="text-xs font-semibold">Próximo Vencimento</Label>
+                <Input
+                  type="date"
+                  value={newServiceNextDue}
+                  onChange={(e) => setNewServiceNextDue(e.target.value)}
+                  className="rounded-xl h-10 text-xs"
+                />
+              </div>
+            </div>
+
+            {/* Opção de Fatura */}
+            <div className="flex items-center justify-between p-3 rounded-2xl bg-muted/40 border">
+              <div className="space-y-0.5">
+                <Label className="text-xs font-semibold cursor-pointer">Gerar Fatura Correspondente</Label>
+                <p className="text-[10px] text-muted-foreground">
+                  Cria a fatura financeira para cobrança deste serviço no financeiro do cliente.
+                </p>
+              </div>
+              <Switch
+                checked={newServiceInvoice}
+                onCheckedChange={setNewServiceInvoice}
+              />
+            </div>
+
+            {/* Observações */}
+            <div className="space-y-1.5">
+              <Label className="text-xs font-semibold">Notas Internas (Opcional)</Label>
+              <Input
+                placeholder="Observações administrativas deste serviço..."
+                value={newServiceNotes}
+                onChange={(e) => setNewServiceNotes(e.target.value)}
+                className="rounded-xl h-9 text-xs"
+              />
+            </div>
+
+            <DialogFooter className="pt-3 gap-2">
+              <Button type="button" variant="outline" onClick={() => setIsAddServiceModalOpen(false)} className="rounded-xl">
+                Cancelar
+              </Button>
+              <Button
+                type="submit"
+                disabled={createServiceMutation.isPending}
+                className="rounded-xl bg-brand text-brand-foreground hover:bg-brand/90 font-semibold"
+              >
+                {createServiceMutation.isPending ? "Cadastrando..." : "Confirmar e Criar Serviço"}
+              </Button>
+            </DialogFooter>
+          </form>
         </DialogContent>
       </Dialog>
     </AppShell>

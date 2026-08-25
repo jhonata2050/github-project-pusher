@@ -1,5 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { 
   LayoutPanelLeft, 
   Store, 
@@ -13,14 +13,29 @@ import {
   User,
   ShieldCheck,
   Zap,
-  ShieldAlert
+  ShieldAlert,
+  TrendingUp,
+  Sparkles,
+  CheckCircle2,
+  Calendar,
+  Check
 } from "lucide-react";
+import { useState } from "react";
 import { AppShell } from "@/components/app/AppShell";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { 
+  Dialog, 
+  DialogContent, 
+  DialogDescription, 
+  DialogHeader, 
+  DialogTitle, 
+  DialogTrigger 
+} from "@/components/ui/dialog";
 import { getServiceServerDetails, getDASSOUrl } from "@/lib/support.functions";
+import { getAvailableUpgrades, requestServiceUpgrade } from "@/lib/upgrade.functions";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { isVPSService, getVPSInstance } from "@/lib/service-type";
@@ -34,9 +49,14 @@ export const Route = createFileRoute("/_authenticated/services/$serviceId")({
   component: ServiceManagementPage,
 });
 
+const brl = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" });
+
 function ServiceManagementPage() {
   const { serviceId } = Route.useParams();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const [upgradeDialogOpen, setUpgradeDialogOpen] = useState(false);
+  const [selectedUpgradeProduct, setSelectedUpgradeProduct] = useState<string | null>(null);
 
   const { data: service, isLoading, error } = useQuery({
     queryKey: ["service-details", serviceId],
@@ -45,15 +65,23 @@ function ServiceManagementPage() {
     },
   });
 
+  const { data: upgradeData, isLoading: isLoadingUpgrades } = useQuery({
+    queryKey: ["service-upgrades", serviceId],
+    queryFn: () => getAvailableUpgrades({ data: { serviceId } }),
+    enabled: upgradeDialogOpen,
+  });
 
-
-
-
-
-
-
-
-
+  const upgradeMutation = useMutation({
+    mutationFn: (targetProductId: string) => requestServiceUpgrade({ data: { serviceId, targetProductId } }),
+    onSuccess: (res) => {
+      toast.success(`Fatura de upgrade para ${res.targetProductName} gerada com sucesso!`);
+      setUpgradeDialogOpen(false);
+      navigate({ to: "/invoices/$invoiceId", params: { invoiceId: res.invoiceId } });
+    },
+    onError: (err: any) => {
+      toast.error(`Falha ao solicitar upgrade: ${err.message}`);
+    }
+  });
 
   const handleSSO = async (command?: string) => {
     if (service && (service as any).block_directadmin) {
@@ -72,7 +100,7 @@ function ServiceManagementPage() {
       return;
     }
 
-    // @ts-ignore - Supabase relations can be tricky with types
+    // @ts-ignore
     if (!service?.server_id || !service?.username) {
       toast.error("O usuário ou servidor ainda não foi vinculado a este serviço. Verifique a importação.");
       return;
@@ -149,29 +177,133 @@ function ServiceManagementPage() {
       }
     >
       <div className="flex flex-col gap-6">
-        <div className="flex items-center gap-4">
-          <Button variant="ghost" size="icon" asChild className="rounded-xl">
-            <Link to="/services">
-              <ArrowLeft className="size-5" />
-            </Link>
-          </Button>
-          <div>
-            <h1 className="text-2xl font-semibold tracking-tight">
-              {isVPSService(service) ? 'Gerenciar VPS' : 'Gerenciar Plano'}
-
-            </h1>
-            <p className="text-muted-foreground text-sm">
-              {service?.domain || (isLoading ? "Carregando..." : "Sem domínio")}
-            </p>
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="flex items-center gap-4">
+            <Button variant="ghost" size="icon" asChild className="rounded-xl">
+              <Link to="/services">
+                <ArrowLeft className="size-5" />
+              </Link>
+            </Button>
+            <div>
+              <h1 className="text-2xl font-semibold tracking-tight">
+                {isVPSService(service) ? 'Gerenciar VPS' : 'Gerenciar Plano'}
+              </h1>
+              <p className="text-muted-foreground text-sm">
+                {service?.domain || (isLoading ? "Carregando..." : "Sem domínio")}
+              </p>
+            </div>
+            {service?.status && (
+              <Badge className={cn(
+                "rounded-full px-4 py-1",
+                service.block_directadmin ? 'bg-destructive text-destructive-foreground' : 
+                service.status === 'active' ? 'bg-success/20 text-success' : 'bg-warning/20 text-warning'
+              )}>
+                {service.block_directadmin ? 'Bloqueado' : service.status === 'active' ? 'Ativo' : service.status}
+              </Badge>
+            )}
           </div>
-          {service?.status && (
-            <Badge className={cn(
-              "ml-auto rounded-full px-4 py-1",
-              service.block_directadmin ? 'bg-destructive text-destructive-foreground' : 
-              service.status === 'active' ? 'bg-success/20 text-success' : 'bg-warning/20 text-warning'
-            )}>
-              {service.block_directadmin ? 'Bloqueado' : service.status === 'active' ? 'Ativo' : service.status}
-            </Badge>
+
+          {/* Botão de Upgrade de Plano */}
+          {service && service.status === 'active' && (
+            <Dialog open={upgradeDialogOpen} onOpenChange={setUpgradeDialogOpen}>
+              <DialogTrigger asChild>
+                <Button className="rounded-xl gap-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-sm">
+                  <Sparkles className="size-4" />
+                  Fazer Upgrade de Plano
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-2xl rounded-3xl p-6">
+                <DialogHeader>
+                  <DialogTitle className="text-xl flex items-center gap-2">
+                    <TrendingUp className="size-5 text-primary" /> Upgrade de Plano
+                  </DialogTitle>
+                  <DialogDescription>
+                    Migre para um plano superior pagando apenas o valor proporcional (Prorata) dos dias restantes.
+                  </DialogDescription>
+                </DialogHeader>
+
+                {isLoadingUpgrades ? (
+                  <div className="py-8 space-y-4">
+                    <Skeleton className="h-20 w-full rounded-2xl" />
+                    <Skeleton className="h-20 w-full rounded-2xl" />
+                  </div>
+                ) : upgradeData?.availableUpgrades && upgradeData.availableUpgrades.length > 0 ? (
+                  <div className="space-y-4 mt-4 max-h-[60vh] overflow-y-auto pr-1">
+                    <div className="p-3 bg-secondary/40 rounded-xl text-xs flex justify-between items-center text-muted-foreground">
+                      <span>Plano Atual: <strong className="text-foreground">{upgradeData.service.currentProduct.name}</strong></span>
+                      <span>Dias restantes no ciclo: <strong className="text-foreground">{upgradeData.service.daysRemaining} dias</strong></span>
+                    </div>
+
+                    <div className="space-y-3">
+                      {upgradeData.availableUpgrades.map((pkg: any) => (
+                        <div 
+                          key={pkg.id}
+                          onClick={() => setSelectedUpgradeProduct(pkg.id)}
+                          className={cn(
+                            "p-4 rounded-2xl border-2 cursor-pointer transition-all flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4",
+                            selectedUpgradeProduct === pkg.id 
+                              ? "border-primary bg-primary/5 shadow-sm" 
+                              : "border-border hover:border-primary/40 bg-card"
+                          )}
+                        >
+                          <div>
+                            <h4 className="font-bold text-sm text-foreground flex items-center gap-2">
+                              {pkg.name}
+                              {selectedUpgradeProduct === pkg.id && (
+                                <CheckCircle2 className="size-4 text-primary" />
+                              )}
+                            </h4>
+                            <p className="text-xs text-muted-foreground mt-0.5">{pkg.description || "Recursos expandidos"}</p>
+                            <div className="flex gap-2 mt-2">
+                              {pkg.directadminPackage && (
+                                <Badge variant="outline" className="text-[10px] rounded-md">
+                                  Pacote: {pkg.directadminPackage}
+                                </Badge>
+                              )}
+                              {pkg.cpuCores && (
+                                <Badge variant="outline" className="text-[10px] rounded-md">
+                                  {pkg.cpuCores} vCPU
+                                </Badge>
+                              )}
+                              {pkg.ramGb && (
+                                <Badge variant="outline" className="text-[10px] rounded-md">
+                                  {pkg.ramGb} GB RAM
+                                </Badge>
+                              )}
+                            </div>
+                          </div>
+
+                          <div className="text-right sm:self-center shrink-0">
+                            <div className="text-[10px] uppercase font-bold text-muted-foreground">Pagar agora (Prorata)</div>
+                            <div className="text-lg font-bold text-primary">{brl.format(pkg.prorataAmount)}</div>
+                            <div className="text-[10px] text-muted-foreground">Novo valor: {brl.format(pkg.targetPrice)}/mês</div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+
+                    <div className="pt-4 flex justify-end gap-2 border-t">
+                      <Button variant="outline" onClick={() => setUpgradeDialogOpen(false)} className="rounded-xl">
+                        Cancelar
+                      </Button>
+                      <Button 
+                        disabled={!selectedUpgradeProduct || upgradeMutation.isPending}
+                        onClick={() => selectedUpgradeProduct && upgradeMutation.mutate(selectedUpgradeProduct)}
+                        className="rounded-xl bg-primary text-primary-foreground gap-2"
+                      >
+                        {upgradeMutation.isPending ? "Gerando Fatura..." : "Confirmar Upgrade"}
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="py-12 text-center text-muted-foreground space-y-3">
+                    <CheckCircle2 className="size-10 text-lime-600 mx-auto opacity-70" />
+                    <p className="text-sm font-medium">Você já está no melhor plano disponível!</p>
+                    <p className="text-xs">Não há opções de upgrade superiores para este serviço no momento.</p>
+                  </div>
+                )}
+              </DialogContent>
+            </Dialog>
           )}
         </div>
 
@@ -196,7 +328,6 @@ function ServiceManagementPage() {
         )}
 
         {isLoading ? (
-
           <div className="grid gap-6 grid-cols-1 md:grid-cols-3">
             <Skeleton className="h-64 rounded-3xl md:col-span-2" />
             <Skeleton className="h-64 rounded-3xl" />
@@ -218,7 +349,6 @@ function ServiceManagementPage() {
                   <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                     <div className="p-4 rounded-2xl bg-secondary/30">
                       <p className="text-xs text-muted-foreground font-medium uppercase">Usuário</p>
-                      {/* @ts-ignore */}
                       <p className="mt-1 font-bold text-foreground">
                         {service.username || '---'}
                         {!service.username && (
@@ -230,12 +360,10 @@ function ServiceManagementPage() {
                     </div>
                     <div className="p-4 rounded-2xl bg-secondary/30">
                       <p className="text-xs text-muted-foreground font-medium uppercase">IP do Servidor</p>
-                      {/* @ts-ignore */}
                       <p className="mt-1 font-bold text-foreground">{service.servers?.ip_address || service.servers?.hostname || '---'}</p>
                     </div>
                     <div className="p-4 rounded-2xl bg-secondary/30">
                       <p className="text-xs text-muted-foreground font-medium uppercase">Servidor</p>
-                      {/* @ts-ignore */}
                       <p className="mt-1 font-bold text-foreground">{service.servers?.name || '---'}</p>
                     </div>
                   </div>
@@ -293,7 +421,6 @@ function ServiceManagementPage() {
 
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 sm:gap-4">
               {isVPSService(service) ? (
-
                 <>
                   <QuickActionCard 
                     icon={<Activity className="size-6" />} 
@@ -349,9 +476,7 @@ function ServiceManagementPage() {
                   />
                 </>
               )}
-
             </div>
-
           </>
         )}
       </div>

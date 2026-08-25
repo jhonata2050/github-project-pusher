@@ -3,9 +3,24 @@ import { AppShell } from "@/components/app/AppShell";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { getTicketDetails, replyTicket } from "@/lib/support.functions";
+import { getTicketDetails, replyTicket, updateTicketStatus } from "@/lib/support.functions";
 import { useIsStaff } from "@/hooks/use-auth";
-import { MessageSquare, Send, User, Shield, ArrowLeft, Clock, AlertCircle, Paperclip, X, Image as ImageIcon } from "lucide-react";
+import { 
+  MessageSquare, 
+  Send, 
+  User, 
+  Shield, 
+  ArrowLeft, 
+  Clock, 
+  AlertCircle, 
+  Paperclip, 
+  X, 
+  CheckCircle,
+  CheckCircle2,
+  Hourglass,
+  RotateCcw,
+  Loader2
+} from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
@@ -13,16 +28,25 @@ import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { Link } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
+import { 
+  Select, 
+  SelectContent, 
+  SelectItem, 
+  SelectTrigger, 
+  SelectValue 
+} from "@/components/ui/select";
 
 export const Route = createFileRoute("/_authenticated/tickets/$ticketId")({
   component: TicketDetailsPage,
 });
 
 const STATUS_MAP = {
-  open: { label: "Aberto", color: "bg-brand/10 text-brand border-brand/20" },
+  open: { label: "Aberto", color: "bg-emerald-500/10 text-emerald-600 border-emerald-500/20" },
+  in_progress: { label: "Em Análise", color: "bg-purple-500/10 text-purple-600 border-purple-500/20" },
+  on_hold: { label: "Em Verificação", color: "bg-amber-500/10 text-amber-600 border-amber-500/20" },
   answered: { label: "Respondido", color: "bg-blue-500/10 text-blue-600 border-blue-500/20" },
-  "customer-reply": { label: "Aguardando", color: "bg-orange-500/10 text-orange-600 border-orange-500/20" },
-  closed: { label: "Fechado", color: "bg-muted text-muted-foreground border-muted-foreground/20" },
+  "customer-reply": { label: "Aguardando Cliente", color: "bg-orange-500/10 text-orange-600 border-orange-500/20" },
+  closed: { label: "Fechado", color: "bg-slate-500/10 text-slate-500 border-slate-500/20" },
 };
 
 function TicketDetailsPage() {
@@ -46,12 +70,28 @@ function TicketDetailsPage() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["ticket", ticketId] });
+      queryClient.invalidateQueries({ queryKey: ["admin-tickets"] });
+      queryClient.invalidateQueries({ queryKey: ["client-tickets"] });
       setMessage("");
       setAttachments([]);
       toast.success("Resposta enviada!");
     },
     onError: (err: any) => {
       toast.error("Erro ao responder: " + err.message);
+    },
+  });
+
+  const statusMutation = useMutation({
+    mutationFn: (status: "open" | "answered" | "customer-reply" | "in_progress" | "on_hold" | "closed") =>
+      updateTicketStatus({ data: { ticketId, status } }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["ticket", ticketId] });
+      queryClient.invalidateQueries({ queryKey: ["admin-tickets"] });
+      queryClient.invalidateQueries({ queryKey: ["client-tickets"] });
+      toast.success("Status do ticket atualizado!");
+    },
+    onError: (err: any) => {
+      toast.error("Erro ao atualizar status: " + err.message);
     },
   });
 
@@ -114,9 +154,8 @@ function TicketDetailsPage() {
   }, [data?.messages]);
 
   if (isLoading) return <div className="h-96 flex items-center justify-center">Carregando ticket...</div>;
-
-
   if (!data) return <div>Ticket não encontrado</div>;
+
   const { ticket, messages } = data;
   const status = STATUS_MAP[ticket.status as keyof typeof STATUS_MAP] || STATUS_MAP.open;
 
@@ -132,7 +171,7 @@ function TicketDetailsPage() {
       }
     >
       <div className="max-w-5xl mx-auto space-y-6">
-        <div className="flex flex-col md:flex-row justify-between gap-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="flex items-center gap-4">
             <Link to={isStaff ? "/admin/tickets" : "/tickets"}>
               <Button variant="outline" size="icon" className="rounded-xl border-brand/20 text-brand">
@@ -141,12 +180,12 @@ function TicketDetailsPage() {
             </Link>
             <div>
               <h1 className="text-2xl font-bold tracking-tight text-foreground">{ticket.subject}</h1>
-              <div className="flex items-center gap-3 mt-1">
+              <div className="flex flex-wrap items-center gap-3 mt-1">
                 <Badge variant="outline" className={cn("rounded-full font-bold uppercase text-[10px]", status.color)}>
                   {status.label}
                 </Badge>
                 <span className="text-xs text-muted-foreground flex items-center gap-1">
-                  <Clock className="h-3 w-3" /> Atualizado em {new Date(ticket.created_at || "").toLocaleString("pt-BR")}
+                  <Clock className="h-3 w-3" /> Criado em {new Date(ticket.created_at || "").toLocaleString("pt-BR")}
                 </span>
                 <span className="text-xs text-muted-foreground flex items-center gap-1 capitalize">
                   <AlertCircle className="h-3 w-3" /> {ticket.priority} prioridade
@@ -154,41 +193,109 @@ function TicketDetailsPage() {
               </div>
             </div>
           </div>
+
+          {/* Ações de Status Rápidas no Cabeçalho */}
+          <div className="flex items-center gap-2">
+            {isStaff ? (
+              <div className="flex items-center gap-2">
+                <Select
+                  value={ticket.status}
+                  onValueChange={(val: any) => statusMutation.mutate(val)}
+                  disabled={statusMutation.isPending}
+                >
+                  <SelectTrigger className="w-[180px] rounded-xl h-10 text-xs font-semibold bg-card border-border">
+                    <SelectValue placeholder="Alterar Status" />
+                  </SelectTrigger>
+                  <SelectContent className="rounded-2xl">
+                    <SelectItem value="open" className="text-emerald-600 font-medium">🟢 Aberto</SelectItem>
+                    <SelectItem value="in_progress" className="text-purple-600 font-medium">🟣 Em Análise</SelectItem>
+                    <SelectItem value="on_hold" className="text-amber-600 font-medium">🟡 Em Verificação</SelectItem>
+                    <SelectItem value="answered" className="text-blue-600 font-medium">🔵 Respondido</SelectItem>
+                    <SelectItem value="customer-reply" className="text-orange-600 font-medium">🟠 Aguardando Cliente</SelectItem>
+                    <SelectItem value="closed" className="text-slate-500 font-medium">⚫ Fechado</SelectItem>
+                  </SelectContent>
+                </Select>
+
+                {ticket.status !== "closed" ? (
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    className="rounded-xl border-destructive/30 text-destructive hover:bg-destructive/10 text-xs h-10 gap-1.5"
+                    disabled={statusMutation.isPending}
+                    onClick={() => statusMutation.mutate("closed")}
+                  >
+                    <CheckCircle className="size-3.5" /> Fechar Ticket
+                  </Button>
+                ) : (
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    className="rounded-xl border-primary/30 text-primary hover:bg-primary/10 text-xs h-10 gap-1.5"
+                    disabled={statusMutation.isPending}
+                    onClick={() => statusMutation.mutate("open")}
+                  >
+                    <RotateCcw className="size-3.5" /> Reabrir Ticket
+                  </Button>
+                )}
+              </div>
+            ) : (
+              ticket.status !== "closed" && (
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  className="rounded-xl border-destructive/30 text-destructive hover:bg-destructive/10 text-xs h-10 gap-1.5"
+                  disabled={statusMutation.isPending}
+                  onClick={() => statusMutation.mutate("closed")}
+                >
+                  <CheckCircle className="size-3.5" /> Finalizar Atendimento
+                </Button>
+              )
+            )}
+          </div>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
           <div className="lg:col-span-3 space-y-4">
-            <Card className="rounded-3xl border-none shadow-sm overflow-hidden flex flex-col h-[600px]">
+            <Card className="rounded-3xl border-none shadow-sm overflow-hidden flex flex-col h-[600px] bg-card">
               <div ref={scrollRef} className="flex-1 overflow-y-auto p-3 sm:p-6 space-y-6 bg-muted/5">
                 {messages.map((msg: any) => {
-                  const isStaff = msg.is_staff;
+                  const isStaffMsg = msg.is_staff;
+                  const isSystemMsg = msg.message?.startsWith("ℹ️ [Sistema]");
                   
+                  if (isSystemMsg) {
+                    return (
+                      <div key={msg.id} className="flex justify-center my-2">
+                        <div className="px-4 py-1.5 rounded-full bg-secondary/80 text-[11px] text-muted-foreground border border-border/50">
+                          {msg.message} • {new Date(msg.created_at).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
+                        </div>
+                      </div>
+                    );
+                  }
+
                   return (
                     <div 
                       key={msg.id} 
                       className={cn(
                         "w-full flex",
-                        isStaff ? "justify-start" : "justify-end"
+                        isStaffMsg ? "justify-start" : "justify-end"
                       )}
                     >
-                        <div className={cn(
-                          "flex gap-3 max-w-[85%] items-end"
-                        )}>
+                      <div className="flex gap-3 max-w-[85%] items-end">
                         <div className={cn(
                           "h-8 w-8 rounded-full flex items-center justify-center shrink-0 border shadow-sm",
-                          isStaff ? "bg-brand text-brand-foreground border-brand order-1" : "bg-slate-100 text-slate-600 border-slate-200 order-2"
+                          isStaffMsg ? "bg-primary text-primary-foreground border-primary order-1" : "bg-slate-100 text-slate-600 border-slate-200 order-2"
                         )}>
-                          {isStaff ? <Shield className="h-4 w-4" /> : <User className="h-4 w-4" />}
+                          {isStaffMsg ? <Shield className="h-4 w-4" /> : <User className="h-4 w-4" />}
                         </div>
                         <div className={cn(
                           "flex flex-col min-w-0",
-                          isStaff ? "order-2 items-start" : "order-1 items-end"
+                          isStaffMsg ? "order-2 items-start" : "order-1 items-end"
                         )}>
                           <div className={cn(
                             "px-4 py-2.5 rounded-2xl text-sm leading-snug shadow-sm",
-                            isStaff 
-                              ? "bg-brand/10 text-foreground border border-brand/20 rounded-bl-none" 
-                              : "bg-white text-foreground border border-border rounded-br-none"
+                            isStaffMsg 
+                              ? "bg-primary/10 text-foreground border border-primary/20 rounded-bl-none" 
+                              : "bg-card text-foreground border border-border rounded-br-none"
                           )}>
                             <p className="whitespace-pre-wrap">{msg.message}</p>
                             {msg.attachments && msg.attachments.length > 0 && (
@@ -209,9 +316,9 @@ function TicketDetailsPage() {
                           </div>
                           <p className={cn(
                             "text-[10px] text-muted-foreground mt-1 px-1",
-                            isStaff ? "text-left font-bold text-brand" : "text-right"
+                            isStaffMsg ? "text-left font-bold text-primary" : "text-right"
                           )}>
-                            {isStaff ? "Equipe de suporte Eqsam" : (msg.profile?.full_name || "Cliente")} • {new Date(msg.created_at).toLocaleString("pt-BR")}
+                            {isStaffMsg ? "Equipe de suporte Eqsam" : (msg.profile?.full_name || "Cliente")} • {new Date(msg.created_at).toLocaleString("pt-BR")}
                           </p>
                         </div>
                       </div>
@@ -220,7 +327,7 @@ function TicketDetailsPage() {
                 })}
               </div>
 
-              <div className="p-4 border-t border-border bg-white">
+              <div className="p-4 border-t border-border bg-card">
                 {attachments.length > 0 && (
                   <div className="flex flex-wrap gap-2 mb-3">
                     {attachments.map((file, idx) => (
@@ -245,8 +352,8 @@ function TicketDetailsPage() {
                 <form onSubmit={handleSubmit} className="relative flex flex-col gap-2">
                   <div className="relative">
                     <Textarea
-                      placeholder="Digite sua resposta aqui..."
-                      className="min-h-[100px] rounded-2xl border-none bg-muted/30 focus-visible:ring-brand resize-none pr-12"
+                      placeholder={ticket.status === 'closed' ? "Este ticket está fechado. Clique em 'Reabrir Ticket' para enviar uma mensagem." : "Digite sua resposta aqui..."}
+                      className="min-h-[100px] rounded-2xl border-none bg-muted/30 focus-visible:ring-primary resize-none pr-12"
                       value={message}
                       onChange={(e) => setMessage(e.target.value)}
                       disabled={ticket.status === 'closed' || uploading}
@@ -264,7 +371,7 @@ function TicketDetailsPage() {
                         type="button"
                         variant="ghost"
                         size="icon"
-                        className="rounded-xl text-muted-foreground hover:text-brand"
+                        className="rounded-xl text-muted-foreground hover:text-primary"
                         onClick={() => fileInputRef.current?.click()}
                         disabled={ticket.status === 'closed' || uploading}
                       >
@@ -273,7 +380,7 @@ function TicketDetailsPage() {
                       <Button 
                         type="submit" 
                         size="icon" 
-                        className="rounded-xl bg-brand text-brand-foreground hover:bg-brand/90"
+                        className="rounded-xl bg-primary text-primary-foreground hover:bg-primary/90"
                         disabled={(!message.trim() && attachments.length === 0) || replyMutation.isPending || ticket.status === 'closed' || uploading}
                       >
                         <Send className="h-4 w-4" />
@@ -282,17 +389,27 @@ function TicketDetailsPage() {
                   </div>
                 </form>
                 {uploading && (
-                  <p className="text-[10px] text-brand animate-pulse mt-1">Enviando anexos...</p>
+                  <p className="text-[10px] text-primary animate-pulse mt-1">Enviando anexos...</p>
                 )}
                 {ticket.status === 'closed' && (
-                  <p className="text-center text-xs text-muted-foreground mt-2 italic">Este ticket está fechado para novas respostas.</p>
+                  <div className="flex items-center justify-center gap-2 mt-2">
+                    <p className="text-center text-xs text-muted-foreground italic">Este ticket foi concluído.</p>
+                    <Button 
+                      variant="link" 
+                      size="sm" 
+                      onClick={() => statusMutation.mutate("open")}
+                      className="text-xs text-primary p-0 h-auto font-semibold"
+                    >
+                      Reabrir chamado
+                    </Button>
+                  </div>
                 )}
               </div>
             </Card>
           </div>
 
           <div className="space-y-6">
-            <Card className="rounded-3xl border-none shadow-sm overflow-hidden">
+            <Card className="rounded-3xl border-none shadow-sm overflow-hidden bg-card">
               <CardHeader className="bg-muted/30 p-5">
                 <CardTitle className="text-sm font-bold uppercase tracking-wider text-muted-foreground">Informações</CardTitle>
               </CardHeader>
@@ -302,25 +419,34 @@ function TicketDetailsPage() {
                   <p className="text-sm font-mono text-foreground break-all">#{ticket.id.slice(0, 8)}</p>
                 </div>
                 <div>
-                  <label className="text-[10px] uppercase font-bold text-muted-foreground">Aberto em</label>
-                  <p className="text-sm text-foreground">{new Date(ticket.created_at || "").toLocaleDateString("pt-BR")}</p>
+                  <label className="text-[10px] uppercase font-bold text-muted-foreground">Status Atual</label>
+                  <div className="mt-1">
+                    <Badge variant="outline" className={cn("rounded-full font-bold uppercase text-[10px]", status.color)}>
+                      {status.label}
+                    </Badge>
+                  </div>
                 </div>
                 <div>
-                  <label className="text-[10px] uppercase font-bold text-muted-foreground">Última Atividade</label>
+                  <label className="text-[10px] uppercase font-bold text-muted-foreground">Cliente</label>
+                  <p className="text-sm font-medium text-foreground">{(ticket as any).profile?.full_name || "Cliente"}</p>
+                  <p className="text-xs text-muted-foreground">{(ticket as any).profile?.email || ""}</p>
+                </div>
+                <div>
+                  <label className="text-[10px] uppercase font-bold text-muted-foreground">Aberto em</label>
                   <p className="text-sm text-foreground">{new Date(ticket.created_at || "").toLocaleDateString("pt-BR")}</p>
                 </div>
               </CardContent>
             </Card>
 
-            <div className="bg-brand/5 rounded-3xl p-6 border border-brand/10">
+            <div className="bg-primary/5 rounded-3xl p-6 border border-primary/10">
               <div className="flex items-center gap-3 mb-3">
-                <div className="h-8 w-8 rounded-xl bg-brand/20 flex items-center justify-center">
-                  <MessageSquare className="h-4 w-4 text-brand" />
+                <div className="h-8 w-8 rounded-xl bg-primary/20 flex items-center justify-center">
+                  <MessageSquare className="h-4 w-4 text-primary" />
                 </div>
-                <h4 className="font-bold text-brand">Precisa de ajuda?</h4>
+                <h4 className="font-bold text-primary">Atendimento Eqsam</h4>
               </div>
               <p className="text-xs text-muted-foreground leading-relaxed">
-                Nossa equipe responde em média em até 4 horas úteis. Para urgências, utilize nosso canal de WhatsApp.
+                As alterações de status informam o cliente em tempo real sobre o andamento e a etapa de resolução técnica.
               </p>
             </div>
           </div>

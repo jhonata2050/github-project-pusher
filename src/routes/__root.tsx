@@ -39,7 +39,7 @@ function NotFoundComponent() {
 }
 
 function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
-  console.error(error);
+  console.error('[Router Error]', error);
   const router = useRouter();
   useEffect(() => {
     reportLovableError(error, { boundary: "tanstack_root_error_component" });
@@ -49,10 +49,10 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
       <div className="max-w-md text-center">
         <h1 className="text-xl font-semibold tracking-tight text-foreground">
-          realmente, publiquei o sistema esta normal, no entanto o preview nao esat funcionando
+          Ocorreu um erro ao carregar esta página
         </h1>
         <p className="mt-2 text-sm text-muted-foreground">
-          Algo deu errado no sistema. Por favor, tente recarregar a página ou voltar para o início.
+          {error?.message || "Algo inesperado aconteceu. Por favor, tente novamente ou volte para a página inicial."}
         </p>
         <div className="mt-6 flex flex-wrap justify-center gap-2">
           <button
@@ -62,13 +62,13 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
             }}
             className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
           >
-            Try again
+            Tentar novamente
           </button>
           <a
             href="/"
             className="inline-flex items-center justify-center rounded-md border border-input bg-background px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-accent"
           >
-            Go home
+            Ir para o início
           </a>
         </div>
       </div>
@@ -152,6 +152,31 @@ function RootShell({ children }: { children: ReactNode }) {
 
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    try {
+      const urlParams = new URLSearchParams(window.location.search);
+      const affCode = urlParams.get("aff") || urlParams.get("ref");
+
+      if (affCode && affCode.trim().length > 0) {
+        const cleanCode = affCode.trim();
+        localStorage.setItem("eqsam_aff_code", cleanCode);
+        document.cookie = `eqsam_aff_code=${encodeURIComponent(cleanCode)}; max-age=${30 * 24 * 60 * 60}; path=/; SameSite=Lax`;
+
+        const sessionKey = `eqsam_tracked_${cleanCode.toLowerCase()}`;
+        if (!sessionStorage.getItem(sessionKey)) {
+          sessionStorage.setItem(sessionKey, "1");
+          import("@/lib/affiliates.functions").then(({ trackAffiliateClickFn }) => {
+            trackAffiliateClickFn({ data: { code: cleanCode } }).catch((err) => {
+              console.warn("[Affiliate Tracker] Erro ao rastrear clique:", err);
+            });
+          });
+        }
+      }
+    } catch (e) {}
+  }, []);
 
   return (
     <QueryClientProvider client={queryClient}>

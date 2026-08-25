@@ -77,7 +77,8 @@ export const getTickets = createServerFn({ method: "GET" })
   .validator((data: unknown) => 
     z.object({
       limit: z.number().default(20),
-      offset: z.number().default(0)
+      offset: z.number().default(0),
+      status: z.string().optional(),
     }).parse(data)
   )
   .handler(async ({ data, context }) => {
@@ -85,22 +86,25 @@ export const getTickets = createServerFn({ method: "GET" })
 
     let query = context.supabase
       .from("tickets")
-      .select("*", { count: 'exact' });
+      .select(`
+        *,
+        profile:profiles(full_name, email)
+      `, { count: 'exact' });
 
     if (!isAdmin) {
       query = query.eq("user_id", context.userId);
     }
 
+    if (data.status && data.status !== "all") {
+      query = query.eq("status", data.status);
+    }
+
     const { data: tickets, count, error } = await query
-      .select(`
-        *,
-        profile:profiles(full_name)
-      `)
       .order("updated_at", { ascending: false })
       .range(data.offset, data.offset + data.limit - 1);
 
     if (error) throw new Error(error.message);
-    return { tickets, count: count || 0 };
+    return { tickets: tickets || [], count: count || 0 };
   });
 
 export const getTicketDetails = createServerFn({ method: "GET" })
@@ -332,6 +336,95 @@ export const replyTicket = createServerFn({ method: "POST" })
     return data;
   });
 
+export const updateTicketStatus = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: unknown) => 
+    z.object({
+      ticketId: z.string(),
+      status: z.enum([
+        "open",
+        "answered",
+        "customer-reply",
+        "in_progress",
+        "on_hold",
+        "closed"
+      ]),
+    }).parse(data)
+  )
+  .handler(async ({ data: input, context }) => {
+    const { data: isAdmin } = await context.supabase.rpc("has_role", {
+      _user_id: context.userId,
+      _role: "admin",
+    });
+
+    const { data: ticket, error: tErr } = await context.supabase
+      .from("tickets")
+      .select("*, profiles(*)")
+      .eq("id", input.ticketId)
+      .single();
+
+    if (tErr || !ticket) throw new Error("Ticket não encontrado");
+
+    if (!isAdmin && ticket.user_id !== context.userId) {
+      throw new Error("Acesso negado: Você não possui permissão para este ticket.");
+    }
+
+    if (!isAdmin && input.status !== "closed" && input.status !== "open") {
+      throw new Error("Apenas administradores podem definir este status.");
+    }
+
+    const { error: updateErr } = await context.supabase
+      .from("tickets")
+      .update({
+        status: input.status,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", input.ticketId);
+
+    if (updateErr) throw new Error(updateErr.message);
+
+    const STATUS_TEXTS: Record<string, string> = {
+      open: "Ticket reaberto",
+      answered: "Ticket marcado como respondido",
+      "customer-reply": "Ticket marcado como aguardando cliente",
+      in_progress: "Ticket colocado em análise técnica",
+      on_hold: "Ticket colocado em verificação",
+      closed: "Ticket fechado e concluído"
+    };
+
+    await context.supabase.from("ticket_messages").insert({
+      ticket_id: input.ticketId,
+      user_id: context.userId,
+      message: `ℹ️ [Sistema] ${STATUS_TEXTS[input.status] || `Status alterado para ${input.status}`}.`,
+      is_staff: true,
+      attachments: []
+    });
+
+    if (isAdmin && (input.status === "closed" || input.status === "in_progress" || input.status === "on_hold")) {
+      const client = (ticket as any)?.profiles;
+      if (client?.phone) {
+        try {
+          const { sendWhatsAppMessage } = await import("./whatsapp.server");
+          let msg = "";
+          if (input.status === "closed") {
+            msg = `🔒 *Ticket Finalizado*\n\nOlá ${client.full_name},\nSeu chamado *#${input.ticketId.slice(0, 8)} - ${ticket.subject}* foi marcado como *Resolvido / Fechado*.\n\nCaso ainda precise de suporte, você pode reabri-lo no painel.`;
+          } else if (input.status === "in_progress") {
+            msg = `⚙️ *Ticket em Análise*\n\nOlá ${client.full_name},\nSeu chamado *#${input.ticketId.slice(0, 8)} - ${ticket.subject}* está sendo analisado pela nossa equipe técnica especializada.`;
+          } else if (input.status === "on_hold") {
+            msg = `⏳ *Ticket em Verificação*\n\nOlá ${client.full_name},\nSeu chamado *#${input.ticketId.slice(0, 8)} - ${ticket.subject}* está em verificação interna/datacenter. Retornaremos em breve.`;
+          }
+          if (msg) {
+            await sendWhatsAppMessage({ to: client.phone, message: msg, category: "ticket_status" });
+          }
+        } catch (e) {
+          console.warn("[WhatsApp] Falha ao notificar mudança de status:", e);
+        }
+      }
+    }
+
+    return { success: true, status: input.status };
+  });
+
 export const getServers = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
@@ -345,11 +438,14 @@ export const getServers = createServerFn({ method: "GET" })
       throw new Error("Acesso negado: Apenas administradores podem listar servidores.");
     }
 
-    const { data, error } = await supabaseAdmin
+    const { data, error } = await context.supabase
       .from("servers")
       .select("*");
 
-    if (error) throw new Error(error.message);
+    if (error) {
+      console.warn("[getServers] Erro ao consultar servers:", error.message);
+      return [];
+    }
     return (data ?? []) as Database["public"]["Tables"]["servers"]["Row"][];
   });
 
@@ -370,7 +466,7 @@ export const createServerDA = createServerFn({ method: "POST" })
     const { data: isAdmin } = await context.supabase.rpc("has_role", { _user_id: context.userId, _role: "admin" });
     if (!isAdmin) throw new Error("Unauthorized: Only admins can create servers.");
 
-    const { data, error } = await supabaseAdmin
+    const { data, error } = await context.supabase
       .from("servers")
       .insert({
         hostname: input.hostname,
@@ -411,7 +507,7 @@ export const updateServerDA = createServerFn({ method: "POST" })
     const { data: isAdmin } = await context.supabase.rpc("has_role", { _user_id: context.userId, _role: "admin" });
     if (!isAdmin) throw new Error("Unauthorized: Only admins can update servers.");
 
-    const { data, error } = await supabaseAdmin
+    const { data, error } = await context.supabase
       .from("servers")
       .update(patch)
       .eq("id", input.id)
@@ -429,7 +525,7 @@ export const deleteServerDA = createServerFn({ method: "POST" })
     const { data: isAdmin } = await context.supabase.rpc("has_role", { _user_id: context.userId, _role: "admin" });
     if (!isAdmin) throw new Error("Unauthorized: Only admins can delete servers.");
 
-    const { error } = await supabaseAdmin.from("servers").delete().eq("id", serverId);
+    const { error } = await context.supabase.from("servers").delete().eq("id", serverId);
     if (error) throw new Error(error.message);
     return { success: true };
   });
@@ -459,13 +555,16 @@ export const getAllProducts = createServerFn({ method: "GET" })
     const { data: isAdmin } = await context.supabase.rpc("has_role", { _user_id: context.userId, _role: "admin" });
     if (!isAdmin) throw new Error("Unauthorized");
 
-    const { data, error } = await supabaseAdmin
+    const { data, error } = await context.supabase
       .from("products")
       .select("id, name")
       .order("name");
 
-    if (error) throw new Error(error.message);
-    return data;
+    if (error) {
+      console.warn("[getAllProducts] Warning:", error.message);
+      return [];
+    }
+    return data ?? [];
   });
 
 export const getDAPackagesList = createServerFn({ method: "GET" })
@@ -523,41 +622,48 @@ export const getServiceServerDetails = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .inputValidator((data: unknown) => z.string().parse(data))
   .handler(async ({ data: serviceId, context }) => {
-    // SECURITY: Verify ownership of the service
     const { data: isAdmin } = await context.supabase.rpc("has_role", {
       _user_id: context.userId,
       _role: "admin",
     });
 
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
     const { data: service, error } = await supabaseAdmin
       .from("services")
       .select(`
-        *,
-        products (
-          name,
-          product_type
-        ),
-        servers(hostname, ip_address, sso_supported),
-        vps_instances(id, external_id, ip_address, status, region, os_template, cpu_cores, ram_gb, disk_gb)
+        id, user_id, product_id, order_id, server_id, status, domain, 
+        billing_cycle, next_due_date, suspension_reason, username, password, 
+        whmcs_id, vps_hostname, vps_os_template, vps_region, notes, created_at, updated_at,
+        products(id, name, product_type),
+        servers(id, name, hostname, ip_address)
       `)
       .eq("id", serviceId)
       .maybeSingle();
 
-
-
-
-    if (error) {
-      console.error("[getServiceServerDetails] erro ao buscar serviço:", error.message);
-      throw new Error("Serviço não encontrado");
-    }
-    if (!service) throw new Error("Serviço não encontrado");
+    if (error || !service) throw new Error("Serviço não encontrado");
 
     // If not admin, the service must belong to the user
     if (!isAdmin && service.user_id !== context.userId) {
       throw new Error("Acesso negado: Você não possui permissão para acessar este serviço.");
     }
 
-    return service;
+    // Buscar VPS vinculada
+    const { data: vpsList } = await supabaseAdmin
+      .from("vps_instances")
+      .select("id, user_id, external_id, name, ip_address, status, region, os_template")
+      .eq("user_id", service.user_id);
+
+    const matchedVps = (vpsList || []).filter((v: any) => 
+      (service.domain && (service.domain === v.name || service.domain === v.ip_address)) ||
+      (service.vps_hostname && service.vps_hostname === v.name) ||
+      service.products?.product_type === 'vps'
+    );
+
+    return {
+      ...service,
+      vps_instances: matchedVps,
+    };
   });
 
 
@@ -802,51 +908,72 @@ export const updateServiceDetails = createServerFn({ method: "POST" })
   .inputValidator((data: unknown) => 
     z.object({
       serviceId: z.string().uuid(),
-      username: z.string().nullable(),
-      domain: z.string().nullable(),
-      server_id: z.string().uuid().nullable(),
-      product_id: z.string().uuid().nullable(),
-      next_due_date: z.string().nullable(),
-      status: z.enum(["active", "pending", "suspended", "terminated", "cancelled"]).nullable(),
-      block_directadmin: z.boolean().optional(),
+      username: z.string().nullable().optional(),
+      domain: z.string().nullable().optional(),
+      server_id: z.string().uuid().nullable().optional(),
+      product_id: z.string().uuid().nullable().optional(),
+      next_due_date: z.string().nullable().optional(),
+      status: z.enum(["active", "pending", "suspended", "terminated", "cancelled"]).nullable().optional(),
       password: z.string().nullable().optional(),
-      vps_instance_id: z.string().uuid().nullable().optional(),
+      vps_instance_id: z.string().nullable().optional(),
     }).parse(data)
   )
   .handler(async ({ data: input, context }) => {
     const { data: isAdmin } = await context.supabase.rpc("has_role", { _user_id: context.userId, _role: "admin" });
     if (!isAdmin) throw new Error("Acesso restrito a administradores.");
 
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
+    // Buscar serviço atual
+    const { data: currentService, error: curErr } = await supabaseAdmin
+      .from("services")
+      .select("id, user_id, product_id, domain")
+      .eq("id", input.serviceId)
+      .single();
+
+    if (curErr || !currentService) throw new Error("Serviço não encontrado.");
+
+    const updatePayload: any = {};
+    if (input.username !== undefined) updatePayload.username = input.username;
+    if (input.domain !== undefined) updatePayload.domain = input.domain;
+    if (input.server_id !== undefined) updatePayload.server_id = input.server_id;
+    if (input.product_id !== undefined) updatePayload.product_id = input.product_id;
+    if (input.next_due_date !== undefined) updatePayload.next_due_date = input.next_due_date;
+    if (input.status !== undefined && input.status !== null) updatePayload.status = input.status;
+    if (input.password !== undefined) updatePayload.password = input.password;
+
     const { error } = await supabaseAdmin
       .from("services")
-      .update({
-        username: input.username,
-        domain: input.domain,
-        server_id: input.server_id,
-        product_id: input.product_id,
-        next_due_date: input.next_due_date,
-        status: input.status ? (input.status as any) : null,
-        block_directadmin: input.block_directadmin !== undefined ? input.block_directadmin : undefined,
-        password: input.password !== undefined ? input.password : undefined
-      })
+      .update(updatePayload)
       .eq("id", input.serviceId);
       
     if (error) throw new Error(`Erro ao atualizar serviço: ${error.message}`);
 
-    // Se houver vinculação de VPS, atualizar a tabela vps_instances
-    if (input.vps_instance_id !== undefined) {
-      // Primeiro, desvincular qualquer VPS anterior deste serviço
-      await supabaseAdmin
+    // Se houver vinculação de VPS, atualizar o proprietário e os dados técnicos
+    if (input.vps_instance_id && input.vps_instance_id !== 'none') {
+      const { data: vps } = await supabaseAdmin
         .from("vps_instances")
-        .update({ service_id: null })
-        .eq("service_id", input.serviceId);
+        .select("id, name, ip_address, region, os_template, external_id")
+        .eq("id", input.vps_instance_id)
+        .maybeSingle();
 
-      // Depois, vincular a nova, se for fornecido um ID
-      if (input.vps_instance_id) {
+      if (vps) {
+        // Atribuir o dono da VPS ao cliente do serviço
         await supabaseAdmin
           .from("vps_instances")
-          .update({ service_id: input.serviceId })
-          .eq("id", input.vps_instance_id);
+          .update({ user_id: currentService.user_id, status: 'active' })
+          .eq("id", vps.id);
+
+        // Atualizar hostname e região no serviço
+        await supabaseAdmin
+          .from("services")
+          .update({
+            domain: input.domain || vps.name || vps.ip_address || currentService.domain,
+            vps_hostname: vps.name || null,
+            vps_region: vps.region || null,
+            vps_os_template: vps.os_template || null,
+          })
+          .eq("id", input.serviceId);
       }
     }
 
@@ -923,6 +1050,191 @@ export const hostingAction = createServerFn({ method: "POST" })
 
     return { success: true };
   });
+
+export const adminCreateClientService = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .validator((data: unknown) =>
+    z
+      .object({
+        clientId: z.string().uuid(),
+        productId: z.string().uuid(),
+        billingCycle: z.enum(["monthly", "quarterly", "semiannually", "annually", "biennially"]).default("monthly"),
+        status: z.enum(["active", "pending", "suspended", "cancelled"]).default("active"),
+        nextDueDate: z.string().optional().nullable(),
+        generateInvoice: z.boolean().default(false),
+        notes: z.string().optional().nullable(),
+        // Hosting specific fields
+        domain: z.string().optional().nullable(),
+        serverId: z.string().uuid().optional().nullable(),
+        username: z.string().optional().nullable(),
+        password: z.string().optional().nullable(),
+        provisionServer: z.boolean().default(false),
+        // VPS specific fields
+        vpsHostname: z.string().optional().nullable(),
+        vpsInstanceId: z.string().optional().nullable(),
+        vpsIpAddress: z.string().optional().nullable(),
+        vpsExternalId: z.string().optional().nullable(),
+        vpsOsTemplate: z.string().optional().nullable(),
+        vpsRegion: z.string().optional().nullable(),
+        vpsSshUser: z.string().optional().nullable(),
+        vpsSshPort: z.number().optional().nullable(),
+        vpsSshPassword: z.string().optional().nullable(),
+      })
+      .parse(data)
+  )
+  .handler(async ({ data: input, context }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
+    // Verificar se é admin
+    const { data: isAdmin } = await context.supabase.rpc("has_role", {
+      _user_id: context.userId,
+      _role: "admin",
+    });
+    if (!isAdmin) throw new Error("Acesso restrito a administradores.");
+
+    // Buscar produto
+    const { data: product, error: pErr } = await supabaseAdmin
+      .from("products")
+      .select("*, product_prices(*)")
+      .eq("id", input.productId)
+      .single();
+
+    if (pErr || !product) throw new Error("Produto não encontrado.");
+
+    // Buscar perfil do cliente
+    const { data: profile, error: profErr } = await supabaseAdmin
+      .from("profiles")
+      .select("id, full_name, email")
+      .eq("id", input.clientId)
+      .single();
+
+    if (profErr || !profile) throw new Error("Cliente não encontrado.");
+
+    let finalPassword = input.password || input.vpsSshPassword || "";
+    let directAdminCreated = false;
+
+    // 1. Provisionamento opcional no DirectAdmin se for hospedagem
+    if (product.product_type === 'hosting' && input.provisionServer && input.serverId && input.username && input.domain) {
+      try {
+        const { createDAAccount } = await import("./directadmin.server");
+        const daRes = await createDAAccount(input.serverId, {
+          username: input.username,
+          email: profile.email || "contato@eqsam.com",
+          domain: input.domain,
+          package: product.directadmin_package || "Default",
+          password: input.password || undefined,
+        });
+        if (daRes?.daPassword) {
+          finalPassword = daRes.daPassword;
+        }
+        directAdminCreated = true;
+      } catch (daErr: any) {
+        console.warn("[AdminAddService] Aviso no DirectAdmin:", daErr.message);
+        throw new Error(`Falha ao criar conta no DirectAdmin: ${daErr.message}`);
+      }
+    }
+
+    // 2. Criar serviço no banco de dados
+    const defaultDueDate = new Date();
+    defaultDueDate.setDate(defaultDueDate.getDate() + 30);
+    const nextDue = input.nextDueDate || defaultDueDate.toISOString();
+
+    const domainName = product.product_type === 'vps'
+      ? (input.vpsHostname || input.domain || `vps-${profile.email?.split('@')[0] || 'instancia'}`)
+      : (input.domain || "sem-dominio.com");
+
+    const usernameVal = product.product_type === 'vps'
+      ? (input.vpsSshUser || 'root')
+      : (input.username || null);
+
+    const { data: service, error: sErr } = await supabaseAdmin
+      .from("services")
+      .insert({
+        user_id: input.clientId,
+        product_id: input.productId,
+        server_id: product.product_type === 'hosting' ? (input.serverId || null) : null,
+        domain: domainName,
+        username: usernameVal,
+        password: finalPassword || null,
+        billing_cycle: input.billingCycle,
+        status: input.status,
+        next_due_date: nextDue,
+        notes: input.notes || (directAdminCreated ? "Hospedagem provisionada automaticamente no DirectAdmin." : product.product_type === 'vps' ? "Instância VPS vinculada/criada pelo administrador." : "Criado manualmente pelo administrador."),
+      })
+      .select()
+      .single();
+
+    if (sErr || !service) throw new Error(`Erro ao cadastrar serviço: ${sErr?.message}`);
+
+    // 3. Se for produto VPS, gerenciar/vincular a linha na tabela vps_instances
+    if (product.product_type === 'vps') {
+      const vpsPayload: any = {
+        service_id: service.id,
+        user_id: input.clientId,
+        external_id: input.vpsExternalId || input.vpsHostname || String(Date.now()),
+        provider_id: input.vpsExternalId || null,
+        name: input.vpsHostname || product.name || 'Servidor VPS',
+        ip_address: input.vpsIpAddress || null,
+        region: input.vpsRegion || 'US-east',
+        os_template: input.vpsOsTemplate || 'Ubuntu',
+        status: input.status === 'active' ? 'active' : 'pending',
+        ssh_host: input.vpsIpAddress || null,
+        ssh_port: input.vpsSshPort || 22,
+        ssh_user: input.vpsSshUser || 'root',
+        ssh_password: input.vpsSshPassword || null,
+      };
+
+      if (input.vpsInstanceId && input.vpsInstanceId !== 'new') {
+        await supabaseAdmin
+          .from('vps_instances')
+          .update(vpsPayload)
+          .eq('id', input.vpsInstanceId);
+      } else {
+        await supabaseAdmin
+          .from('vps_instances')
+          .upsert(vpsPayload, { onConflict: 'service_id' });
+      }
+    }
+
+    // 4. Gerar fatura opcional
+    if (input.generateInvoice) {
+      try {
+        const prices = product.product_prices || [];
+        const matchedPriceObj = prices.find((p: any) => p.cycle === input.billingCycle && p.is_active !== false);
+        const price = Number(matchedPriceObj?.price || 19.90);
+
+        const { data: invoice } = await supabaseAdmin
+          .from("invoices")
+          .insert({
+            user_id: input.clientId,
+            total_amount: price,
+            subtotal: price,
+            discount_amount: 0,
+            due_date: nextDue,
+            status: input.status === "active" ? "paid" : "pending",
+            payment_method: "manual",
+            notes: `Fatura gerada manualmente para ${product.name} (${domainName})`,
+          })
+          .select()
+          .single();
+
+        if (invoice) {
+          await supabaseAdmin.from("invoice_items").insert({
+            invoice_id: invoice.id,
+            service_id: service.id,
+            description: `${product.name} - ${domainName} (${input.billingCycle.toUpperCase()})`,
+            amount: price,
+            quantity: 1,
+          });
+        }
+      } catch (invErr: any) {
+        console.warn("[AdminAddService] Aviso ao gerar fatura:", invErr.message);
+      }
+    }
+
+    return { success: true, serviceId: service.id };
+  });
+
 
 
 

@@ -73,6 +73,8 @@ export async function placeOrder(
     }
   }
 
+  const affNotes = data.affCode ? `aff:${data.affCode.trim()}` : null;
+
   const { data: order, error: oError } = await supabaseAdmin
     .from("orders")
     .insert({
@@ -80,6 +82,7 @@ export async function placeOrder(
       coupon_id: couponId,
       total_amount: totalAmount,
       status: "pending",
+      notes: affNotes,
     })
     .select()
     .single();
@@ -112,6 +115,7 @@ export async function placeOrder(
       discount_amount: discountAmount,
       due_date: new Date().toISOString(),
       status: "pending",
+      notes: affNotes,
     })
     .select()
     .single();
@@ -133,32 +137,56 @@ export async function placeOrder(
   return { orderId: order.id as string, invoiceId: invoice.id as string };
 }
 
-export async function fetchInvoiceDetails(userId: string, id: string) {
-  // First attempt to find the invoice for this specific user
-  const { data: invoice, error } = await supabaseAdmin
+export async function fetchInvoiceDetails(supabaseClient: any, userId: string, id: string) {
+  // 1. Tenta buscar usando o cliente autenticado (suporta dono da fatura e admins via RLS)
+  const { data: invoice, error } = await supabaseClient
     .from("invoices")
     .select("*, invoice_items(*), profiles(*)")
     .eq("id", id)
-    .eq("user_id", userId)
     .maybeSingle();
 
   if (invoice) return invoice;
 
-  // If not found, check if the requesting user is an admin
-  const { data: isAdmin } = await supabaseAdmin.rpc("has_role", {
-    _user_id: userId,
-    _role: "admin",
-  });
+  // 2. Se a query detalhada com join profiles falhou por restrição de FK, tenta query básica
+  const { data: basicInvoice, error: basicError } = await supabaseClient
+    .from("invoices")
+    .select("*, invoice_items(*)")
+    .eq("id", id)
+    .maybeSingle();
 
-  if (isAdmin) {
-    const { data: adminInvoice, error: adminError } = await supabaseAdmin
-      .from("invoices")
-      .select("*, invoice_items(*), profiles(*)")
-      .eq("id", id)
-      .single();
+  if (basicInvoice) {
+    if (basicInvoice.user_id) {
+      const { data: profile } = await supabaseClient
+        .from("profiles")
+        .select("*")
+        .eq("id", basicInvoice.user_id)
+        .maybeSingle();
+      return { ...basicInvoice, profiles: profile || null };
+    }
+    return basicInvoice;
+  }
 
-    if (adminError || !adminInvoice) throw new Error("Fatura não encontrada");
+  // 3. Fallback adicional usando supabaseAdmin caso seja impersonation de admin
+  const { data: adminInvoice } = await supabaseAdmin
+    .from("invoices")
+    .select("*, invoice_items(*)")
+    .eq("id", id)
+    .maybeSingle();
+
+  if (adminInvoice) {
+    if (adminInvoice.user_id) {
+      const { data: profile } = await supabaseAdmin
+        .from("profiles")
+        .select("*")
+        .eq("id", adminInvoice.user_id)
+        .maybeSingle();
+      return { ...adminInvoice, profiles: profile || null };
+    }
     return adminInvoice;
+  }
+
+  if (error || basicError) {
+    console.error("[fetchInvoiceDetails] Erro:", error?.message || basicError?.message);
   }
 
   throw new Error("Fatura não encontrada ou acesso negado");
@@ -195,9 +223,210 @@ export async function processProvisioning(invoiceId: string) {
     const service = item.services;
     const product = service?.products;
 
+    // Caso Especial: Fatura de ADIÇÃO DE SALDO NA CARTEIRA (Depósito)
+    if (item.description?.includes("Adição de Saldo na Carteira") || item.description?.includes("Recarga de Saldo")) {
+      console.log(`[Provisioning] Creditando saldo na carteira para fatura #${invoiceId}`);
+      try {
+        const depositAmount = Number(item.amount || invoice.total_amount);
+        const { data: userProfile } = await supabaseAdmin
+          .from("profiles")
+          .select("account_balance, full_name, phone")
+          .eq("id", invoice.user_id)
+          .single();
+
+        const currentBal = Number(userProfile?.account_balance || 0);
+        const updatedBal = Number((currentBal + depositAmount).toFixed(2));
+
+        await supabaseAdmin
+          .from("profiles")
+          .update({
+            account_balance: updatedBal,
+            updated_at: new Date().toISOString()
+          })
+          .eq("id", invoice.user_id);
+
+        try {
+          await supabaseAdmin.from("wallet_transactions").insert({
+            user_id: invoice.user_id,
+            type: "deposit",
+            amount: depositAmount,
+            balance_after: updatedBal,
+            description: `Recarga de saldo via ${invoice.payment_method?.toUpperCase() || 'PIX'} (Fatura #${invoice.id.slice(0, 8)})`,
+            invoice_id: invoice.id,
+          });
+        } catch (e) {}
+
+        if (userProfile?.phone) {
+          try {
+            const { sendWhatsAppMessage } = await import("./whatsapp.server");
+            await sendWhatsAppMessage({
+              to: userProfile.phone,
+              message: `💰 *Saldo Creditado com Sucesso!*\n\nOlá ${userProfile.full_name},\nSua recarga de *R$ ${depositAmount.toFixed(2)}* foi confirmada e adicionada à sua carteira!\n\nSeu novo saldo disponível é: *R$ ${updatedBal.toFixed(2)}*.`,
+              category: "wallet_deposit"
+            });
+          } catch (wErr) {
+            console.warn("[WhatsApp] Falha ao enviar notificação de recarga:", wErr);
+          }
+        }
+
+        // Automação: Se o cliente possuía faturas pendentes aguardando saldo, auto-pagar imediatamente
+        try {
+          const { autoPayPendingInvoices } = await import("./wallet.server");
+          await autoPayPendingInvoices(invoice.user_id);
+        } catch (autoErr) {
+          console.warn("[Wallet AutoPay] Aviso:", autoErr);
+        }
+
+        results.push({ success: true, message: `Saldo de R$ ${depositAmount.toFixed(2)} creditado` });
+        continue;
+      } catch (depErr: any) {
+        console.error("[Provisioning] Erro ao creditar saldo na carteira:", depErr.message);
+        results.push({ success: false, error: depErr.message });
+        continue;
+      }
+    }
+
+    // Caso Especial: Fatura de REGISTRO DE DOMÍNIO
+    if (item.description?.includes("Registro de Domínio:") || item.description?.includes("Domínio:")) {
+      console.log(`[Provisioning] Processando registro de domínio para fatura #${invoiceId}`);
+      try {
+        const desc = item.description || "";
+        const domainMatch = desc.match(/Registro de Domínio:\s*([a-zA-Z0-9.-]+)/i) || desc.match(/Domínio:\s*([a-zA-Z0-9.-]+)/i);
+        const domainName = domainMatch ? domainMatch[1].trim().toLowerCase() : null;
+
+        if (domainName) {
+          const { getDomainRegistrarSettings } = await import("./domains.server");
+          const settings = await getDomainRegistrarSettings();
+          const defaultNs = [settings.defaultNs1 || "ns1.eqsam.com", settings.defaultNs2 || "ns2.eqsam.com"];
+
+          let registrarUsed = "openprovider";
+
+          // Se houver credenciais Openprovider configuradas, chama a API
+          if (settings.openproviderUsername) {
+            try {
+              const { OpenproviderRegistrar } = await import("./registrars/openprovider.server");
+              const { data: passRow } = await supabaseAdmin
+                .from("system_settings")
+                .select("value")
+                .eq("key", "openprovider_password")
+                .maybeSingle();
+
+              const openprovider = new OpenproviderRegistrar(
+                settings.openproviderUsername,
+                passRow?.value || "",
+                settings.openproviderTestMode
+              );
+
+              // Extrair extensão
+              const parts = domainName.split('.');
+              const ext = parts.length > 2 && parts[parts.length - 1] === 'br' 
+                ? `.${parts[parts.length - 2]}.${parts[parts.length - 1]}` 
+                : `.${parts[parts.length - 1]}`;
+
+              await openprovider.registerDomain({
+                domainName,
+                extension: ext,
+                periodYears: 1,
+                nameservers: defaultNs,
+                customerData: {
+                  name: profile?.full_name || "Cliente",
+                  email: profile?.email || "contato@eqsam.com",
+                  phone: profile?.phone || "+5511999999999",
+                  document: profile?.document || undefined,
+                }
+              });
+              console.log(`[Openprovider] Domínio ${domainName} registrado com sucesso na API!`);
+            } catch (regErr: any) {
+              console.warn(`[Openprovider] Aviso ao registrar na API (salvando no banco):`, regErr.message);
+            }
+          }
+
+          // Salvar ou atualizar o domínio no banco de dados
+          const expiryDate = new Date();
+          expiryDate.setFullYear(expiryDate.getFullYear() + 1);
+
+          await supabaseAdmin.from("domains").upsert({
+            user_id: invoice.user_id,
+            domain_name: domainName,
+            status: "active",
+            registrar: registrarUsed,
+            registration_date: new Date().toISOString(),
+            expiry_date: expiryDate.toISOString(),
+            nameservers: defaultNs,
+            auto_renew: true,
+            updated_at: new Date().toISOString(),
+          }, { onConflict: "domain_name" });
+
+          if (profile?.phone) {
+            try {
+              const { sendWhatsAppMessage } = await import("./whatsapp.server");
+              await sendWhatsAppMessage({
+                to: profile.phone,
+                message: `🌐 *Domínio Registrado com Sucesso!*\n\nOlá ${profile.full_name},\nSeu domínio *${domainName}* foi registrado e ativado com sucesso!\n\nVocê já pode gerenciar os Nameservers DNS diretamente no seu painel.`,
+                category: "domain_registered"
+              });
+            } catch (e) {
+              console.warn("[WhatsApp] Falha ao enviar notificação de domínio:", e);
+            }
+          }
+
+          results.push({ domainName, success: true, message: "Domínio registrado e ativado com sucesso" });
+        }
+        continue;
+      } catch (dErr: any) {
+        console.error(`[Provisioning] Erro no registro de domínio:`, dErr.message);
+        results.push({ success: false, error: dErr.message });
+        continue;
+      }
+    }
+
     if (!service) {
       console.warn(`[Provisioning] Item da fatura sem serviço associado. Fatura: #${invoiceId}`);
       continue;
+    }
+
+    // Caso Especial: Fatura de UPGRADE de plano para serviço já existente
+    if (item.description?.includes("Upgrade de Plano:") || item.description?.includes("Upgrade:")) {
+      console.log(`[Provisioning] Processando upgrade de plano para o serviço ${service.id}`);
+      try {
+        // Obter pedido para localizar o target_product_id se necessário
+        const { data: order } = await supabaseAdmin
+          .from("orders")
+          .select("*")
+          .eq("id", invoice.order_id)
+          .maybeSingle();
+
+        // Se o serviço está associado ao DirectAdmin, alterar o pacote no servidor
+        if (service.server_id && service.username && product?.directadmin_package) {
+          const { modifyDAUserPackage } = await import("./directadmin.server");
+          await modifyDAUserPackage(service.server_id, service.username, product.directadmin_package);
+          console.log(`[Provisioning] Pacote DirectAdmin atualizado para '${product.directadmin_package}' no usuário ${service.username}`);
+        }
+
+        await supabaseAdmin.from("services").update({
+          notes: `Upgrade aplicado para ${product.name} em ${new Date().toLocaleDateString('pt-BR')}`,
+          updated_at: new Date().toISOString()
+        }).eq("id", service.id);
+
+        if (profile?.phone) {
+          try {
+            await sendWhatsAppMessage({
+              to: profile.phone,
+              message: `🚀 *Upgrade Concluído com Sucesso!*\n\nOlá ${profile.full_name},\nSeu plano foi atualizado para *${product.name}* com novos recursos liberados imediatamente!`,
+              category: "service_upgrade"
+            });
+          } catch (e) {
+            console.warn("[WhatsApp] Falha ao enviar notificação de upgrade:", e);
+          }
+        }
+
+        results.push({ serviceId: service.id, success: true, message: "Upgrade aplicado com sucesso" });
+        continue;
+      } catch (err: any) {
+        console.error(`[Provisioning] Erro ao aplicar upgrade no serviço ${service.id}:`, err.message);
+        results.push({ serviceId: service.id, success: false, error: err.message });
+        continue;
+      }
     }
 
     if (service.status !== "pending") {
@@ -365,6 +594,27 @@ export async function processProvisioning(invoiceId: string) {
         results.push({ serviceId: service.id, success: false, error: errorDetail });
       }
     }
+    // 3. Caso: Aplicações & Bots (Coolify PaaS)
+    else if (product?.product_type === 'app' || product?.product_type === 'bot' || product?.product_type === 'coolify') {
+      console.log(`[Provisioning] Provisionando Aplicação PaaS no Coolify para o serviço ${service.id}.`);
+      try {
+        const { provisionCoolifyApplication } = await import("./coolify.server");
+        const app = await provisionCoolifyApplication(service.id, {
+          name: service.domain || product.name,
+          memoryLimit: product.disk_quota_mb || 512,
+          cpuLimit: 1.0,
+        });
+
+        results.push({ serviceId: service.id, success: true, appId: app.id, appUuid: app.coolify_app_uuid });
+      } catch (err: any) {
+        const errorDetail = err?.message || "Falha ao provisionar container Coolify";
+        await supabaseAdmin.from("services").update({
+          notes: `Falha no provisionamento Coolify: ${errorDetail}`,
+          status: "pending",
+        }).eq("id", service.id);
+        results.push({ serviceId: service.id, success: false, error: errorDetail });
+      }
+    }
     else {
       console.log(`[Provisioning] Produto sem regras de auto-provisionamento para serviço ${service.id}`);
       results.push({ serviceId: service.id, success: true, message: "Sem provisionamento automático" });
@@ -430,6 +680,14 @@ export async function handlePaymentSuccess(
 
     // 4. Provisionar serviços
     await processProvisioning(invoiceId);
+
+    // 4.1 Processar comissão de afiliados se houver indicação
+    try {
+      const { processAffiliateCommission } = await import("./affiliates.server");
+      await processAffiliateCommission(invoiceId);
+    } catch (affErr: any) {
+      console.warn(`[Affiliates] Aviso ao processar comissão para fatura #${invoiceId}:`, affErr.message);
+    }
 
     // 5. Notificações
     const profile = invoice.profiles;

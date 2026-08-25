@@ -223,226 +223,263 @@ function AuthPage() {
   }
 
   return (
-    <div className="lime-backdrop flex min-h-screen items-center justify-center px-4 py-12">
-      <div className="w-full max-w-md rounded-3xl border border-border bg-card p-8 shadow-[var(--shadow-card)]">
-        <div className="flex justify-center mb-8">
-          {branding.logo_url ? (
-            <img
-              src={branding.logo_url}
-              alt={branding.app_name}
-              className="h-10 w-auto max-w-[180px] object-contain"
-            />
-          ) : (
-            <span className="text-2xl font-bold text-brand">{branding.app_name}</span>
-          )}
-        </div>
-        {checkEmail ? (
-          <div className="space-y-4 text-center">
-            <h1 className="text-2xl font-semibold">Confirme seu e-mail</h1>
-            <p className="text-sm text-muted-foreground">
-              Enviamos um link de confirmação para <strong>{email}</strong>. Clique nele para ativar sua conta
-              e acessar o painel.
-            </p>
-            <Button variant="outline" className="w-full" onClick={() => setCheckEmail(false)}>
-              Voltar
-            </Button>
+    <div className="lime-backdrop flex min-h-screen items-center justify-center p-4 sm:p-6 lg:p-8">
+      <div className="w-full max-w-5xl rounded-3xl border border-border bg-card shadow-2xl overflow-hidden grid grid-cols-1 lg:grid-cols-12">
+        
+        {/* Banner Lateral no Desktop */}
+        <div className="relative hidden lg:flex lg:col-span-6 flex-col justify-between p-8 bg-zinc-950 text-white overflow-hidden min-h-[640px]">
+          <div 
+            className="absolute inset-0 bg-cover bg-center bg-no-repeat opacity-95 transition-transform duration-700 hover:scale-105"
+            style={{ backgroundImage: "url('/images/login-banner.png')" }}
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/30" />
+          
+          <div className="relative z-10 flex justify-between items-center">
+            <span className="inline-flex items-center gap-2 rounded-full bg-black/60 backdrop-blur-md px-3.5 py-1 text-xs font-semibold uppercase tracking-wider text-rose-400 border border-rose-500/30">
+              <span className="h-2 w-2 rounded-full bg-rose-500 animate-pulse" /> Acesso Ilimitado
+            </span>
           </div>
-        ) : (
-          <>
-            <p className="-mt-2 mb-6 text-center text-sm text-muted-foreground">
-              O seu Data Center de serviços Cloud
+
+          <div className="relative z-10 space-y-2">
+            <h2 className="text-2xl font-bold text-white tracking-tight drop-shadow-md">
+              Potência e Performance para seus Projetos
+            </h2>
+            <p className="text-xs text-zinc-300 max-w-sm leading-relaxed drop-shadow-sm">
+              Hospedagem de alta performance, Cloud VPS, bots 24/7 e infraestrutura completa em um só lugar.
             </p>
+          </div>
+        </div>
 
-            <Button
-              variant="outline"
-              className="mt-6 h-12 w-full rounded-xl text-base"
-              onClick={handleGoogle}
-              disabled={busy}
-            >
-              <GoogleIcon />
-              Entrar com o Google
-            </Button>
+        {/* Coluna do Formulário */}
+        <div className="lg:col-span-6 p-6 sm:p-10 flex flex-col justify-center bg-card">
+          {/* Banner no Mobile */}
+          <div className="lg:hidden mb-6 rounded-2xl overflow-hidden border border-border shadow-sm">
+            <img 
+              src="/images/login-banner.png" 
+              alt="Banner" 
+              className="w-full h-36 sm:h-44 object-cover"
+            />
+          </div>
 
-            <div className="my-6 flex items-center gap-3">
-              <span className="h-px flex-1 border-t border-dashed border-border" />
-              <span className="text-xs text-muted-foreground">ou entre com e-mail</span>
-              <span className="h-px flex-1 border-t border-dashed border-border" />
+          <div className="flex justify-center mb-6">
+            {branding.logo_url ? (
+              <img
+                src={branding.logo_url}
+                alt={branding.app_name}
+                className="h-10 w-auto max-w-[180px] object-contain"
+              />
+            ) : (
+              <span className="text-2xl font-bold text-brand">{branding.app_name}</span>
+            )}
+          </div>
+
+          {checkEmail ? (
+            <div className="space-y-4 text-center py-6">
+              <h1 className="text-2xl font-semibold">Confirme seu e-mail</h1>
+              <p className="text-sm text-muted-foreground">
+                Enviamos um link de confirmação para <strong>{email}</strong>. Clique nele para ativar sua conta
+                e acessar o painel.
+              </p>
+              <Button variant="outline" className="w-full rounded-xl" onClick={() => setCheckEmail(false)}>
+                Voltar
+              </Button>
             </div>
+          ) : (
+            <>
+              <p className="-mt-2 mb-6 text-center text-xs text-muted-foreground">
+                {mode === "signup" ? "Crie sua conta para começar agora" : "O seu Data Center de serviços Cloud"}
+              </p>
 
-            <form className="space-y-4" onSubmit={handleSubmit}>
-              {mode === "signup" && (
-                <div className="space-y-2">
-                  <Label htmlFor="fullName">Nome completo</Label>
-                  <Input
-                    id="fullName"
-                    value={fullName}
-                    onChange={(e) => setFullName(e.target.value)}
-                    placeholder="Seu nome"
-                    maxLength={120}
-                    className="h-12 rounded-xl"
-                  />
-                </div>
-              )}
-              {mode === "signup" && (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="country">País</Label>
-                    <CountrySelector
-                      value={country}
-                      onChange={(val) => {
-                        setCountry(val);
-                        const selectedCountry = countries.find(c => c.code === val);
-                        if (selectedCountry && !phone.startsWith('+')) {
-                          setPhone(selectedCountry.ddi + " ");
-                        }
-                      }}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="phone">Telefone / WhatsApp</Label>
+              <Button
+                variant="outline"
+                className="h-11 w-full rounded-xl text-sm font-medium gap-2"
+                onClick={handleGoogle}
+                disabled={busy}
+              >
+                <GoogleIcon />
+                Entrar com o Google
+              </Button>
+
+              <div className="my-5 flex items-center gap-3">
+                <span className="h-px flex-1 border-t border-dashed border-border" />
+                <span className="text-[11px] uppercase tracking-wider text-muted-foreground">ou com seu e-mail</span>
+                <span className="h-px flex-1 border-t border-dashed border-border" />
+              </div>
+
+              <form className="space-y-3.5" onSubmit={handleSubmit}>
+                {mode === "signup" && (
+                  <div className="space-y-1.5">
+                    <Label htmlFor="fullName" className="text-xs">Nome completo</Label>
                     <Input
-                      id="phone"
-                      value={phone}
-                      onChange={(e) => setPhone(e.target.value)}
-                      placeholder="+55 (00) 00000-0000"
-                      className="h-12 rounded-xl"
-                      required
+                      id="fullName"
+                      value={fullName}
+                      onChange={(e) => setFullName(e.target.value)}
+                      placeholder="Seu nome"
+                      maxLength={120}
+                      className="h-11 rounded-xl text-xs"
                     />
                   </div>
-                </div>
-              )}
-              {mode === "signup" && (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="identificationType">Tipo de Documento</Label>
+                )}
+                {mode === "signup" && (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div className="space-y-1.5">
+                      <Label htmlFor="country" className="text-xs">País</Label>
+                      <CountrySelector
+                        value={country}
+                        onChange={(val) => {
+                          setCountry(val);
+                          const selectedCountry = countries.find(c => c.code === val);
+                          if (selectedCountry && !phone.startsWith('+')) {
+                            setPhone(selectedCountry.ddi + " ");
+                          }
+                        }}
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="phone" className="text-xs">Telefone / WhatsApp</Label>
+                      <Input
+                        id="phone"
+                        value={phone}
+                        onChange={(e) => setPhone(e.target.value)}
+                        placeholder="+55 (00) 00000-0000"
+                        className="h-11 rounded-xl text-xs"
+                        required
+                      />
+                    </div>
+                  </div>
+                )}
+                {mode === "signup" && (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div className="space-y-1.5">
+                      <Label htmlFor="identificationType" className="text-xs">Tipo de Documento</Label>
+                      <Select
+                        value={identificationType}
+                        onValueChange={(val) => setIdentificationType(val)}
+                      >
+                        <SelectTrigger id="identificationType" className="h-11 rounded-xl border-input bg-background text-xs">
+                          <SelectValue placeholder="Selecione o tipo" />
+                        </SelectTrigger>
+                        <SelectContent className="rounded-xl border-border/40 shadow-xl">
+                          <SelectItem value="cpf">CPF (Pessoa Física)</SelectItem>
+                          <SelectItem value="cnpj">CNPJ (Empresa)</SelectItem>
+                          <SelectItem value="tax_id">Tax ID (Internacional)</SelectItem>
+                          <SelectItem value="passport">Passaporte</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="tax_id" className="text-xs">Documento (ID)</Label>
+                      <Input
+                        id="tax_id"
+                        value={tax_id}
+                        onChange={(e) => setTaxId(e.target.value)}
+                        placeholder={identificationType === 'cpf' ? "000.000.000-00" : "Número do documento"}
+                        className="h-11 rounded-xl text-xs"
+                        required
+                      />
+                    </div>
+                  </div>
+                )}
+                {mode === "signup" && (
+                  <div className="space-y-1.5">
+                    <Label htmlFor="leadSource" className="text-xs">Como nos conheceu?</Label>
                     <Select
-                      value={identificationType}
-                      onValueChange={(val) => setIdentificationType(val)}
+                      value={leadSource}
+                      onValueChange={(val) => setLeadSource(val)}
                     >
-                      <SelectTrigger id="identificationType" className="h-12 rounded-xl border-input bg-background">
-                        <SelectValue placeholder="Selecione o tipo" />
+                      <SelectTrigger id="leadSource" className="h-11 rounded-xl border-input bg-background text-xs">
+                        <SelectValue placeholder="Selecione uma opção" />
                       </SelectTrigger>
                       <SelectContent className="rounded-xl border-border/40 shadow-xl">
-                        <SelectItem value="cpf">CPF (Pessoa Física)</SelectItem>
-                        <SelectItem value="cnpj">CNPJ (Empresa)</SelectItem>
-                        <SelectItem value="tax_id">Tax ID (Internacional)</SelectItem>
-                        <SelectItem value="passport">Passaporte</SelectItem>
+                        <SelectItem value="Google">Google</SelectItem>
+                        <SelectItem value="Facebook">Facebook</SelectItem>
+                        <SelectItem value="Instagram">Instagram</SelectItem>
+                        <SelectItem value="TikTok">TikTok</SelectItem>
+                        <SelectItem value="Indicação">Indicação</SelectItem>
+                        <SelectItem value="Outro">Outro</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="tax_id">Documento (ID)</Label>
+                )}
+                {mode === "signup" && leadSource === "Outro" && (
+                  <div className="space-y-1.5">
+                    <Label htmlFor="leadSourceOther" className="text-xs">Especifique</Label>
                     <Input
-                      id="tax_id"
-                      value={tax_id}
-                      onChange={(e) => setTaxId(e.target.value)}
-                      placeholder={identificationType === 'cpf' ? "000.000.000-00" : "Número do documento"}
-                      className="h-12 rounded-xl"
+                      id="leadSourceOther"
+                      value={leadSourceOther}
+                      onChange={(e) => setLeadSourceOther(e.target.value)}
+                      placeholder="Ex: Blog, Podcast..."
+                      className="h-11 rounded-xl text-xs"
                       required
                     />
                   </div>
-                </div>
-              )}
-              {mode === "signup" && (
-                <div className="space-y-2">
-                  <Label htmlFor="leadSource">Como nos conheceu?</Label>
-                  <Select
-                    value={leadSource}
-                    onValueChange={(val) => setLeadSource(val)}
-                  >
-                    <SelectTrigger id="leadSource" className="h-12 rounded-xl border-input bg-background">
-                      <SelectValue placeholder="Selecione uma opção" />
-                    </SelectTrigger>
-                    <SelectContent className="rounded-xl border-border/40 shadow-xl">
-                      <SelectItem value="Google">Google</SelectItem>
-                      <SelectItem value="Facebook">Facebook</SelectItem>
-                      <SelectItem value="Instagram">Instagram</SelectItem>
-                      <SelectItem value="TikTok">TikTok</SelectItem>
-                      <SelectItem value="Indicação">Indicação</SelectItem>
-                      <SelectItem value="Outro">Outro</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              )}
-              {mode === "signup" && leadSource === "Outro" && (
-                <div className="space-y-2">
-                  <Label htmlFor="leadSourceOther">Especifique</Label>
+                )}
+
+                <div className="space-y-1.5">
+                  <Label htmlFor="email" className="text-xs">E-mail de acesso</Label>
                   <Input
-                    id="leadSourceOther"
-                    value={leadSourceOther}
-                    onChange={(e) => setLeadSourceOther(e.target.value)}
-                    placeholder="Ex: Blog, Podcast..."
-                    className="h-12 rounded-xl"
-                    required
+                    id="email"
+                    type="email"
+                    autoComplete="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="voce@exemplo.com"
+                    className="h-11 rounded-xl text-xs"
                   />
                 </div>
-              )}
-
-              <div className="space-y-2">
-                <Label htmlFor="email">E-mail de acesso</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  autoComplete="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="voce@exemplo.com"
-                  className="h-12 rounded-xl"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="password">Senha</Label>
-                <Input
-                  id="password"
-                  type="password"
-                  autoComplete={mode === "signup" ? "new-password" : "current-password"}
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="••••••••"
-                  className="h-12 rounded-xl"
-                />
-              </div>
-              <div className="flex flex-col gap-3 sm:flex-row sm:justify-between sm:items-center">
-                <button
-                  type="button"
-                  className="text-left text-xs text-brand hover:underline"
-                  onClick={() => setMode(mode === "signup" ? "signin" : "signup")}
+                <div className="space-y-1.5">
+                  <Label htmlFor="password" className="text-xs">Senha</Label>
+                  <Input
+                    id="password"
+                    type="password"
+                    autoComplete={mode === "signup" ? "new-password" : "current-password"}
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="••••••••"
+                    className="h-11 rounded-xl text-xs"
+                  />
+                </div>
+                <div className="flex flex-col gap-2 sm:flex-row sm:justify-between sm:items-center pt-1">
+                  <button
+                    type="button"
+                    className="text-left text-xs font-semibold text-brand hover:underline"
+                    onClick={() => setMode(mode === "signup" ? "signin" : "signup")}
+                  >
+                    {mode === "signup" ? "Já tem conta? Entrar" : "Criar uma conta gratuita"}
+                  </button>
+                  <button
+                    type="button"
+                    className="text-left sm:text-right text-xs text-muted-foreground hover:text-brand hover:underline transition-colors"
+                    onClick={() => {
+                      if (!email) {
+                        toast.error("Informe seu e-mail para recuperar a senha");
+                        return;
+                      }
+                      const promise = fetch("/api/public/password-reset", {
+                        method: "POST",
+                        body: JSON.stringify({ email }),
+                      });
+                      toast.promise(promise, {
+                        loading: "Enviando link de recuperação...",
+                        success: "Se o e-mail estiver cadastrado, você receberá um link em breve.",
+                        error: "Erro ao solicitar recuperação",
+                      });
+                    }}
+                  >
+                    Esqueci minha senha
+                  </button>
+                </div>
+                <Button
+                  type="submit"
+                  disabled={busy}
+                  className="h-11 w-full rounded-xl bg-foreground text-sm font-semibold text-background hover:bg-foreground/90 mt-2"
                 >
-                  {mode === "signup" ? "Já tem conta? Entrar" : "Criar uma conta"}
-                </button>
-                <button
-                  type="button"
-                  className="text-left sm:text-right text-xs text-muted-foreground hover:text-brand hover:underline transition-colors"
-                  onClick={() => {
-                    if (!email) {
-                      toast.error("Informe seu e-mail para recuperar a senha");
-                      return;
-                    }
-                    const promise = fetch("/api/public/password-reset", {
-                      method: "POST",
-                      body: JSON.stringify({ email }),
-                    });
-                    toast.promise(promise, {
-                      loading: "Enviando link de recuperação...",
-                      success: "Se o e-mail estiver cadastrado, você receberá um link em breve.",
-                      error: "Erro ao solicitar recuperação",
-                    });
-                  }}
-                >
-                  Esqueci minha senha
-                </button>
-              </div>
-              <Button
-                type="submit"
-                disabled={busy}
-                className="h-12 w-full rounded-xl bg-foreground text-base text-background hover:bg-foreground/90"
-              >
-                {mode === "signup" ? "Criar minha conta" : "Entrar"}
-              </Button>
-            </form>
-
-          </>
-        )}
+                  {mode === "signup" ? "Criar minha conta" : "Entrar no Painel"}
+                </Button>
+              </form>
+            </>
+          )}
+        </div>
       </div>
     </div>
   );
