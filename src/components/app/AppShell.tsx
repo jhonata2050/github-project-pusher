@@ -236,37 +236,39 @@ export function AppShell({
 
   const homeTo = isAdminArea ? "/admin" : "/dashboard";
 
+  const effectiveUserId = impersonatedClientId || user?.id;
+
   const { data: overdueInvoices } = useQuery({
-    queryKey: ["overdue-invoices", user?.id],
+    queryKey: ["overdue-invoices", effectiveUserId],
     queryFn: async () => {
-      if (!user) return [];
+      if (!effectiveUserId) return [];
       const { data } = await supabase
         .from("invoices")
         .select("id")
-        .eq("user_id", user.id)
+        .eq("user_id", effectiveUserId)
         .eq("status", "pending")
         .lt("due_date", new Date().toISOString());
       return data || [];
     },
-    enabled: !!user && !isAdminArea,
+    enabled: !!effectiveUserId && !isAdminArea,
   });
 
   const hasOverdue = overdueInvoices && overdueInvoices.length > 0;
 
   const { data: notifications, refetch: refetchNotifications } = useQuery({
-    queryKey: ["notifications", user?.id],
+    queryKey: ["notifications", effectiveUserId],
     queryFn: async () => {
-      if (!user) return [];
+      if (!effectiveUserId) return [];
       const { data, error } = await supabase
         .from("notifications")
         .select("*")
-        .eq("user_id", user.id)
+        .eq("user_id", effectiveUserId)
         .order("created_at", { ascending: false })
         .limit(10);
       if (error) throw error;
       return data || [];
     },
-    enabled: !!user,
+    enabled: !!effectiveUserId,
   });
 
   const unreadCount = notifications?.filter(n => !n.read).length || 0;
