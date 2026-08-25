@@ -127,7 +127,64 @@ export async function listRealDirectory(
   showHidden: boolean = true
 ): Promise<IFileListResult> {
   const targetDir = await validateSafePath(clientRoot, relativePath);
-  const entries = await fs.readdir(targetDir, { withFileTypes: true });
+  let entries = await fs.readdir(targetDir, { withFileTypes: true });
+
+  // Se o diretório raiz estiver vazio, auto-inicializar arquivos padrão
+  if (entries.length === 0 && (!relativePath || relativePath === "." || relativePath === "/")) {
+    try {
+      const defaultIndex = path.join(targetDir, "index.html");
+      const defaultStyles = path.join(targetDir, "styles.css");
+      const defaultCaddyfile = path.join(targetDir, "Caddyfile");
+      const defaultReadme = path.join(targetDir, "README.md");
+
+      await fs.writeFile(
+        defaultIndex,
+        `<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Aplicação Online — EQSAM</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="container">
+    <h1>🚀 Servidor Online & Ativo!</h1>
+    <p>Diretório raiz <code>/var/www/html</code> provisionado com sucesso no cluster DK1.</p>
+    <p>Você pode editar estes arquivos em tempo real, criar novas pastas ou enviar seu pacote ZIP diretamente pelo painel.</p>
+  </div>
+</body>
+</html>`,
+        "utf-8"
+      );
+
+      await fs.writeFile(
+        defaultStyles,
+        `body { font-family: system-ui, sans-serif; background: #09090b; color: #f4f4f5; display: grid; place-items: center; min-height: 100vh; margin: 0; }
+.container { text-align: center; padding: 2.5rem; background: #18181b; border: 1px solid #27272a; border-radius: 1.5rem; max-width: 600px; }
+h1 { color: #10b981; margin-bottom: 1rem; }
+p { color: #a1a1aa; line-height: 1.6; margin-bottom: 1rem; }
+code { background: #27272a; padding: 0.2rem 0.5rem; border-radius: 0.4rem; font-family: monospace; color: #34d399; }`,
+        "utf-8"
+      );
+
+      await fs.writeFile(
+        defaultCaddyfile,
+        `:80 {\n\troot * /var/www/html\n\tfile_server\n\tencode zstd gzip\n\ttry_files {path} /index.html\n}\n`,
+        "utf-8"
+      );
+
+      await fs.writeFile(
+        defaultReadme,
+        `# Aplicação Web & Container\n\nDiretório raiz provisionado no cluster DK1 EQSAM.\n\n- **Document Root:** /var/www/html\n- **SSL:** TLS Automático com HTTP/3\n- **Gerenciador de Arquivos:** Suporte a edição ao vivo, uploads ZIP, CHMOD e compressão.\n`,
+        "utf-8"
+      );
+
+      entries = await fs.readdir(targetDir, { withFileTypes: true });
+    } catch (popErr) {
+      console.warn("[FileManager Auto-Populate Error]:", popErr);
+    }
+  }
 
   const items: IFileInfo[] = [];
   let totalSizeBytes = 0;
