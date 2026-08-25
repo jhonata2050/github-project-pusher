@@ -1294,6 +1294,8 @@ export async function applyTemplateToApplication(
           git_repository: sanitizedGit,
           git_branch: template.git_branch || "main",
           ports_exposes: String(template.default_port || 3000),
+          publish_directory: template.build_pack === "static" ? "/usr/share/caddy" : "",
+          post_deployment_command: "",
         };
         if (template.build_pack === "static") {
           patchBody.static_image = "caddy:2-alpine";

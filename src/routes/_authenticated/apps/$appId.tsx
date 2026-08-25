@@ -790,7 +790,7 @@ function AppDetailsPage() {
             {isPendingDeploy ? (
               <Button 
                 onClick={() => setIsTemplateModalOpen(true)}
-                className="rounded-xl gap-2 font-bold bg-amber-500 hover:bg-amber-600 text-white shadow-sm"
+                className="rounded-xl h-9 px-4 gap-2 font-bold bg-amber-500 hover:bg-amber-600 text-white shadow-sm transition-all active:scale-95"
               >
                 <Sparkles className="h-4 w-4" />
                 Escolher Modelo & Fazer Deploy
@@ -800,41 +800,41 @@ function AppDetailsPage() {
                 {isRunning ? (
                   <Button
                     variant="outline"
-                    className="rounded-xl gap-2 border-rose-500/30 text-rose-600 hover:bg-rose-500/10"
+                    className="rounded-xl h-9 px-3.5 gap-2 font-semibold border-rose-500/30 text-rose-600 dark:text-rose-400 bg-rose-500/10 hover:bg-rose-500/20 active:scale-95 transition-all shadow-xs text-xs"
                     disabled={actionMutation.isPending}
                     onClick={() => actionMutation.mutate("stop")}
                   >
-                    <Square className="h-4 w-4" />
+                    <Square className="h-3.5 w-3.5" />
                     Parar
                   </Button>
                 ) : (
                   <Button
                     variant="outline"
-                    className="rounded-xl gap-2 border-emerald-500/30 text-emerald-600 hover:bg-emerald-500/10"
+                    className="rounded-xl h-9 px-3.5 gap-2 font-semibold border-emerald-500/30 text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 hover:bg-emerald-500/20 active:scale-95 transition-all shadow-xs text-xs"
                     disabled={actionMutation.isPending}
                     onClick={() => actionMutation.mutate("start")}
                   >
-                    <Play className="h-4 w-4" />
+                    <Play className="h-3.5 w-3.5" />
                     Iniciar
                   </Button>
                 )}
 
                 <Button
                   variant="outline"
-                  className="rounded-xl gap-2"
+                  className="rounded-xl h-9 px-3.5 gap-2 font-semibold border border-zinc-300 dark:border-zinc-700 bg-zinc-100/80 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-foreground active:scale-95 transition-all shadow-xs text-xs"
                   disabled={actionMutation.isPending}
                   onClick={() => actionMutation.mutate("restart")}
                 >
-                  <RotateCcw className="h-4 w-4" />
+                  <RotateCcw className="h-3.5 w-3.5" />
                   Reiniciar
                 </Button>
 
                 <Button
-                  className="rounded-xl gap-2 font-bold bg-primary"
+                  className="rounded-xl h-9 px-4 gap-2 font-bold bg-emerald-600 hover:bg-emerald-500 text-white active:scale-95 transition-all shadow-sm text-xs"
                   disabled={actionMutation.isPending}
                   onClick={() => actionMutation.mutate("deploy")}
                 >
-                  <Zap className="h-4 w-4" />
+                  <Zap className="h-3.5 w-3.5" />
                   Re-Deploy
                 </Button>
               </>
