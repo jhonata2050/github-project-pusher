@@ -148,25 +148,25 @@ function VPSDetailsPage() {
             <Card className="rounded-3xl border-2">
               <CardContent className="p-5">
                 <div className="flex items-center gap-2 text-[11px] font-medium text-muted-foreground uppercase tracking-wider"><Cpu className="h-3.5 w-3.5" /> CPU</div>
-                <div className="text-2xl font-bold mt-2">{vps.cpu_cores || 'N/A'} <span className="text-sm font-medium text-muted-foreground">vCPU</span></div>
+                <div className="text-2xl font-bold mt-2">{details.specs?.cpu_cores || details.cpuCores || vps.cpu_cores || 'N/A'} <span className="text-sm font-medium text-muted-foreground">vCPU</span></div>
               </CardContent>
             </Card>
             <Card className="rounded-3xl border-2">
               <CardContent className="p-5">
                 <div className="flex items-center gap-2 text-[11px] font-medium text-muted-foreground uppercase tracking-wider"><Activity className="h-3.5 w-3.5" /> RAM</div>
-                <div className="text-2xl font-bold mt-2">{vps.ram_gb || 'N/A'} <span className="text-sm font-medium text-muted-foreground">GB</span></div>
+                <div className="text-2xl font-bold mt-2">{details.specs?.ram_gb || (details.ramMb ? Math.round(details.ramMb / 1024) : null) || vps.ram_gb || 'N/A'} <span className="text-sm font-medium text-muted-foreground">GB</span></div>
               </CardContent>
             </Card>
             <Card className="rounded-3xl border-2">
               <CardContent className="p-5">
                 <div className="flex items-center gap-2 text-[11px] font-medium text-muted-foreground uppercase tracking-wider"><HardDrive className="h-3.5 w-3.5" /> Disco</div>
-                <div className="text-2xl font-bold mt-2">{displayStats.diskTotalGb || vps.disk_gb || 'N/A'} <span className="text-sm font-medium text-muted-foreground">GB</span></div>
+                <div className="text-2xl font-bold mt-2">{details.specs?.disk_gb || (details.diskMb ? Math.round(details.diskMb / 1024) : null) || displayStats.diskTotalGb || vps.disk_gb || 'N/A'} <span className="text-sm font-medium text-muted-foreground">GB</span></div>
               </CardContent>
             </Card>
             <Card className="rounded-3xl border-2">
               <CardContent className="p-5">
                 <div className="flex items-center gap-2 text-[11px] font-medium text-muted-foreground uppercase tracking-wider"><Monitor className="h-3.5 w-3.5" /> Sistema</div>
-                <div className="text-base font-bold mt-2 truncate">{vps.os_template || details.imageName || 'N/A'}</div>
+                <div className="text-base font-bold mt-2 truncate">{details.osType || details.osTemplate || vps.os_template || 'Linux'}</div>
               </CardContent>
             </Card>
           </div>
