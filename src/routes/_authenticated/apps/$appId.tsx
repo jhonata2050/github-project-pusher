@@ -1706,15 +1706,13 @@ function AppDetailsPage() {
                   </DialogDescription>
                 </div>
                 <div className="flex items-center gap-2">
-                  <Button
+                  <button
                     type="button"
-                    variant="outline"
-                    size="sm"
                     onClick={handleCopyLogs}
-                    className="rounded-xl border-zinc-700 bg-zinc-800/80 text-zinc-200 hover:bg-zinc-700 h-8 text-xs gap-1.5 shadow-sm"
+                    className="inline-flex items-center justify-center rounded-xl border border-zinc-700 bg-zinc-800 hover:bg-zinc-700 active:scale-95 text-zinc-200 hover:text-white h-8 text-xs gap-1.5 font-medium px-3 shadow-xs transition-all cursor-pointer"
                   >
                     <Copy className="h-3.5 w-3.5" /> Copiar Logs
-                  </Button>
+                  </button>
                   {deploymentStatus === "finished" ? (
                     <Badge className="bg-emerald-500/20 text-emerald-400 border-emerald-500/40">Online 24/7</Badge>
                   ) : deploymentStatus === "failed" ? (
@@ -1805,40 +1803,40 @@ function AppDetailsPage() {
               </div>
 
               <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto justify-end">
-                <Button
+                <button
                   type="button"
-                  variant="outline"
-                  size="sm"
                   onClick={handleCopyLogs}
-                  className="rounded-xl border-zinc-700 text-zinc-300 hover:bg-zinc-800 text-xs gap-1.5"
+                  className="inline-flex items-center justify-center rounded-xl border border-zinc-700 bg-zinc-800 hover:bg-zinc-700 active:scale-95 text-zinc-200 hover:text-white font-medium text-xs px-3.5 h-9 gap-1.5 transition-all cursor-pointer shadow-sm"
                 >
                   <Copy className="h-3.5 w-3.5" /> Copiar Logs
-                </Button>
+                </button>
                 {deploymentStatus === "failed" && (
-                  <Button
-                    size="sm"
+                  <button
+                    type="button"
                     onClick={() => actionMutation.mutate("deploy")}
                     disabled={actionMutation.isPending}
-                    className="rounded-xl font-bold bg-amber-600 hover:bg-amber-700 text-white gap-1.5 text-xs"
+                    className="inline-flex items-center justify-center rounded-xl font-bold bg-amber-600 hover:bg-amber-500 active:scale-95 text-white text-xs px-4 h-9 gap-1.5 transition-all cursor-pointer shadow-md"
                   >
                     <RotateCcw className="h-3.5 w-3.5" /> Tentar Novamente
-                  </Button>
+                  </button>
                 )}
                 {deploymentStatus === "finished" && app.fqdn && (
-                  <Button asChild size="sm" className="rounded-xl font-bold bg-emerald-600 hover:bg-emerald-700 text-white gap-1.5 text-xs">
-                    <a href={app.fqdn} target="_blank" rel="noreferrer">
-                      <ExternalLink className="h-3.5 w-3.5" /> Acessar Online
-                    </a>
-                  </Button>
+                  <a
+                    href={app.fqdn}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex items-center justify-center rounded-xl font-bold bg-emerald-600 hover:bg-emerald-500 active:scale-95 text-white text-xs px-4 h-9 gap-1.5 transition-all cursor-pointer shadow-md"
+                  >
+                    <ExternalLink className="h-3.5 w-3.5" /> Acessar Online
+                  </a>
                 )}
-                <Button 
-                  variant="secondary" 
-                  size="sm" 
+                <button 
+                  type="button"
                   onClick={() => setIsDeployModalOpen(false)}
-                  className="rounded-xl border-zinc-700 text-zinc-300 hover:bg-zinc-800 text-xs"
+                  className="inline-flex items-center justify-center rounded-xl border border-zinc-700 bg-zinc-800/80 hover:bg-zinc-700 active:scale-95 text-zinc-200 hover:text-white font-medium text-xs px-3.5 h-9 transition-all cursor-pointer shadow-sm"
                 >
                   Fechar Janela
-                </Button>
+                </button>
               </div>
             </div>
           </DialogContent>
