@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ==============================================================================
-# 🚀 COLIFY — SCRIPT DE INSTALAÇÃO AUTOMATIZADA PARA VPS LINUX (Ubuntu / Debian)
+# 🚀 EQSAM PAINEL — SCRIPT DE INSTALAÇÃO AUTOMATIZADA PARA VPS LINUX (Ubuntu / Debian)
 # ==============================================================================
 set -e
 
@@ -12,7 +12,7 @@ BLUE='\033[0;34m'
 NC='\033[0m' # Sem cor
 
 echo -e "${BLUE}==============================================================================${NC}"
-echo -e "${GREEN}       🚀 INICIANDO INSTALAÇÃO AUTOMATIZADA DO COLIFY NA VPS           ${NC}"
+echo -e "${GREEN}       🚀 INICIANDO INSTALAÇÃO AUTOMATIZADA DO EQSAM PAINEL NA VPS     ${NC}"
 echo -e "${BLUE}==============================================================================${NC}\n"
 
 # 1. Verificar se está rodando como root
@@ -46,14 +46,14 @@ echo -e "${GREEN}✓ Docker $(docker --version) ativo!${NC}"
 
 # 5. Criar estrutura de diretórios do Filesystem real
 echo -e "${YELLOW}📂 [4/7] Criando diretórios físicos de clientes e storage...${NC}"
-INSTALL_DIR="/var/www/colify"
-STORAGE_DIR="/var/www/colify/storage/apps"
+INSTALL_DIR="/var/www/eqsam-painel"
+STORAGE_DIR="/var/www/eqsam-painel/storage/apps"
 CLIENTS_DIR="/var/www/clientes"
 
 mkdir -p "$INSTALL_DIR"
 mkdir -p "$STORAGE_DIR"
 mkdir -p "$CLIENTS_DIR"
-mkdir -p "/var/log/colify"
+mkdir -p "/var/log/eqsam-painel"
 
 # 6. Instalar Caddy Server para servir domínios e proxy reverso
 echo -e "${YELLOW}🌐 [5/7] Instalando Caddy Server oficial...${NC}"
@@ -76,23 +76,23 @@ ufw allow 3000/tcp || true
 ufw allow 8080/tcp || true
 echo "y" | ufw enable || true
 
-# 8. Criar serviço Systemd para o Colify
-echo -e "${YELLOW}⚙️  [7/7] Configurando serviço Systemd do Colify...${NC}"
-cat << 'EOF' > /etc/systemd/system/colify.service
+# 8. Criar serviço Systemd para o EQSAM Painel
+echo -e "${YELLOW}⚙️  [7/7] Configurando serviço Systemd do EQSAM Painel...${NC}"
+cat << 'EOF' > /etc/systemd/system/eqsam-painel.service
 [Unit]
-Description=Colify Hosting & Server Management Panel
+Description=EQSAM Painel - Hosting & Server Management
 After=network.target docker.service
 
 [Service]
 Type=simple
 User=root
-WorkingDirectory=/var/www/colify
+WorkingDirectory=/var/www/eqsam-painel
 ExecStart=/usr/bin/npm run preview -- --port 8080 --host 0.0.0.0
 Restart=always
 RestartSec=5
 Environment=NODE_ENV=production
 Environment=PORT=8080
-Environment=STORAGE_PATH=/var/www/colify/storage/apps
+Environment=STORAGE_PATH=/var/www/eqsam-painel/storage/apps
 
 [Install]
 WantedBy=multi-user.target
@@ -106,8 +106,8 @@ echo -e "${BLUE}================================================================
 echo -e "Diretório da Aplicação: ${YELLOW}$INSTALL_DIR${NC}"
 echo -e "Filesystem dos Clientes: ${YELLOW}$STORAGE_DIR${NC}"
 echo -e "\nPara iniciar o painel na VPS:"
-echo -e "  1. Copie os arquivos do projeto para ${YELLOW}/var/www/colify${NC}"
-echo -e "  2. Configure o arquivo ${YELLOW}/var/www/colify/.env${NC}"
-echo -e "  3. Execute: ${YELLOW}cd /var/www/colify && npm install && npm run build${NC}"
-echo -e "  4. Inicie o serviço: ${YELLOW}systemctl start colify && systemctl enable colify${NC}"
+echo -e "  1. Copie os arquivos do projeto para ${YELLOW}/var/www/eqsam-painel${NC}"
+echo -e "  2. Configure o arquivo ${YELLOW}/var/www/eqsam-painel/.env${NC}"
+echo -e "  3. Execute: ${YELLOW}cd /var/www/eqsam-painel && npm install && npm run build${NC}"
+echo -e "  4. Inicie o serviço: ${YELLOW}systemctl start eqsam-painel && systemctl enable eqsam-painel${NC}"
 echo -e "${BLUE}==============================================================================${NC}\n"
