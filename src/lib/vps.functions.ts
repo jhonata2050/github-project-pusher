@@ -140,18 +140,25 @@ export const getVPSDetails = createServerFn({ method: "GET" })
         stats = await getContaboInstanceStats(vps.external_id);
       } catch (e) {}
 
+      // Obter métricas reportadas pelo agente
+      const { getVPSLatestMetrics } = await import("./vps-metrics.server");
+      const agentMetrics = getVPSLatestMetrics(vps.id);
+
       return {
         ...vps,
         service,
         externalDetails,
-        stats
+        stats,
+        last_metrics: agentMetrics || null
       };
     } catch (err: any) {
       console.error("Erro ao buscar detalhes na Contabo:", err.message);
+      const { getVPSLatestMetrics } = await import("./vps-metrics.server");
       return {
         ...vps,
         service,
-        apiError: err.message
+        apiError: err.message,
+        last_metrics: getVPSLatestMetrics(vps.id) || null
       };
     }
   });
@@ -177,46 +184,6 @@ export const getVPSMetricsHistory = createServerFn({ method: "GET" })
     const { data: isStaff } = await supabase.rpc('is_staff', { _user_id: userId });
     if (!isStaff && vps.user_id !== userId) throw new Error("Acesso negado");
 
-    const since = new Date(
-      Date.now() - (data.period === '24h' ? 24 * 60 * 60 * 1000 : data.period === '7d' ? 7 * 24 * 60 * 60 * 1000 : 30 * 24 * 60 * 60 * 1000)
-    ).toISOString();
-
-    const PAGE = 1000;
-    const MAX_ROWS = 20000;
-    const rows: any[] = [];
-    for (let from = 0; from < MAX_ROWS; from += PAGE) {
-      const { data: page, error } = await supabaseAdmin
-        .from('vps_metrics_history')
-        .select('cpu, ram, disk, created_at')
-        .eq('vps_id', data.instanceId)
-        .gte('created_at', since)
-        .order('created_at', { ascending: false })
-        .range(from, from + PAGE - 1);
-
-      if (error) {
-        break;
-      }
-      if (!page || page.length === 0) break;
-      rows.push(...page);
-      if (page.length < PAGE) break;
-    }
-
-    rows.reverse();
-
-    const MAX_POINTS = 200;
-    if (rows.length <= MAX_POINTS) return rows;
-
-    const bucketSize = Math.ceil(rows.length / MAX_POINTS);
-    const result: any[] = [];
-    for (let i = 0; i < rows.length; i += bucketSize) {
-      const bucket = rows.slice(i, i + bucketSize);
-      const avg = (k: string) => Math.round(bucket.reduce((s, r) => s + (Number(r[k]) || 0), 0) / bucket.length);
-      result.push({
-        created_at: bucket[bucket.length - 1].created_at,
-        cpu: avg('cpu'),
-        ram: avg('ram'),
-        disk: avg('disk'),
-      });
-    }
-    return result;
+    const { getVPSHistory } = await import("./vps-metrics.server");
+    return getVPSHistory(data.instanceId, data.period);
   });

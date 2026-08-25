@@ -44,6 +44,8 @@ function VPSDetailsPage() {
   const queryClient = useQueryClient();
   const [period, setPeriod] = useState<'24h' | '7d' | '30d'>('24h');
   const [showPassword, setShowPassword] = useState(false);
+  const [copiedKey, setCopiedKey] = useState<string | null>(null);
+  const [isSyncing, setIsSyncing] = useState(false);
 
   const { data: vps, isLoading, error, refetch } = useQuery({
     queryKey: ['vps-details', vpsId],
@@ -51,10 +53,34 @@ function VPSDetailsPage() {
     refetchInterval: 30000,
   });
 
-  const { data: history } = useQuery({
+  const { data: history, refetch: refetchHistory } = useQuery({
     queryKey: ['vps-metrics-history', vpsId, period],
     queryFn: () => getVPSMetricsHistory({ data: { instanceId: vpsId, period } }),
   });
+
+  const handleSync = async () => {
+    setIsSyncing(true);
+    try {
+      await Promise.all([
+        refetch(),
+        refetchHistory(),
+        queryClient.invalidateQueries({ queryKey: ['vps-details', vpsId] }),
+        queryClient.invalidateQueries({ queryKey: ['vps-metrics-history', vpsId] }),
+      ]);
+      toast.success("Dados da VPS sincronizados com sucesso!");
+    } catch (err: any) {
+      toast.error(`Falha ao sincronizar: ${err.message}`);
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
+  const handleCopy = (text: string, key: string, label: string = 'Copiado!') => {
+    navigator.clipboard.writeText(text);
+    setCopiedKey(key);
+    toast.success(`${label} copiado para a área de transferência!`);
+    setTimeout(() => setCopiedKey(null), 2000);
+  };
 
   const actionMutation = useMutation({
     mutationFn: (vars: { instanceId: string; action: 'start' | 'stop' | 'restart' | 'reinstall' }) => 
@@ -113,15 +139,6 @@ function VPSDetailsPage() {
     disk: h.disk
   }));
 
-  const [copiedKey, setCopiedKey] = useState<string | null>(null);
-
-  const handleCopy = (text: string, key: string, label: string = 'Copiado!') => {
-    navigator.clipboard.writeText(text);
-    setCopiedKey(key);
-    toast.success(`${label} copiado para a área de transferência!`);
-    setTimeout(() => setCopiedKey(null), 2000);
-  };
-
   const ipAddress = vps.ip_address || details.ipConfig?.v4?.ip || details.ipAddress;
   const sshHost = vps.ssh_host || ipAddress || '127.0.0.1';
   const sshPort = vps.ssh_port || 22;
@@ -155,9 +172,9 @@ function VPSDetailsPage() {
               </div>
             </div>
           </div>
-          <Button variant="outline" size="sm" onClick={() => refetch()} className="rounded-xl h-8 text-xs">
-            <RefreshCw className={cn("mr-1.5 h-3.5 w-3.5", isLoading && "animate-spin")} /> 
-            Sincronizar
+          <Button variant="outline" size="sm" onClick={handleSync} disabled={isSyncing} className="rounded-xl h-8 text-xs">
+            <RefreshCw className={cn("mr-1.5 h-3.5 w-3.5", (isSyncing || isLoading) && "animate-spin")} /> 
+            {isSyncing ? "Sincronizando..." : "Sincronizar"}
           </Button>
         </div>
 
