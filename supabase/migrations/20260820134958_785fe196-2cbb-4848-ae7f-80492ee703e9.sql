@@ -1,0 +1,1 @@
+ALTER TABLE public.services ADD COLUMN block_directadmin BOOLEAN DEFAULT false;
