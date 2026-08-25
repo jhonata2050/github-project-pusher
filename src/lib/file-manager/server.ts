@@ -258,25 +258,29 @@ export async function syncAppFilesToCoolify(appId: string): Promise<void> {
     const { data: pubUrl } = supabaseAdmin.storage.from("app-bundles").getPublicUrl(bundlePath);
     const downloadUrl = pubUrl.publicUrl;
 
-    const caddyfile = `:80 {\n    root * /usr/share/caddy\n    file_server\n    encode zstd gzip\n    try_files {path} {path}/ /index.html\n}\n`;
-    const caddyfileB64 = Buffer.from(caddyfile).toString("base64");
-
-    const postCmd = `apk add --no-cache unzip wget curl && mkdir -p /usr/share/caddy /var/www/html /srv /etc/caddy && rm -rf /usr/share/caddy/* /var/www/html/* && wget -qO /tmp/site.zip "${downloadUrl}" && unzip -q -o /tmp/site.zip -d /usr/share/caddy && cp -r /usr/share/caddy/* /var/www/html/ 2>/dev/null || true && rm -f /tmp/site.zip && echo "${caddyfileB64}" | base64 -d > /etc/caddy/Caddyfile && caddy reload --config /etc/caddy/Caddyfile || true`;
-
+    const isStatic = app?.build_pack === "static";
     const baseUrl = server.apiUrl.trim().replace(/\/+$/, "").replace(/\/api\/v1$/, "") + "/api/v1";
-    await fetch(`${baseUrl}/applications/${coolifyAppUuid}`, {
-      method: "PATCH",
-      headers: {
-        Authorization: `Bearer ${server.apiToken.trim()}`,
-        "Content-Type": "application/json",
-        Accept: "application/json",
-      },
-      body: JSON.stringify({
-        publish_directory: "/usr/share/caddy",
-        static_image: "caddy:2-alpine",
-        post_deployment_command: postCmd,
-      }),
-    });
+
+    if (isStatic) {
+      const caddyfile = `:80 {\n    root * /usr/share/caddy\n    file_server\n    encode zstd gzip\n    try_files {path} {path}/ /index.html\n}\n`;
+      const caddyfileB64 = Buffer.from(caddyfile).toString("base64");
+
+      const postCmd = `(which apk >/dev/null && apk add --no-cache unzip wget curl || true) && mkdir -p /usr/share/caddy /var/www/html /srv /etc/caddy && rm -rf /usr/share/caddy/* /var/www/html/* && (wget -qO /tmp/site.zip "${downloadUrl}" || curl -sSL -o /tmp/site.zip "${downloadUrl}") && unzip -q -o /tmp/site.zip -d /usr/share/caddy && cp -r /usr/share/caddy/* /var/www/html/ 2>/dev/null || true && rm -f /tmp/site.zip && echo "${caddyfileB64}" | base64 -d > /etc/caddy/Caddyfile && (caddy reload --config /etc/caddy/Caddyfile 2>/dev/null || true)`;
+
+      await fetch(`${baseUrl}/applications/${coolifyAppUuid}`, {
+        method: "PATCH",
+        headers: {
+          Authorization: `Bearer ${server.apiToken.trim()}`,
+          "Content-Type": "application/json",
+          Accept: "application/json",
+        },
+        body: JSON.stringify({
+          publish_directory: "/usr/share/caddy",
+          static_image: "caddy:2-alpine",
+          post_deployment_command: postCmd,
+        }),
+      });
+    }
 
     await fetch(`${baseUrl}/deploy`, {
       method: "POST",

@@ -17,24 +17,98 @@ export async function resolveClientRoot(appId: string): Promise<string> {
 
   if (!fsSync.existsSync(appDir)) {
     await fs.mkdir(appDir, { recursive: true });
+  }
 
-    // Criar arquivos padrão de inicialização no filesystem real se vazio
-    const defaultIndex = path.join(appDir, "index.html");
-    if (!fsSync.existsSync(defaultIndex)) {
+  // Se o diretório estiver vazio, inicializar arquivos base correspondentes ao tipo de serviço
+  const existingFiles = await fs.readdir(appDir).catch(() => []);
+  if (existingFiles.length === 0) {
+    let buildPack = "static";
+    let appName = "Aplicação";
+    try {
+      const store = await getCoolifyApplicationsStore();
+      const app = store[appId];
+      if (app) {
+        buildPack = app.build_pack || "static";
+        appName = app.name || "Aplicação";
+      }
+    } catch {}
+
+    if (buildPack === "nixpacks" || buildPack === "dockerfile") {
       await fs.writeFile(
-        defaultIndex,
+        path.join(appDir, "package.json"),
+        JSON.stringify(
+          {
+            name: appName.toLowerCase().replace(/[^a-z0-9-]/g, "-"),
+            version: "1.0.0",
+            description: `${appName} provisionado no cluster EQSAM`,
+            main: "index.js",
+            scripts: {
+              start: "node index.js",
+              dev: "node --watch index.js",
+            },
+            dependencies: {
+              express: "^4.19.2",
+            },
+          },
+          null,
+          2
+        ),
+        "utf-8"
+      );
+
+      await fs.writeFile(
+        path.join(appDir, "index.js"),
+        `// ${appName} - Servidor Node.js 24/7
+const express = require('express');
+const app = express();
+const PORT = process.env.PORT || 3000;
+
+app.use(express.json());
+app.use(express.static('public'));
+
+app.get('/', (req, res) => {
+  res.json({
+    status: 'online',
+    app: '${appName}',
+    cluster: 'DK1.EQSAM.COM',
+    timestamp: new Date().toISOString()
+  });
+});
+
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(\`Servidor rodando na porta \${PORT}\`);
+});\n`,
+        "utf-8"
+      );
+
+      await fs.writeFile(
+        path.join(appDir, ".env"),
+        `PORT=3000\nNODE_ENV=production\nAPP_NAME="${appName}"\n`,
+        "utf-8"
+      );
+
+      await fs.writeFile(
+        path.join(appDir, "README.md"),
+        `# ${appName}\n\nAplicação provisionada com sucesso no Cluster DK1 EQSAM.\n\n- **Porta padrão:** 3000\n- **Engine:** Node.js / Nixpacks\n- **Gerenciador de Arquivos:** Ativo\n`,
+        "utf-8"
+      );
+    } else {
+      // Arquivos padrão para sites HTML / Caddy Server
+      await fs.writeFile(
+        path.join(appDir, "index.html"),
         `<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Aplicação Ativa — Colify</title>
+  <title>${appName} — Online</title>
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
   <div class="container">
-    <h1>🚀 Servidor Online & Pronto!</h1>
-    <p>Diretório raiz <code>/var/www/html</code> provisionado com sucesso.</p>
+    <h1>🚀 ${appName} está Online!</h1>
+    <p>Diretório raiz <code>/var/www/html</code> provisionado com sucesso no cluster.</p>
+    <p>Você pode editar este arquivo ou enviar seu projeto diretamente pelo Gerenciador de Arquivos.</p>
   </div>
 </body>
 </html>`,
@@ -44,7 +118,9 @@ export async function resolveClientRoot(appId: string): Promise<string> {
       await fs.writeFile(
         path.join(appDir, "styles.css"),
         `body { font-family: system-ui, sans-serif; background: #09090b; color: #f4f4f5; display: grid; place-items: center; min-height: 100vh; margin: 0; }
-.container { text-align: center; padding: 2rem; background: #18181b; border: 1px solid #27272a; border-radius: 1rem; }`,
+.container { text-align: center; padding: 2.5rem; background: #18181b; border: 1px solid #27272a; border-radius: 1.5rem; max-width: 600px; }
+h1 { color: #10b981; margin-bottom: 1rem; }
+code { background: #27272a; padding: 0.2rem 0.5rem; border-radius: 0.4rem; font-family: monospace; }`,
         "utf-8"
       );
 
