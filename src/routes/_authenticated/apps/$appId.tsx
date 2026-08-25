@@ -1761,14 +1761,28 @@ function AppDetailsPage() {
                   <Loader2 className="h-3.5 w-3.5 animate-spin" /> Conectando ao daemon de build do cluster...
                 </div>
               )}
-              {deploymentLogs.map((log, index) => (
-                <div 
-                  key={index} 
-                  className={`leading-relaxed whitespace-pre-wrap ${log.type === "stderr" ? "text-rose-400" : "text-emerald-400"}`}
-                >
-                  {log.output}
-                </div>
-              ))}
+              {deploymentLogs.map((log, index) => {
+                const lower = log.output.toLowerCase();
+                const isRealError = lower.includes("error:") || lower.includes("fatal:") || lower.includes("failed:") || lower.includes("exception:") || lower.includes("command execution failed");
+                const isWarning = lower.includes("warning") || lower.includes("warn:");
+                const isSuccess = lower.includes("done") || lower.includes("success") || lower.includes("ready") || lower.includes("online") || lower.includes("container pronto");
+                const isStep = lower.startsWith("#") || lower.startsWith("starting") || lower.startsWith("cloning") || lower.startsWith("importing");
+
+                let colorClass = "text-zinc-300";
+                if (isRealError) colorClass = "text-rose-400 font-semibold";
+                else if (isWarning) colorClass = "text-amber-400";
+                else if (isSuccess) colorClass = "text-emerald-400 font-medium";
+                else if (isStep) colorClass = "text-cyan-400/90";
+
+                return (
+                  <div 
+                    key={index} 
+                    className={`leading-relaxed whitespace-pre-wrap ${colorClass}`}
+                  >
+                    {log.output}
+                  </div>
+                );
+              })}
               <div ref={terminalLogsEndRef} />
             </div>
 
