@@ -90,3 +90,58 @@ export interface DeploymentSession {
   startedAt: string;
   completedAt?: string;
 }
+
+// ==========================================
+// ETAPA 3: STACKS WEB & DETECÇÃO DE PROJETOS
+// ==========================================
+
+export type PackageManager = "npm" | "yarn" | "pnpm" | "bun";
+
+export type FrameworkType =
+  | "nextjs"
+  | "react_vite"
+  | "node_api"
+  | "static_html"
+  | "dockerfile"
+  | "docker_compose"
+  | "unknown";
+
+export type NextJsVariant = "ssr" | "standalone" | "static_export";
+export type NextJsRouter = "app_router" | "pages_router" | "both" | "unknown";
+export type ViteVariant = "spa" | "ssr";
+export type NodeFramework = "express" | "fastify" | "nestjs" | "koa" | "hono" | "vanilla" | "typescript";
+
+export interface DetectedProject {
+  packageManager: PackageManager;
+  lockfilesFound: string[];
+  hasMultipleLockfiles: boolean;
+  lockfileWarning?: string;
+  framework: FrameworkType;
+  version?: string;
+  nextVariant?: NextJsVariant;
+  nextRouter?: NextJsRouter;
+  viteVariant?: ViteVariant;
+  nodeFramework?: NodeFramework;
+  entrypoint?: string;
+  hasBuildScript: boolean;
+  hasStartScript: boolean;
+  scripts: Record<string, string>;
+  dependencies: Record<string, string>;
+  devDependencies: Record<string, string>;
+  defaultPort: number;
+}
+
+export interface ResolvedBuildStrategy {
+  framework: FrameworkType;
+  runtime: "nixpacks" | "dockerfile" | "static";
+  packageManager: PackageManager;
+  installCommand: string;
+  buildCommand: string | null;
+  startCommand: string;
+  outputDirectory?: string;
+  entrypoint?: string;
+  port: number;
+  environment: Record<string, string>;
+  healthcheck: HealthcheckConfig;
+  validationPolicy: DeploymentValidationPolicy;
+}
