@@ -199,6 +199,7 @@ export const applyTemplateToApp = createServerFn({ method: "POST" })
       .object({
         appId: z.string(),
         template: z.object({
+          id: z.string().optional(),
           git_repository: z.string().url(),
           git_branch: z.string().min(1),
           build_pack: z.enum(["nixpacks", "dockerfile", "dockercompose", "static"]),

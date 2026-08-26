@@ -154,6 +154,8 @@ function AppDetailsPage() {
   const [isDeployModalOpen, setIsDeployModalOpen] = useState(false);
   const [activeDeploymentUuid, setActiveDeploymentUuid] = useState<string | null>(null);
   const [deploymentStatus, setDeploymentStatus] = useState<"queued" | "in_progress" | "finished" | "failed" | null>(null);
+  const [deploymentState, setDeploymentState] = useState<string>("BUILDING");
+  const [deploymentDiagnostic, setDeploymentDiagnostic] = useState<any | null>(null);
   const [deploymentLogs, setDeploymentLogs] = useState<Array<{ output: string; type: string }>>([]);
   const [deployStep, setDeployStep] = useState<number>(1);
   const [deployAppTitle, setDeployAppTitle] = useState<string>("");
@@ -231,21 +233,34 @@ function AppDetailsPage() {
         const res = await getDeploymentStatus({ data: { deploymentUuid: activeDeploymentUuid } });
         if (res) {
           setDeploymentStatus(res.status as any);
+          if (res.state) {
+            setDeploymentState(res.state);
+          }
+          if (res.diagnostic) {
+            setDeploymentDiagnostic(res.diagnostic);
+          }
           if (res.logs && Array.isArray(res.logs)) {
             setDeploymentLogs(res.logs);
           }
 
-          if (res.status === "in_progress") {
+          if (res.state === "BUILDING" || res.status === "in_progress") {
+            setDeployStep(2);
+          } else if (res.state === "HEALTH_CHECKING") {
             setDeployStep(3);
-          } else if (res.status === "finished") {
+          } else if (res.state === "VERIFYING_DOMAIN") {
             setDeployStep(4);
-            toast.success("Aplicação compilada e online 24/7!");
+          } else if (res.state === "READY" || res.status === "finished") {
+            setDeployStep(4);
+            toast.success("Aplicação compilada, saudável e online 24/7!");
             queryClient.invalidateQueries({ queryKey: ["applicationDetails", appId] });
             refetch();
             refetchLogs();
-          } else if (res.status === "failed") {
-            setDeployStep(3);
-            toast.error("Falha no build. Verifique os logs no terminal.");
+          } else if (res.state === "FAILED" || res.status === "failed") {
+            if (res.diagnostic?.title) {
+              toast.error(res.diagnostic.title);
+            } else {
+              toast.error("Falha no deploy. Verifique o diagnóstico e os logs.");
+            }
           }
         }
       } catch (e) {
@@ -570,8 +585,12 @@ function AppDetailsPage() {
     mutationFn: async () => {
       return saveApplicationEnvs({ data: { appId, envs: envsList } });
     },
-    onSuccess: () => {
-      toast.success("Variáveis de ambiente (.env) salvas com sucesso!");
+    onSuccess: (res: any) => {
+      if (res?.requiresRebuild) {
+        toast.warning("Variáveis salvas! Como contêm valores build-time (ex: NEXT_PUBLIC_*), execute um novo Deploy para aplicar no frontend.");
+      } else {
+        toast.success("Variáveis de ambiente (.env) salvas com sucesso!");
+      }
       queryClient.invalidateQueries({ queryKey: ["applicationEnvs", appId] });
     },
     onError: (err: any) => {
@@ -598,6 +617,7 @@ function AppDetailsPage() {
         data: {
           appId,
           template: {
+            id: template.id,
             git_repository: template.git_repository,
             git_branch: template.git_branch,
             build_pack: template.build_pack,
@@ -1751,34 +1771,71 @@ function AppDetailsPage() {
                 </div>
               </div>
 
-              {/* Stepper de Fases do Deploy */}
+              {/* Stepper de Fases Reais do Deploy */}
               <div className="grid grid-cols-4 gap-2 mt-4 pt-3 border-t border-zinc-800 text-[11px]">
                 <div className={`p-2 rounded-xl border flex flex-col gap-1 ${deployStep >= 1 ? "border-emerald-500/50 bg-emerald-500/10 text-emerald-400" : "border-zinc-800 text-zinc-500"}`}>
                   <span className="font-bold flex items-center gap-1">
-                    {deployStep > 1 ? <Check className="h-3 w-3" /> : "1."} Recursos
+                    {deployStep > 1 ? <Check className="h-3 w-3" /> : "1."} Validação & Envs
                   </span>
-                  <span className="text-[10px] opacity-80">{app.memory_limit}MB RAM</span>
+                  <span className="text-[10px] opacity-80">{app.memory_limit}MB • Recursos</span>
                 </div>
                 <div className={`p-2 rounded-xl border flex flex-col gap-1 ${deployStep >= 2 ? "border-emerald-500/50 bg-emerald-500/10 text-emerald-400" : "border-zinc-800 text-zinc-500"}`}>
                   <span className="font-bold flex items-center gap-1">
-                    {deployStep > 2 ? <Check className="h-3 w-3" /> : "2."} Repositório
+                    {deployStep > 2 ? <Check className="h-3 w-3" /> : "2."} Build da Imagem
                   </span>
-                  <span className="text-[10px] opacity-80">Git / ZIP</span>
+                  <span className="text-[10px] opacity-80">{app.build_pack?.toUpperCase() || "NIXPACKS"}</span>
                 </div>
                 <div className={`p-2 rounded-xl border flex flex-col gap-1 ${deployStep >= 3 ? "border-emerald-500/50 bg-emerald-500/10 text-emerald-400" : "border-zinc-800 text-zinc-500"}`}>
                   <span className="font-bold flex items-center gap-1">
-                    {deployStep > 3 ? <Check className="h-3 w-3" /> : "3."} Build Docker
+                    {deployStep > 3 ? <Check className="h-3 w-3" /> : "3."} Healthcheck
                   </span>
-                  <span className="text-[10px] opacity-80">Compilação</span>
+                  <span className="text-[10px] opacity-80">HTTP/TCP Probe</span>
                 </div>
                 <div className={`p-2 rounded-xl border flex flex-col gap-1 ${deployStep >= 4 ? "border-emerald-500/50 bg-emerald-500/10 text-emerald-400" : "border-zinc-800 text-zinc-500"}`}>
                   <span className="font-bold flex items-center gap-1">
-                    {deployStep >= 4 ? <Check className="h-3 w-3" /> : "4."} SSL / Online
+                    {deployStep >= 4 && deploymentStatus === "finished" ? <Check className="h-3 w-3" /> : "4."} Domínio & SSL
                   </span>
-                  <span className="text-[10px] opacity-80">Let's Encrypt</span>
+                  <span className="text-[10px] opacity-80">Traefik Proxy</span>
                 </div>
               </div>
             </DialogHeader>
+
+            {/* Banner de Diagnóstico Inteligente em caso de Falha */}
+            {deploymentDiagnostic && (
+              <div className="bg-rose-950/70 border-b border-rose-800/60 p-4 space-y-2">
+                <div className="flex items-start gap-2.5">
+                  <AlertTriangle className="h-5 w-5 text-rose-400 shrink-0 mt-0.5" />
+                  <div className="space-y-1 flex-1">
+                    <h4 className="text-xs font-bold text-rose-200">{deploymentDiagnostic.title}</h4>
+                    <p className="text-[11px] text-rose-300/90 leading-relaxed">{deploymentDiagnostic.description}</p>
+                    {deploymentDiagnostic.possibleCause && (
+                      <p className="text-[11px] text-amber-300/90 font-medium">
+                        💡 <strong>Causa provável:</strong> {deploymentDiagnostic.possibleCause}
+                      </p>
+                    )}
+                  </div>
+                  {deploymentDiagnostic.action && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="bg-rose-900/60 hover:bg-rose-800 border-rose-700 text-white text-xs h-7 rounded-lg shrink-0"
+                      onClick={() => {
+                        setIsDeployModalOpen(false);
+                        if (deploymentDiagnostic.action.type === "configure_env") {
+                          setActiveTab("envs");
+                        } else if (deploymentDiagnostic.action.type === "fix_port") {
+                          setActiveTab("overview");
+                        } else if (deploymentDiagnostic.action.type === "view_logs") {
+                          setActiveTab("logs");
+                        }
+                      }}
+                    >
+                      {deploymentDiagnostic.action.label}
+                    </Button>
+                  )}
+                </div>
+              </div>
+            )}
 
             {/* Terminal de Logs do Deploy */}
             <div className="flex-1 bg-black p-4 font-mono text-xs overflow-y-auto max-h-[360px] space-y-1">

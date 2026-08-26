@@ -303,10 +303,24 @@ export async function getCoolifyServerAndProject(server: CoolifyServerConfig): P
   }
 }
 
+import {
+  HealthcheckManager,
+  DomainVerificationManager,
+  DeploymentDiagnosticsService,
+  EnvironmentManager,
+  type DeployState,
+  type DeploymentDiagnostic,
+} from "./deployment-engine";
+import { APP_TEMPLATES } from "./templates.data";
+
 export async function getCoolifyDeploymentStatus(deploymentUuid: string, userId: string) {
   const server = await getActiveCoolifyServer();
   if (!server.apiToken || server.apiToken.includes("placeholder")) {
-    return { status: "finished", logs: [{ output: "Simulação de deploy concluída com sucesso.", type: "stdout" }] };
+    return { 
+      status: "finished", 
+      state: "READY" as DeployState,
+      logs: [{ output: "Simulação de deploy concluída com sucesso.", type: "stdout" }] 
+    };
   }
 
   try {
@@ -324,39 +338,103 @@ export async function getCoolifyDeploymentStatus(deploymentUuid: string, userId:
       }
     }
 
-    // Se o deploy terminou (finished ou failed), sincronizar status na aplicação correspondente
-    if (res.status === "finished" || res.status === "failed") {
-      try {
-        const store = await getCoolifyApplicationsStore();
-        let changed = false;
-        for (const app of Object.values(store)) {
-          if (app.last_deployment_uuid === deploymentUuid || app.status === "building") {
-            if (res.status === "finished") {
-              app.status = "running";
-              changed = true;
-            } else if (res.status === "failed") {
-              app.status = "error";
-              changed = true;
-            }
+    let calculatedState: DeployState = "BUILDING";
+    let diagnostic: DeploymentDiagnostic | null = null;
+
+    if (res.status === "queued") {
+      calculatedState = "QUEUED";
+    } else if (res.status === "in_progress") {
+      calculatedState = "BUILDING";
+    } else if (res.status === "failed") {
+      calculatedState = "FAILED";
+      const rawText = parsedLogs.map((l) => l.output).join("\n");
+      diagnostic = DeploymentDiagnosticsService.diagnose(rawText);
+    } else if (res.status === "finished") {
+      // O container iniciou no Docker. Agora executa validação real (Healthcheck e Domínio)
+      calculatedState = "HEALTH_CHECKING";
+
+      const store = await getCoolifyApplicationsStore();
+      const matchingApp = Object.values(store).find(
+        (a) => a.last_deployment_uuid === deploymentUuid || a.status === "building"
+      );
+
+      if (matchingApp) {
+        const template = APP_TEMPLATES.find((t) => t.id === matchingApp.template_id);
+        const policy = template?.validationPolicy || {
+          requireHealthcheck: true,
+          requireDomainVerification: Boolean(matchingApp.fqdn),
+        };
+
+        // 1. Healthcheck interno/direto
+        if (policy.requireHealthcheck) {
+          const targetUrl = matchingApp.fqdn ? `https://${matchingApp.fqdn}` : `http://127.0.0.1:${matchingApp.direct_port || 3000}`;
+          const healthConfig = template?.healthcheck || {
+            type: "http",
+            path: "/",
+            port: matchingApp.direct_port || 3000,
+            expectedStatus: [200, 201, 204, 301, 302, 304, 307, 308],
+            timeoutSeconds: 6,
+            retries: 4,
+          };
+
+          const healthResult = await HealthcheckManager.check(targetUrl, healthConfig);
+          if (!healthResult.isHealthy) {
+            calculatedState = "FAILED";
+            diagnostic = DeploymentDiagnosticsService.diagnose(
+              `healthcheck failed: ${healthResult.error || "Código HTTP inesperado " + healthResult.statusCode}`,
+              { appId: matchingApp.id, appName: matchingApp.name, port: matchingApp.direct_port }
+            );
           }
         }
-        if (changed) {
+
+        // 2. Validação externa do Domínio via Traefik (se exigido e healthcheck anterior passou)
+        if (calculatedState !== "FAILED" && policy.requireDomainVerification && matchingApp.fqdn) {
+          calculatedState = "VERIFYING_DOMAIN";
+          const domainResult = await DomainVerificationManager.verifyDomain(
+            matchingApp.fqdn,
+            policy.expectedDomainStatuses || [200, 201, 204, 301, 302, 304, 307, 308],
+            8000
+          );
+
+          if (!domainResult.isValid) {
+            calculatedState = "FAILED";
+            diagnostic = DeploymentDiagnosticsService.diagnose(
+              domainResult.error || `O proxy reverso retornou erro ao acessar ${matchingApp.fqdn}`,
+              { appId: matchingApp.id, appName: matchingApp.name, port: matchingApp.direct_port }
+            );
+          }
+        }
+
+        // Se todas as validações obrigatórias passaram:
+        if (calculatedState !== "FAILED") {
+          calculatedState = "READY";
+          matchingApp.status = "running";
+          await saveCoolifyApplicationsStore(store);
+        } else {
+          matchingApp.status = "error";
           await saveCoolifyApplicationsStore(store);
         }
-      } catch (syncErr) {
-        console.warn("[Coolify Sync Deployment Status Error]:", syncErr);
+      } else {
+        calculatedState = "READY";
       }
     }
 
     return {
-      status: res.status, // "queued" | "in_progress" | "finished" | "failed"
+      status: calculatedState === "READY" ? "finished" : calculatedState === "FAILED" ? "failed" : res.status,
+      state: calculatedState,
+      diagnostic,
       logs: parsedLogs,
       rawLogs: typeof res.logs === "string" ? res.logs : JSON.stringify(res.logs),
       serverName: res.server_name,
       updatedAt: res.updated_at,
     };
   } catch (err: any) {
-    return { status: "failed", logs: [{ output: err.message, type: "stderr" }] };
+    return {
+      status: "failed",
+      state: "FAILED" as DeployState,
+      diagnostic: DeploymentDiagnosticsService.diagnose(err.message),
+      logs: [{ output: err.message, type: "stderr" }],
+    };
   }
 }
 
@@ -1214,24 +1292,51 @@ export async function saveCoolifyApplicationEnvs(appId: string, envs: CoolifyEnv
   const { data: isStaff } = await supabaseAdmin.rpc("is_staff", { _user_id: userId });
   if (!isStaff && app.user_id !== userId) throw new Error("Acesso negado");
 
+  // Carregar variáveis antigas para detectar se alguma variável build_time foi modificada
+  let oldEnvs: CoolifyEnvVar[] = [];
+  try {
+    const { data: oldData } = await supabaseAdmin
+      .from("system_settings")
+      .select("value")
+      .eq("key", `coolify_envs_${appId}`)
+      .maybeSingle();
+    if (oldData?.value) {
+      oldEnvs = typeof oldData.value === "string" ? JSON.parse(oldData.value) : oldData.value;
+    }
+  } catch {}
+
+  // Classificar variáveis automaticamente
+  const classifiedEnvs = envs.map((e) => {
+    const meta = EnvironmentManager.classifyVariable(e.key, e.value, {
+      type: e.is_build_time ? "build_time" : undefined,
+    });
+    return {
+      ...e,
+      is_build_time: meta.requiresRebuild || meta.scope === "build" || meta.scope === "both",
+      is_literal: e.is_literal ?? true,
+    };
+  });
+
   await supabaseAdmin.from("system_settings").upsert({
     key: `coolify_envs_${appId}`,
-    value: envs as any,
+    value: classifiedEnvs as any,
     updated_at: new Date().toISOString(),
   }, { onConflict: "key" });
+
+  const rebuildCheck = EnvironmentManager.checkIfRebuildRequired(oldEnvs, classifiedEnvs);
 
   const servers = await getCoolifyServers();
   const server = servers.find((s) => s.id === app.coolify_server_id) || (await getActiveCoolifyServer());
 
   if (server.apiToken && !server.apiToken.includes("placeholder")) {
     try {
-      for (const env of envs) {
+      for (const env of classifiedEnvs) {
         await coolifyFetch(server, `/applications/${app.coolify_app_uuid}/envs`, {
           method: "POST",
           body: JSON.stringify({
             key: env.key,
             value: env.value,
-            is_build_time: env.is_build_time ?? false,
+            is_build_time: env.is_build_time,
             is_literal: env.is_literal ?? true,
           }),
         });
@@ -1239,7 +1344,15 @@ export async function saveCoolifyApplicationEnvs(appId: string, envs: CoolifyEnv
     } catch (e) {}
   }
 
-  return { success: true, count: envs.length };
+  return {
+    success: true,
+    count: classifiedEnvs.length,
+    requiresRebuild: rebuildCheck.requiresRebuild,
+    changedBuildVars: rebuildCheck.changedBuildVars,
+    message: rebuildCheck.requiresRebuild
+      ? `As variáveis [${rebuildCheck.changedBuildVars.join(", ")}] foram alteradas. Como são embutidas no frontend, é necessário executar um novo Deploy para aplicar a alteração.`
+      : "Variáveis salvas com sucesso!",
+  };
 }
 
 export async function updateCoolifyApplicationDomain(appId: string, newDomain: string, userId: string) {

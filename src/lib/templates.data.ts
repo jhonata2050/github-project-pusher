@@ -1,3 +1,5 @@
+import type { HealthcheckConfig, DeploymentValidationPolicy } from "./deployment-engine/types";
+
 export interface AppTemplate {
   id: string;
   name: string;
@@ -12,7 +14,9 @@ export interface AppTemplate {
   default_port: number;
   start_command?: string;
   tags: string[];
-  default_envs: Array<{ key: string; value: string; is_build_time?: boolean }>;
+  default_envs: Array<{ key: string; value: string; is_build_time?: boolean; is_secret?: boolean; required?: boolean }>;
+  healthcheck?: HealthcheckConfig;
+  validationPolicy?: DeploymentValidationPolicy;
 }
 
 export const APP_TEMPLATES: AppTemplate[] = [
@@ -33,6 +37,19 @@ export const APP_TEMPLATES: AppTemplate[] = [
     default_port: 80,
     tags: ["Caddy", "HTML", "CSS", "Landing Page", "HTTP/3", "Estático"],
     default_envs: [],
+    healthcheck: {
+      type: "http",
+      path: "/",
+      port: 80,
+      expectedStatus: [200, 304],
+      timeoutSeconds: 5,
+      retries: 5,
+    },
+    validationPolicy: {
+      requireHealthcheck: true,
+      requireDomainVerification: true,
+      expectedDomainStatuses: [200, 304],
+    },
   },
   {
     id: "wordpress-litespeed",
@@ -48,10 +65,21 @@ export const APP_TEMPLATES: AppTemplate[] = [
     default_port: 80,
     tags: ["WordPress", "CMS", "Sites", "PHP", "WooCommerce"],
     default_envs: [
-      { key: "WORDPRESS_DB_USER", value: "wordpress" },
-      { key: "WORDPRESS_DB_PASSWORD", value: "eqsam_wp_pass_123" },
-      { key: "WORDPRESS_DB_NAME", value: "wordpress" },
+      { key: "WORDPRESS_DB_USER", value: "wordpress", is_secret: true, required: true },
+      { key: "WORDPRESS_DB_PASSWORD", value: "eqsam_wp_pass_123", is_secret: true, required: true },
+      { key: "WORDPRESS_DB_NAME", value: "wordpress", required: true },
     ],
+    healthcheck: {
+      type: "http",
+      path: "/",
+      port: 80,
+      expectedStatus: [200, 301, 302],
+    },
+    validationPolicy: {
+      requireHealthcheck: true,
+      requireDomainVerification: true,
+      dependencies: ["mysql"],
+    },
   },
   {
     id: "nextjs-react-app",
@@ -73,6 +101,20 @@ export const APP_TEMPLATES: AppTemplate[] = [
       { key: "PORT", value: "3000" },
       { key: "NODE_ENV", value: "production" },
     ],
+    healthcheck: {
+      type: "http",
+      path: "/",
+      port: 3000,
+      expectedStatus: [200, 304, 307, 308],
+      timeoutSeconds: 8,
+      retries: 6,
+      startPeriodSeconds: 3,
+    },
+    validationPolicy: {
+      requireHealthcheck: true,
+      requireDomainVerification: true,
+      expectedDomainStatuses: [200, 304, 307, 308],
+    },
   },
   {
     id: "ghost-cms",
