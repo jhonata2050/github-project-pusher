@@ -282,14 +282,13 @@ export async function syncAppFilesToCoolify(appId: string): Promise<void> {
       });
     }
 
-    await fetch(`${baseUrl}/deploy`, {
+    await fetch(`${baseUrl}/deploy?uuid=${coolifyAppUuid}&force=true`, {
       method: "POST",
       headers: {
         Authorization: `Bearer ${server.apiToken.trim()}`,
         "Content-Type": "application/json",
         Accept: "application/json",
       },
-      body: JSON.stringify({ uuid: coolifyAppUuid, force: true }),
     });
   } catch (err: any) {
     console.warn("[Coolify Live Auto-Sync Warning]:", err.message);
