@@ -23,7 +23,8 @@ import {
   Bot,
   Database,
   Layers,
-  ArrowRight
+  ArrowRight,
+  Trash2
 } from "lucide-react";
 import { AppShell } from "@/components/app/AppShell";
 import { Button } from "@/components/ui/button";
@@ -40,7 +41,17 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { getMyApplications, executeAppAction, applyTemplateToApp } from "@/lib/coolify.functions";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { getMyApplications, executeAppAction, applyTemplateToApp, deleteApplication } from "@/lib/coolify.functions";
 import { APP_TEMPLATES, type AppTemplate } from "@/lib/templates.data";
 import { useAuth } from "@/hooks/use-auth";
 import { toast } from "sonner";
@@ -66,11 +77,26 @@ function ApplicationsListPage() {
   const [selectedTemplate, setSelectedTemplate] = useState<AppTemplate | null>(null);
   const [selectedAppId, setSelectedAppId] = useState<string>("");
   const [installModalOpen, setInstallModalOpen] = useState(false);
+  const [appToDelete, setAppToDelete] = useState<any | null>(null);
 
   const { data: apps, isLoading } = useQuery({
     queryKey: ["myApplications", effectiveUserId],
     enabled: Boolean(effectiveUserId),
     queryFn: () => getMyApplications({ data: { clientId: effectiveUserId } }),
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: async (appId: string) => {
+      return deleteApplication({ data: { appId } });
+    },
+    onSuccess: () => {
+      toast.success("Aplicação e containers excluídos com sucesso!");
+      setAppToDelete(null);
+      queryClient.invalidateQueries({ queryKey: ["myApplications"] });
+    },
+    onError: (err: any) => {
+      toast.error(err.message || "Erro ao excluir aplicação.");
+    },
   });
 
   const actionMutation = useMutation({
@@ -339,6 +365,17 @@ function ApplicationsListPage() {
                           onClick={() => actionMutation.mutate({ appId: app.id, action: "restart" })}
                         >
                           <RotateCcw className="h-4 w-4" />
+                        </Button>
+
+                        <Button
+                          size="icon"
+                          variant="outline"
+                          className="rounded-xl h-9 w-9 text-rose-500 hover:text-rose-600 hover:bg-rose-500/10 border-rose-500/30"
+                          title="Excluir aplicação"
+                          disabled={deleteMutation.isPending}
+                          onClick={() => setAppToDelete(app)}
+                        >
+                          <Trash2 className="h-4 w-4" />
                         </Button>
                       </div>
                     </Card>
@@ -626,6 +663,46 @@ function ApplicationsListPage() {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+
+        {/* Modal Padronizado de Confirmação de Exclusão */}
+        <AlertDialog open={!!appToDelete} onOpenChange={(open) => !open && setAppToDelete(null)}>
+          <AlertDialogContent className="rounded-3xl border-zinc-200 dark:border-zinc-800">
+            <AlertDialogHeader className="space-y-3">
+              <div className="h-12 w-12 rounded-2xl bg-rose-500/10 text-rose-600 dark:text-rose-400 flex items-center justify-center">
+                <Trash2 className="h-6 w-6" />
+              </div>
+              <AlertDialogTitle className="text-xl font-bold">
+                Excluir Aplicação &quot;{appToDelete?.name}&quot;?
+              </AlertDialogTitle>
+              <AlertDialogDescription className="text-xs text-muted-foreground leading-relaxed space-y-2">
+                <p>
+                  Esta ação é <strong className="text-foreground">definitiva e irreversível</strong>. Ao confirmar:
+                </p>
+                <ul className="list-disc pl-4 space-y-1 text-zinc-400">
+                  <li>O container Docker será parado e removido do cluster.</li>
+                  <li>Todos os volumes de dados e arquivos locais serão excluídos.</li>
+                  <li>O roteamento de domínio e certificados SSL serão desprovisionados.</li>
+                </ul>
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter className="gap-2 sm:gap-0 mt-4">
+              <AlertDialogCancel className="rounded-xl text-xs font-semibold">
+                Cancelar
+              </AlertDialogCancel>
+              <AlertDialogAction
+                className="rounded-xl text-xs font-bold bg-rose-600 hover:bg-rose-700 text-white gap-1.5"
+                disabled={deleteMutation.isPending}
+                onClick={() => {
+                  if (appToDelete) {
+                    deleteMutation.mutate(appToDelete.id);
+                  }
+                }}
+              >
+                {deleteMutation.isPending ? "Excluindo..." : "Sim, Excluir Aplicação"}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </AppShell>
   );

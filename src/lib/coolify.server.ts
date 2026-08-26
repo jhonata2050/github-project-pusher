@@ -406,6 +406,70 @@ export async function executeCoolifyAppAction(appId: string, action: "start" | "
   return { success: true, action, status: app.status, deploymentUuid };
 }
 
+export async function deleteCoolifyApplication(appId: string, userId: string) {
+  const store = await getCoolifyApplicationsStore();
+  const app = store[appId];
+  if (!app) throw new Error("Aplicação não encontrada");
+
+  const { data: isStaff } = await supabaseAdmin.rpc("is_staff", { _user_id: userId });
+  if (!isStaff && app.user_id !== userId) {
+    throw new Error("Acesso negado à aplicação");
+  }
+
+  // 1. Remover container, volumes e configurações no Coolify Server
+  const servers = await getCoolifyServers();
+  const server = servers.find((s) => s.id === app.coolify_server_id) || (await getActiveCoolifyServer());
+
+  if (server?.apiToken && !server.apiToken.includes("placeholder") && app.coolify_app_uuid && !app.coolify_app_uuid.startsWith("app_")) {
+    try {
+      await coolifyFetch(server, `/applications/${app.coolify_app_uuid}?delete_configurations=true&delete_volumes=true&force=true`, {
+        method: "DELETE",
+      });
+    } catch (e: any) {
+      console.warn(`[Coolify API Delete Warning]:`, e.message);
+    }
+  }
+
+  // 2. Limpar storage físico de arquivos em disco
+  try {
+    const fs = await import("fs/promises");
+    const path = await import("path");
+    const baseStorageDir = process.env.COLIFY_STORAGE_ROOT || process.env.STORAGE_PATH || path.resolve(process.cwd(), "storage", "apps");
+    const appDir = path.resolve(baseStorageDir, appId);
+    await fs.rm(appDir, { recursive: true, force: true }).catch(() => {});
+  } catch (fsErr) {
+    console.warn(`[Storage Cleanup Warning]:`, fsErr);
+  }
+
+  // 3. Remover do store e dos app_files no banco de dados
+  delete store[appId];
+  await saveCoolifyApplicationsStore(store);
+
+  await supabaseAdmin
+    .from("system_settings")
+    .delete()
+    .eq("key", `app_files_${appId}`);
+
+  // 4. Se tiver serviço vinculado no Supabase, atualizar status para 'cancelled'
+  if (app.service_id) {
+    await supabaseAdmin
+      .from("services")
+      .update({ status: "cancelled", updated_at: new Date().toISOString() })
+      .eq("id", app.service_id);
+  }
+
+  // 5. Registrar log de auditoria
+  await supabaseAdmin.from("audit_logs").insert({
+    user_id: userId,
+    action: "DELETE_APPLICATION",
+    entity: "coolify_applications",
+    entity_id: appId,
+    details: { name: app.name, coolify_app_uuid: app.coolify_app_uuid },
+  }).catch(() => {});
+
+  return { success: true, message: "Aplicação e containers excluídos com sucesso." };
+}
+
 export async function getCoolifyApplicationDetails(appId: string, userId: string) {
   const store = await getCoolifyApplicationsStore();
   const app = store[appId];

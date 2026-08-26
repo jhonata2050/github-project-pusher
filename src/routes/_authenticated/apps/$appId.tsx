@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState, useEffect, useRef } from "react";
 import { 
@@ -93,7 +93,8 @@ import {
   bulkDeleteApplicationFiles,
   createApplicationFolder,
   moveApplicationFiles,
-  copyApplicationFiles
+  copyApplicationFiles,
+  deleteApplication
 } from "@/lib/coolify.functions";
 import { APP_TEMPLATES, type AppTemplate } from "@/lib/templates.data";
 import { toast } from "sonner";
@@ -108,8 +109,10 @@ export const Route = createFileRoute("/_authenticated/apps/$appId")({
 
 function AppDetailsPage() {
   const { appId } = Route.useParams();
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState("overview");
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
 
   // Estados de formulários
   const [gitRepoInput, setGitRepoInput] = useState("");
@@ -287,6 +290,20 @@ function AppDetailsPage() {
         setDeploymentStatus("failed");
       }
       toast.error(err.message || "Falha ao executar ação na aplicação.");
+    },
+  });
+
+  const deleteAppMutation = useMutation({
+    mutationFn: async () => {
+      return deleteApplication({ data: { appId } });
+    },
+    onSuccess: () => {
+      toast.success("Aplicação e containers excluídos com sucesso!");
+      queryClient.invalidateQueries({ queryKey: ["myApplications"] });
+      navigate({ to: "/apps" });
+    },
+    onError: (err: any) => {
+      toast.error(err.message || "Erro ao excluir aplicação.");
     },
   });
 
@@ -836,6 +853,17 @@ function AppDetailsPage() {
                 >
                   <Zap className="h-3.5 w-3.5" />
                   Re-Deploy
+                </Button>
+
+                <Button
+                  variant="outline"
+                  className="rounded-xl h-9 px-3 gap-1.5 font-semibold border border-rose-500/30 text-rose-600 dark:text-rose-400 bg-rose-500/10 hover:bg-rose-500/20 active:scale-95 transition-all shadow-xs text-xs"
+                  disabled={deleteAppMutation.isPending}
+                  onClick={() => setIsDeleteModalOpen(true)}
+                  title="Excluir aplicação e containers"
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                  Excluir
                 </Button>
               </>
             )}
@@ -1841,6 +1869,50 @@ function AppDetailsPage() {
             </div>
           </DialogContent>
         </Dialog>
+
+        {/* Modal Padronizado de Confirmação de Exclusão */}
+        <AlertDialog open={isDeleteModalOpen} onOpenChange={setIsDeleteModalOpen}>
+          <AlertDialogContent className="rounded-3xl border-zinc-200 dark:border-zinc-800">
+            <AlertDialogHeader className="space-y-3">
+              <div className="h-12 w-12 rounded-2xl bg-rose-500/10 text-rose-600 dark:text-rose-400 flex items-center justify-center">
+                <Trash2 className="h-6 w-6" />
+              </div>
+              <AlertDialogTitle className="text-xl font-bold">
+                Excluir Definitivamente &quot;{app.name}&quot;?
+              </AlertDialogTitle>
+              <AlertDialogDescription className="text-xs text-muted-foreground leading-relaxed space-y-2">
+                <p>
+                  Esta ação é <strong className="text-foreground">permanente e irreversível</strong>. Ao confirmar:
+                </p>
+                <ul className="list-disc pl-4 space-y-1 text-zinc-400">
+                  <li>O container Docker em execução será imediatamente finalizado e excluído.</li>
+                  <li>Todos os volumes de dados persistentes, logs e arquivos em disco serão apagados.</li>
+                  <li>O proxy reverso e os certificados SSL associados ao domínio serão removidos.</li>
+                </ul>
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter className="gap-2 sm:gap-0 mt-4">
+              <AlertDialogCancel className="rounded-xl text-xs font-semibold">
+                Cancelar
+              </AlertDialogCancel>
+              <AlertDialogAction
+                className="rounded-xl text-xs font-bold bg-rose-600 hover:bg-rose-700 text-white gap-1.5"
+                disabled={deleteAppMutation.isPending}
+                onClick={() => deleteAppMutation.mutate()}
+              >
+                {deleteAppMutation.isPending ? (
+                  <>
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" /> Excluindo...
+                  </>
+                ) : (
+                  <>
+                    <Trash2 className="h-3.5 w-3.5" /> Sim, Excluir Aplicação
+                  </>
+                )}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </AppShell>
   );

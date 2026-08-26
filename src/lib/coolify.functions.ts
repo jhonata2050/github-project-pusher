@@ -270,6 +270,20 @@ export const createAndDeployApplication = createServerFn({ method: "POST" })
     });
   });
 
+export const deleteApplication = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .validator((data: unknown) =>
+    z
+      .object({
+        appId: z.string().min(1),
+      })
+      .parse(data)
+  )
+  .handler(async ({ data, context }) => {
+    const { deleteCoolifyApplication } = await import("./coolify.server");
+    return deleteCoolifyApplication(data.appId, context.userId);
+  });
+
 export const getDeploymentStatus = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .validator((data: unknown) =>
