@@ -10,6 +10,7 @@ export interface AppTemplate {
   recommended_ram: number; // MB
   recommended_cpu: number; // vCPU
   default_port: number;
+  start_command?: string;
   tags: string[];
   default_envs: Array<{ key: string; value: string; is_build_time?: boolean }>;
 }
@@ -64,6 +65,7 @@ export const APP_TEMPLATES: AppTemplate[] = [
     recommended_ram: 512,
     recommended_cpu: 0.5,
     default_port: 3000,
+    start_command: "npx next start -H 0.0.0.0 -p 3000",
     tags: ["Next.js", "React", "TypeScript", "Frontend", "SSR"],
     default_envs: [
       { key: "HOSTNAME", value: "0.0.0.0" },

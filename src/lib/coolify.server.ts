@@ -1353,15 +1353,41 @@ export async function applyTemplateToApplication(
       }
     } else {
       try {
+        const domainHost = app.fqdn
+          ? app.fqdn.replace(/^https?:\/\//, "").split(",")[0].trim()
+          : `${app.coolify_app_uuid}.${server.wildcardDomain || "dk1.eqsam.com"}`;
+
+        const targetPort = template.default_port || 3000;
+
+        const labelsText = [
+          'traefik.enable=true',
+          'traefik.docker.network=coolify',
+          `traefik.http.routers.http-0-${app.coolify_app_uuid}.entryPoints=http`,
+          `traefik.http.routers.http-0-${app.coolify_app_uuid}.rule=Host(\`${domainHost}\`)`,
+          `traefik.http.routers.http-0-${app.coolify_app_uuid}.service=http-0-${app.coolify_app_uuid}`,
+          `traefik.http.routers.http-0-${app.coolify_app_uuid}.middlewares=redirect-to-https`,
+          'traefik.http.middlewares.redirect-to-https.redirectscheme.scheme=https',
+          `traefik.http.routers.https-0-${app.coolify_app_uuid}.entryPoints=https`,
+          `traefik.http.routers.https-0-${app.coolify_app_uuid}.rule=Host(\`${domainHost}\`)`,
+          `traefik.http.routers.https-0-${app.coolify_app_uuid}.service=http-0-${app.coolify_app_uuid}`,
+          `traefik.http.routers.https-0-${app.coolify_app_uuid}.tls=true`,
+          `traefik.http.routers.https-0-${app.coolify_app_uuid}.tls.certresolver=letsencrypt`,
+          `traefik.http.services.http-0-${app.coolify_app_uuid}.loadbalancer.server.port=${targetPort}`
+        ].join('\n');
+
+        const customLabelsB64 = Buffer.from(labelsText).toString('base64');
+
         const patchBody: any = {
           build_pack: template.build_pack,
           git_repository: sanitizedGit,
           git_branch: template.git_branch || "main",
-          ports_exposes: String(template.default_port || 3000),
+          ports_exposes: String(targetPort),
           ports_mappings: "",
           publish_directory: template.build_pack === "static" ? "/usr/share/caddy" : "",
           static_image: "caddy:2-alpine",
           base_directory: "",
+          start_command: (template as any).start_command || "",
+          custom_labels: customLabelsB64,
           post_deployment_command: "",
         };
         await coolifyFetch(server, `/applications/${app.coolify_app_uuid}`, {
