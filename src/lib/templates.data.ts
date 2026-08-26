@@ -442,11 +442,11 @@ export const APP_TEMPLATES: AppTemplate[] = [
   },
 
   // ==========================================
-  // 6. BANCOS DE DADOS
+  // 6. BANCOS DE DADOS DEDICADOS
   // ==========================================
   {
     id: "postgresql-db",
-    name: "PostgreSQL Database",
+    name: "PostgreSQL 16 Database",
     category: "databases",
     icon: "https://cdn.simpleicons.org/postgresql/4169E1",
     description: "O banco de dados relacional e relacional-objeto mais avançado e confiável do mundo para aplicações modernas.",
@@ -460,12 +460,25 @@ export const APP_TEMPLATES: AppTemplate[] = [
     default_envs: [
       { key: "POSTGRES_DB", value: "main" },
       { key: "POSTGRES_USER", value: "postgres" },
-      { key: "POSTGRES_PASSWORD", value: "eqsam_postgres_pass_123" },
+      { key: "POSTGRES_PASSWORD", value: "••••••••", is_secret: true, required: true },
+      { key: "PGDATA", value: "/var/lib/postgresql/data/pgdata" },
     ],
+    healthcheck: {
+      type: "command",
+      command: "pg_isready -U postgres -d main",
+      port: 5432,
+      timeoutSeconds: 5,
+      retries: 6,
+      startPeriodSeconds: 10,
+    },
+    validationPolicy: {
+      requireHealthcheck: true,
+      requireDomainVerification: false,
+    },
   },
   {
     id: "mysql-db",
-    name: "MySQL Database",
+    name: "MySQL 8.4 Database",
     category: "databases",
     icon: "https://cdn.simpleicons.org/mysql/4479A1",
     description: "O sistema gerenciador de banco de dados relacional mais popular do mundo, ideal para WordPress, Laravel e sistemas web.",
@@ -479,16 +492,60 @@ export const APP_TEMPLATES: AppTemplate[] = [
     default_envs: [
       { key: "MYSQL_DATABASE", value: "main" },
       { key: "MYSQL_USER", value: "dbuser" },
-      { key: "MYSQL_PASSWORD", value: "eqsam_mysql_pass_123" },
-      { key: "MYSQL_ROOT_PASSWORD", value: "eqsam_root_pass_123" },
+      { key: "MYSQL_PASSWORD", value: "••••••••", is_secret: true, required: true },
+      { key: "MYSQL_ROOT_PASSWORD", value: "••••••••", is_secret: true, required: true },
     ],
+    healthcheck: {
+      type: "command",
+      command: "mysqladmin ping -h 127.0.0.1 -u dbuser",
+      port: 3306,
+      timeoutSeconds: 5,
+      retries: 6,
+      startPeriodSeconds: 15,
+    },
+    validationPolicy: {
+      requireHealthcheck: true,
+      requireDomainVerification: false,
+    },
+  },
+  {
+    id: "mariadb-db",
+    name: "MariaDB 11.4 Database",
+    category: "databases",
+    icon: "https://cdn.simpleicons.org/mariadb/003545",
+    description: "Banco de dados relacional comunitário e de altíssima performance, 100% compatível com MySQL.",
+    build_pack: "dockerfile",
+    git_repository: "https://github.com/MariaDB/mariadb-docker",
+    git_branch: "master",
+    recommended_ram: 512,
+    recommended_cpu: 0.5,
+    default_port: 3306,
+    tags: ["MariaDB", "MySQL", "SQL", "Database", "Relacional"],
+    default_envs: [
+      { key: "MARIADB_DATABASE", value: "main" },
+      { key: "MARIADB_USER", value: "dbuser" },
+      { key: "MARIADB_PASSWORD", value: "••••••••", is_secret: true, required: true },
+      { key: "MARIADB_ROOT_PASSWORD", value: "••••••••", is_secret: true, required: true },
+    ],
+    healthcheck: {
+      type: "command",
+      command: "mariadb-admin ping -h 127.0.0.1 -u dbuser",
+      port: 3306,
+      timeoutSeconds: 5,
+      retries: 6,
+      startPeriodSeconds: 12,
+    },
+    validationPolicy: {
+      requireHealthcheck: true,
+      requireDomainVerification: false,
+    },
   },
   {
     id: "redis-standalone",
-    name: "Redis Cache & Broker",
+    name: "Redis 7.2 (Cache & Filas)",
     category: "databases",
     icon: "https://cdn.simpleicons.org/redis/DC382D",
-    description: "Banco de dados em memória ultrarrápido para filas, pub/sub, cache de sessões e alta velocidade.",
+    description: "Banco de dados em memória ultrarrápido para filas, pub/sub, cache de sessões e alta velocidade com persistência AOF.",
     build_pack: "dockerfile",
     git_repository: "https://github.com/redis/redis",
     git_branch: "7.2",
@@ -497,8 +554,20 @@ export const APP_TEMPLATES: AppTemplate[] = [
     default_port: 6379,
     tags: ["Redis", "Cache", "PubSub", "Filas"],
     default_envs: [
-      { key: "REDIS_PORT", value: "6379" },
+      { key: "REDIS_PASSWORD", value: "••••••••", is_secret: true, required: true },
     ],
+    healthcheck: {
+      type: "command",
+      command: "redis-cli ping",
+      port: 6379,
+      timeoutSeconds: 4,
+      retries: 5,
+      startPeriodSeconds: 4,
+    },
+    validationPolicy: {
+      requireHealthcheck: true,
+      requireDomainVerification: false,
+    },
   },
   {
     id: "pocketbase-backend",
@@ -516,5 +585,17 @@ export const APP_TEMPLATES: AppTemplate[] = [
     default_envs: [
       { key: "PORT", value: "8090" },
     ],
+    healthcheck: {
+      type: "http",
+      path: "/api/health",
+      port: 8090,
+      expectedStatus: [200],
+      timeoutSeconds: 5,
+      retries: 4,
+    },
+    validationPolicy: {
+      requireHealthcheck: true,
+      requireDomainVerification: true,
+    },
   },
 ];

@@ -94,15 +94,61 @@ export class DeploymentDiagnosticsService {
       };
     }
 
-    // 6. Falha Genérica de Healthcheck
-    if (text.includes("healthcheck") || text.includes("Healthcheck")) {
+    // 6. Falha de Autenticação em Banco de Dados
+    if (
+      text.includes("password authentication failed") ||
+      text.includes("Access denied for user") ||
+      text.includes("NOAUTH Authentication required") ||
+      text.includes("auth failed")
+    ) {
       return {
-        code: "ERR_HEALTHCHECK_FAILED",
-        title: "Validação de integridade da aplicação falhou",
-        description: "O container foi iniciado, mas o teste de resposta interna não retornou status de sucesso.",
-        possibleCause: "A rota testada (ex: '/') pode estar retornando erro 500 ou demorando mais tempo para carregar do que o timeout configurado.",
+        code: "ERR_DB_AUTH_FAILED",
+        title: "Falha de autenticação com o banco de dados",
+        description: "O usuário ou a senha informada foram recusados pelo servidor de banco de dados.",
+        possibleCause: "As credenciais inseridas na connection string ou nas variáveis POSTGRES_PASSWORD/MYSQL_PASSWORD/REDIS_PASSWORD estão incorretas.",
         action: {
-          label: "Consultar Logs do Container",
+          label: "Verificar Credenciais de Conexão",
+          type: "configure_env",
+        },
+        technicalError: text.slice(0, 300),
+        timestamp: new Date().toISOString(),
+      };
+    }
+
+    // 7. Falha de Disco / Storage Cheio
+    if (
+      text.includes("No space left on device") ||
+      text.includes("disk quota exceeded") ||
+      text.includes("could not extend file")
+    ) {
+      return {
+        code: "ERR_DISK_FULL",
+        title: "Armazenamento do volume de dados esgotado",
+        description: "O banco de dados não conseguiu gravar dados porque o volume atingiu a capacidade máxima.",
+        possibleCause: "A quota de armazenamento do serviço foi atingida ou o disco do servidor hospedeiro está lotado.",
+        action: {
+          label: "Aumentar Limite de Storage",
+          type: "view_database",
+        },
+        technicalError: text.slice(0, 300),
+        timestamp: new Date().toISOString(),
+      };
+    }
+
+    // 8. Falha de Memória (OOM / Out of Memory)
+    if (
+      text.includes("Cannot allocate memory") ||
+      text.includes("Out of memory") ||
+      text.includes("OOMKilled") ||
+      text.includes("JavaScript heap out of memory")
+    ) {
+      return {
+        code: "ERR_OUT_OF_MEMORY",
+        title: "Limite de memória RAM excedido",
+        description: "O container foi encerrado pelo sistema operacional por ultrapassar a memória alocada.",
+        possibleCause: "O consumo de memória da aplicação ou banco de dados ultrapassou o limite configurado no plano.",
+        action: {
+          label: "Aumentar Limite de RAM",
           type: "view_logs",
         },
         technicalError: text.slice(0, 300),
@@ -110,7 +156,23 @@ export class DeploymentDiagnosticsService {
       };
     }
 
-    // 7. Diagnóstico Padrão
+    // 9. Falha Genérica de Healthcheck
+    if (text.includes("healthcheck") || text.includes("Healthcheck")) {
+      return {
+        code: "ERR_HEALTHCHECK_FAILED",
+        title: "Aplicação não respondeu às sondas de saúde",
+        description: "O container foi iniciado, mas falhou repetidamente nas verificações automáticas de integridade.",
+        possibleCause: "O processo pode ter entrado em deadlock, demorado mais tempo para inicializar do que o tempo limite (startPeriod) ou a rota de status não retornou HTTP 200.",
+        action: {
+          label: "Inspecionar Logs do Container",
+          type: "view_logs",
+        },
+        technicalError: text.slice(0, 300),
+        timestamp: new Date().toISOString(),
+      };
+    }
+
+    // 10. Diagnóstico Padrão
     return {
       code: "ERR_GENERIC_DEPLOY",
       title: "Falha durante a execução do deploy",

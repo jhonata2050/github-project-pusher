@@ -6,3 +6,4 @@ export * from "./domain-verifier";
 export * from "./diagnostics";
 export * from "./project-detector";
 export * from "./build-strategy";
+export * from "./database-providers";

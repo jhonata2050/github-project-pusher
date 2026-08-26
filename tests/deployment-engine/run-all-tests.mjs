@@ -16,6 +16,8 @@ const tests = [
   "healthcheck-and-domain.test.mjs",
   "web-stacks.test.mjs",
   "stage3-audit-and-failures.test.mjs",
+  "database-providers.test.mjs",
+  "database-persistence-and-failures.test.mjs",
 ];
 
 let allPassed = true;
