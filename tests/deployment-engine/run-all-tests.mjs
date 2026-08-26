@@ -15,6 +15,7 @@ const tests = [
   "diagnostics.test.mjs",
   "healthcheck-and-domain.test.mjs",
   "web-stacks.test.mjs",
+  "stage3-audit-and-failures.test.mjs",
 ];
 
 let allPassed = true;
@@ -31,7 +32,7 @@ for (const testFile of tests) {
 
 console.log("==================================================");
 if (allPassed) {
-  console.log("🎉 TODOS OS TESTES PASSARAM COM SUCESSO!");
+  console.log("🎉 TODOS OS TESTES PASSARAM COM 100% DE SUCESSO!");
 } else {
   console.error("❌ ALGUNS TESTES FALHARAM.");
   process.exit(1);

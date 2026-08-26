@@ -12,7 +12,7 @@ export class BuildStrategyResolver {
     const pm = project.packageManager || "npm";
     const port = requestedPort || project.defaultPort || 3000;
 
-    const installCommand = this.getInstallCommand(pm);
+    const installCommand = this.getInstallCommand(pm, project.lockfilesFound);
 
     // 1. ESTRATÉGIA: Next.js
     if (project.framework === "nextjs") {
@@ -45,6 +45,7 @@ export class BuildStrategyResolver {
         };
       }
 
+      // Next.js Standalone
       if (project.nextVariant === "standalone") {
         return {
           framework: "nextjs",
@@ -52,7 +53,7 @@ export class BuildStrategyResolver {
           packageManager: pm,
           installCommand,
           buildCommand: project.hasBuildScript ? `${pm} run build` : "npx next build",
-          startCommand: `node .next/standalone/server.js`,
+          startCommand: "node .next/standalone/server.js",
           entrypoint: ".next/standalone/server.js",
           port,
           environment: {
@@ -145,7 +146,7 @@ export class BuildStrategyResolver {
         };
       }
 
-      // Vite SPA Estático (Publicado via Caddy)
+      // Vite SPA Estático (Publicado via Caddy com fallback de rotas SPA)
       return {
         framework: "react_vite",
         runtime: "static",
@@ -190,12 +191,6 @@ export class BuildStrategyResolver {
         startCmd = "node index.js";
       }
 
-      const isNest = project.nodeFramework === "nestjs";
-      const isFastify = project.nodeFramework === "fastify";
-      const isExpress = project.nodeFramework === "express";
-
-      const hasHealthEndpoint = isNest || isFastify || isExpress;
-
       return {
         framework: "node_api",
         runtime: "nixpacks",
@@ -212,7 +207,7 @@ export class BuildStrategyResolver {
         },
         healthcheck: {
           type: "http",
-          path: hasHealthEndpoint ? "/" : "/",
+          path: "/",
           port,
           expectedStatus: [200, 201, 204, 301, 302, 304, 307, 308, 404], // 404 permitido se rota raiz não estiver implementada em API pura
           timeoutSeconds: 6,
@@ -306,7 +301,7 @@ export class BuildStrategyResolver {
     };
   }
 
-  private static getInstallCommand(pm: PackageManager): string {
+  private static getInstallCommand(pm: PackageManager, lockfiles: string[] = []): string {
     switch (pm) {
       case "bun":
         return "bun install";
@@ -316,6 +311,10 @@ export class BuildStrategyResolver {
         return "yarn install";
       case "npm":
       default:
+        // Se package-lock.json estiver presente, npm ci garante builds determinísticos e reproduzíveis
+        if (lockfiles.includes("package-lock.json")) {
+          return "npm ci";
+        }
         return "npm install";
     }
   }
