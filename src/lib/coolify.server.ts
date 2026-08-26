@@ -1358,12 +1358,12 @@ export async function applyTemplateToApplication(
           git_repository: sanitizedGit,
           git_branch: template.git_branch || "main",
           ports_exposes: String(template.default_port || 3000),
+          ports_mappings: "",
           publish_directory: template.build_pack === "static" ? "/usr/share/caddy" : "",
+          static_image: "caddy:2-alpine",
+          base_directory: "",
           post_deployment_command: "",
         };
-        if (template.build_pack === "static") {
-          patchBody.static_image = "caddy:2-alpine";
-        }
         await coolifyFetch(server, `/applications/${app.coolify_app_uuid}`, {
           method: "PATCH",
           body: JSON.stringify(patchBody),
@@ -1382,10 +1382,8 @@ export async function applyTemplateToApplication(
             body: JSON.stringify({
               key: env.key,
               value: env.value,
-              is_build_time: false,
-              is_literal: true,
             }),
-          });
+          }).catch(() => null);
         }
       } catch (e: any) {
         console.warn("[Coolify] Aviso ao salvar envs:", e.message);
