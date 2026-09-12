@@ -178,6 +178,18 @@ describe("Lei da Preservação de Fachadas (Facade Integrity Tests)", () => {
     expect(pending.length).toBe(2);
     expect(pending.map(p => p.key)).toEqual(["DB_PASSWORD", "API_KEY"]);
   });
+
+  it("AppOverviewTab e subcomponentes de overview devem ser exportados corretamente", async () => {
+    const { AppOverviewTab } = await import("../../src/components/apps/tabs/AppOverviewTab");
+    expect(typeof AppOverviewTab).toBe("function");
+
+    const overview = await import("../../src/components/apps/overview");
+    expect(typeof overview.AppPendingDeployBanner).toBe("function");
+    expect(typeof overview.AppPendingEnvsAlert).toBe("function");
+    expect(typeof overview.AppMetricsCards).toBe("function");
+    expect(typeof overview.AppConnectionEndpointsCard).toBe("function");
+    expect(typeof overview.AppInfrastructureInfoCard).toBe("function");
+  });
 });
 
 describe("Motor Caddy & Hardening de Segurança OWASP", () => {
