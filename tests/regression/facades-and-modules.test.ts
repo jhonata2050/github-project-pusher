@@ -138,6 +138,46 @@ describe("Lei da Preservação de Fachadas (Facade Integrity Tests)", () => {
     const postDeploy = await import("../../src/lib/swarm/templates/post-deploy");
     expect(typeof postDeploy.runPostDeployHooks).toBe("function");
   });
+
+  it("payments.server fachada deve reexportar todas as funções de sessão, URLs canônicas e adaptadores de gateway", async () => {
+    const payments = await import("../../src/lib/payments.server");
+    expect(typeof payments.getCanonicalPublicUrl).toBe("function");
+    expect(typeof payments.createPaymentSession).toBe("function");
+    expect(typeof payments.createPaymentSessionWithFallback).toBe("function");
+    expect(typeof payments.recordTransaction).toBe("function");
+    expect(typeof payments.onlyDigits).toBe("function");
+
+    // Adaptadores individuais
+    expect(typeof payments.createAbacatePaySession).toBe("function");
+    expect(typeof payments.createStripeSession).toBe("function");
+    expect(typeof payments.createMercadoPagoSession).toBe("function");
+    expect(typeof payments.createWooviSession).toBe("function");
+    expect(typeof payments.createPagHiperSession).toBe("function");
+    expect(typeof payments.createCajuPaySession).toBe("function");
+    expect(typeof payments.createMisticPaySession).toBe("function");
+
+    // Validações utilitárias
+    expect(payments.onlyDigits("123.456.789-00")).toBe("12345678900");
+    expect(payments.onlyDigits("+55 (11) 99999-8888")).toBe("5511999998888");
+
+    const url = payments.getCanonicalPublicUrl();
+    expect(url.endsWith("/")).toBe(false);
+    expect(url).not.toContain("localhost");
+  });
+
+  it("useAppManagement deve exportar detectPendingRequiredEnvs e detectar variáveis de exemplo", async () => {
+    const { detectPendingRequiredEnvs } = await import("../../src/components/apps/hooks/useAppManagement");
+    expect(typeof detectPendingRequiredEnvs).toBe("function");
+
+    const pending = detectPendingRequiredEnvs([
+      { key: "DB_PASSWORD", value: "re_insira_sua_senha" },
+      { key: "API_KEY", value: "" },
+      { key: "PORT", value: "3000" },
+      { key: "NODE_ENV", value: "production" },
+    ]);
+    expect(pending.length).toBe(2);
+    expect(pending.map(p => p.key)).toEqual(["DB_PASSWORD", "API_KEY"]);
+  });
 });
 
 describe("Motor Caddy & Hardening de Segurança OWASP", () => {
