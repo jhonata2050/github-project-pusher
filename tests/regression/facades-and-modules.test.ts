@@ -62,6 +62,42 @@ describe("Lei da Preservação de Fachadas (Facade Integrity Tests)", () => {
     expect(cloudApps.activeDeployments).toBeInstanceOf(Map);
     expect(cloudApps.appDiskUsageCache).toBeInstanceOf(Map);
   });
+
+  it("support.functions fachada deve reexportar todas as 27 server functions de Suporte, DA, Produtos e Serviços", async () => {
+    const support = await import("../../src/lib/support.functions");
+    // System settings
+    expect(typeof support.testWhatsApp).toBe("function");
+    expect(typeof support.getSystemSettings).toBe("function");
+    expect(typeof support.updateSystemSettings).toBe("function");
+    // Tickets
+    expect(typeof support.getTickets).toBe("function");
+    expect(typeof support.getTicketDetails).toBe("function");
+    expect(typeof support.createTicket).toBe("function");
+    expect(typeof support.replyTicket).toBe("function");
+    expect(typeof support.updateTicketStatus).toBe("function");
+    // Servers & DirectAdmin
+    expect(typeof support.getServers).toBe("function");
+    expect(typeof support.createServerDA).toBe("function");
+    expect(typeof support.updateServerDA).toBe("function");
+    expect(typeof support.deleteServerDA).toBe("function");
+    expect(typeof support.testDAConnection).toBe("function");
+    expect(typeof support.getDAPackagesList).toBe("function");
+    expect(typeof support.getDACapabilitiesList).toBe("function");
+    expect(typeof support.getDASSOUrl).toBe("function");
+    expect(typeof support.getServiceServerDetails).toBe("function");
+    expect(typeof support.hostingAction).toBe("function");
+    // Products & Groups
+    expect(typeof support.getAllProducts).toBe("function");
+    expect(typeof support.getProductGroups).toBe("function");
+    expect(typeof support.createProductGroup).toBe("function");
+    expect(typeof support.updateProductGroup).toBe("function");
+    expect(typeof support.deleteProductGroup).toBe("function");
+    expect(typeof support.createProduct).toBe("function");
+    expect(typeof support.updateProduct).toBe("function");
+    // Services
+    expect(typeof support.updateServiceDetails).toBe("function");
+    expect(typeof support.adminCreateClientService).toBe("function");
+  });
 });
 
 describe("Motor Caddy & Hardening de Segurança OWASP", () => {
