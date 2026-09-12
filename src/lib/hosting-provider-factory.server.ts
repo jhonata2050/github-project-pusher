@@ -6,7 +6,7 @@ export async function getHostingProvider(serverId: string): Promise<HostingProvi
   
   const { data: server, error } = await supabaseAdmin
     .from("servers")
-    .select("id, server_type")
+    .select("id, type")
     .eq("id", serverId)
     .maybeSingle();
 
@@ -18,7 +18,7 @@ export async function getHostingProvider(serverId: string): Promise<HostingProvi
   }
 
   // Por padrão, se não especificado, tratamos como DirectAdmin para compatibilidade
-  const serverType = server.server_type || 'directadmin';
+  const serverType = (server as any).type || 'directadmin';
 
   switch (serverType.toLowerCase()) {
     case 'directadmin':

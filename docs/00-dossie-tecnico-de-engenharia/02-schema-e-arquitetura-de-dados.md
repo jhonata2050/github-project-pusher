@@ -127,7 +127,7 @@ A autenticação de usuários é gerenciada pelo schema nativo `auth.users`, sen
 10. **`public.vps_instances`**:
     - **Chave Primária:** `id` (UUID).
     - **Colunas Reais:**
-      - `service_id` (UUID, referencia `services.id`).
+      - `id` (UUID).
       - `user_id` (UUID, referencia `profiles.id`).
       - `external_id` (`text`): ID da instância na API da Contabo.
       - `name` (`text`): Nome da VPS.
@@ -135,6 +135,7 @@ A autenticação de usuários é gerenciada pelo schema nativo `auth.users`, sen
       - `region` (`text`), `os_template` (`text`).
       - `status` (`text`: `'active' | 'provisioning' | 'stopped' | 'rebuilding' | 'error'`).
       - `created_at`, `updated_at`.
+    - **ATENÇÃO:** A coluna `service_id` NÃO existe em `vps_instances`; o vínculo com clientes é via `user_id` e correlação de metadados (`domain`, `vps_hostname`).
 
 ---
 

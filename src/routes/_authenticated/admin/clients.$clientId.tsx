@@ -414,8 +414,8 @@ function ClientDetailPage() {
     queryFn: async () => {
       const { data } = await supabase
         .from('vps_instances')
-        .select('id, external_id, ip_address, status, region, os_template, service_id');
-      return (data || []).filter((i: any) => !i.service_id);
+        .select('id, external_id, ip_address, status, region, os_template, user_id');
+      return (data || []).filter((i: any) => !i.user_id);
     },
     enabled: isAddServiceModalOpen,
   });

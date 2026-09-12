@@ -97,7 +97,77 @@ describe("Integridade Estrita de Schema do Banco de Dados (Anti-Erro 42703)", ()
         });
       }
     }
-
     expect(violations).toHaveLength(0);
+  });
+
+  it("garante que nenhum arquivo em src/ tenta acessar 'servers.server_type' (deve ser 'servers.type')", () => {
+    const violations: { file: string; match: string }[] = [];
+    for (const filePath of sourceFiles) {
+      const content = fs.readFileSync(filePath, "utf-8");
+      if (content.includes("server_type") && (content.includes('.from("servers")') || content.includes(".from('servers')"))) {
+        const lines = content.split("\n");
+        lines.forEach((line, index) => {
+          if (line.includes("server_type") && !line.trim().startsWith("//")) {
+            violations.push({ file: path.relative(process.cwd(), filePath), match: `Linha ${index + 1}: ${line.trim()}` });
+          }
+        });
+      }
+    }
+    expect(violations, `Coluna fantasma 'servers.server_type' detectada em: ${JSON.stringify(violations, null, 2)}`).toHaveLength(0);
+  });
+
+  it("garante que nenhum arquivo em src/ tenta acessar 'vps_instances.service_id' (deve ser 'vps_instances.user_id')", () => {
+    const violations: { file: string; match: string }[] = [];
+    for (const filePath of sourceFiles) {
+      const content = fs.readFileSync(filePath, "utf-8");
+      if (content.includes('.from("vps_instances")') || content.includes(".from('vps_instances')")) {
+        const lines = content.split("\n");
+        let inVpsQuery = false;
+        lines.forEach((line, index) => {
+          if (line.includes('.from("vps_instances")') || line.includes(".from('vps_instances')")) {
+            inVpsQuery = true;
+          }
+          if (inVpsQuery && line.includes("service_id") && !line.trim().startsWith("//")) {
+            violations.push({ file: path.relative(process.cwd(), filePath), match: `Linha ${index + 1}: ${line.trim()}` });
+          }
+          if (line.includes(";")) {
+            inVpsQuery = false;
+          }
+        });
+      }
+    }
+    expect(violations, `Coluna fantasma 'vps_instances.service_id' detectada em: ${JSON.stringify(violations, null, 2)}`).toHaveLength(0);
+  });
+
+  it("garante que nenhum arquivo em src/ tenta selecionar 'category' diretamente em 'audit_logs'", () => {
+    const violations: { file: string; match: string }[] = [];
+    for (const filePath of sourceFiles) {
+      const content = fs.readFileSync(filePath, "utf-8");
+      if (content.includes("category") && (content.includes('.from("audit_logs")') || content.includes(".from('audit_logs')"))) {
+        const lines = content.split("\n");
+        lines.forEach((line, index) => {
+          if (line.includes(".select(") && line.includes("category") && !line.trim().startsWith("//")) {
+            violations.push({ file: path.relative(process.cwd(), filePath), match: `Linha ${index + 1}: ${line.trim()}` });
+          }
+        });
+      }
+    }
+    expect(violations, `Coluna fantasma 'audit_logs.category' detectada em: ${JSON.stringify(violations, null, 2)}`).toHaveLength(0);
+  });
+
+  it("garante que nenhum arquivo em src/ faz consultas diretas na tabela inexistente 'notifications'", () => {
+    const violations: { file: string; match: string }[] = [];
+    for (const filePath of sourceFiles) {
+      const content = fs.readFileSync(filePath, "utf-8");
+      if (content.includes('.from("notifications")') || content.includes(".from('notifications')")) {
+        const lines = content.split("\n");
+        lines.forEach((line, index) => {
+          if ((line.includes('.from("notifications")') || line.includes(".from('notifications')")) && !line.trim().startsWith("//")) {
+            violations.push({ file: path.relative(process.cwd(), filePath), match: `Linha ${index + 1}: ${line.trim()}` });
+          }
+        });
+      }
+    }
+    expect(violations, `Tabela inexistente 'notifications' consultada em: ${JSON.stringify(violations, null, 2)}`).toHaveLength(0);
   });
 });

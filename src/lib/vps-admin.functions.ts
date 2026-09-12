@@ -48,7 +48,11 @@ export const getVPSAdminData = createServerFn({ method: "GET" })
 
     // Associar instâncias com seus respectivos serviços e perfis
     const rows = allInstances.map((inst: any) => {
-      const matchedService = allServices.find((s: any) => s.id === inst.service_id);
+      const matchedService = allServices.find((s: any) => 
+        (inst.user_id && s.user_id === inst.user_id && s.products?.product_type === 'vps') ||
+        (s.vps_hostname && s.vps_hostname === inst.name) ||
+        (s.domain && (s.domain === inst.name || s.domain === inst.ip_address))
+      );
       const targetUserId = matchedService?.user_id || inst.user_id;
       return {
         ...inst,
@@ -60,7 +64,9 @@ export const getVPSAdminData = createServerFn({ method: "GET" })
 
     // Se houver serviços de VPS sem instância criada ainda, incluir também na lista
     const vpsServicesWithoutInstance = allServices.filter(
-      (s: any) => s.products?.product_type === 'vps' && !allInstances.some((i: any) => i.service_id === s.id)
+      (s: any) => s.products?.product_type === 'vps' && !allInstances.some((i: any) => 
+        (i.user_id === s.user_id) || (s.vps_hostname && i.name === s.vps_hostname)
+      )
     );
 
     vpsServicesWithoutInstance.forEach((s: any) => {

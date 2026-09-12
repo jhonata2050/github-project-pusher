@@ -71,13 +71,11 @@ for (const f of files) {
   while ((match = queryRegex.exec(content)) !== null) {
     const table = match[1];
     const select = match[2].replace(/\s+/g, ' ').trim();
-    if (select.includes('(')) {
-      queriesFound.push({ file: normalizedFile, table, select });
-    }
+    queriesFound.push({ file: normalizedFile, table, select });
   }
 }
 
-console.log(`Found ${queriesFound.length} joined select queries to test...`);
+console.log(`Found ${queriesFound.length} select queries across the codebase to test...`);
 
 async function testAll() {
   const broken = [];

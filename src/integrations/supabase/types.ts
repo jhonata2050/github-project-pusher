@@ -649,8 +649,10 @@ export type Database = {
           last_capability_check: string | null
           max_accounts: number | null
           name: string | null
+          port: number | null
           server_type: string | null
           sso_supported: boolean | null
+          type: string | null
         }
         Insert: {
           api_token?: string | null
@@ -663,8 +665,10 @@ export type Database = {
           last_capability_check?: string | null
           max_accounts?: number | null
           name?: string | null
+          port?: number | null
           server_type?: string | null
           sso_supported?: boolean | null
+          type?: string | null
         }
         Update: {
           api_token?: string | null
@@ -677,8 +681,10 @@ export type Database = {
           last_capability_check?: string | null
           max_accounts?: number | null
           name?: string | null
+          port?: number | null
           server_type?: string | null
           sso_supported?: boolean | null
+          type?: string | null
         }
         Relationships: []
       }
@@ -1004,6 +1010,7 @@ export type Database = {
           id: string
           ip_address: string | null
           last_metrics: Json | null
+          name: string | null
           os_template: string | null
           provider_id: string | null
           provider_name: string | null
@@ -1015,6 +1022,7 @@ export type Database = {
           ssh_port: number | null
           ssh_user: string | null
           status: string | null
+          user_id: string | null
         }
         Insert: {
           cpu_cores?: number | null
@@ -1024,6 +1032,7 @@ export type Database = {
           id?: string
           ip_address?: string | null
           last_metrics?: Json | null
+          name?: string | null
           os_template?: string | null
           provider_id?: string | null
           provider_name?: string | null
@@ -1035,6 +1044,7 @@ export type Database = {
           ssh_port?: number | null
           ssh_user?: string | null
           status?: string | null
+          user_id?: string | null
         }
         Update: {
           cpu_cores?: number | null
@@ -1044,6 +1054,7 @@ export type Database = {
           id?: string
           ip_address?: string | null
           last_metrics?: Json | null
+          name?: string | null
           os_template?: string | null
           provider_id?: string | null
           provider_name?: string | null
@@ -1055,6 +1066,7 @@ export type Database = {
           ssh_port?: number | null
           ssh_user?: string | null
           status?: string | null
+          user_id?: string | null
         }
         Relationships: [
           {

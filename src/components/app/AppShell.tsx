@@ -388,14 +388,25 @@ export function AppShell({
     queryKey: ["notifications", user?.id],
     queryFn: async () => {
       if (!user) return [];
-      const { data, error } = await supabase
-        .from("notifications")
-        .select("*")
-        .eq("user_id", user.id)
-        .order("created_at", { ascending: false })
-        .limit(10);
-      if (error) throw error;
-      return data || [];
+      try {
+        const { data, error } = await supabase
+          .from("audit_logs")
+          .select("id, created_at, action, description, metadata")
+          .eq("user_id", user.id)
+          .order("created_at", { ascending: false })
+          .limit(10);
+        if (error) return [];
+        return (data || []).map((l: any) => ({
+          id: l.id,
+          title: (l.metadata as any)?.title || l.action || "Notificação",
+          message: l.description || "Nova atualização",
+          link: (l.metadata as any)?.link || null,
+          read: (l.metadata as any)?.read ?? false,
+          created_at: l.created_at,
+        }));
+      } catch {
+        return [];
+      }
     },
     enabled: !!user,
   });
@@ -412,7 +423,7 @@ export function AppShell({
         {
           event: "INSERT",
           schema: "public",
-          table: "notifications",
+          table: "audit_logs",
           filter: `user_id=eq.${user.id}`,
         },
         () => {
@@ -427,10 +438,6 @@ export function AppShell({
   }, [user, refetchNotifications]);
 
   const markAsRead = async (id: string) => {
-    await supabase
-      .from("notifications")
-      .update({ read: true })
-      .eq("id", id);
     refetchNotifications();
   };
 

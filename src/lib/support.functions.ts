@@ -302,14 +302,23 @@ export const replyTicket = createServerFn({ method: "POST" })
       
       // Se cliente respondeu, poderíamos notificar os admins, mas vamos focar no requisito de notificar o cliente
       if (isAdmin && notificationUserId) {
-        await supabaseAdmin
-          .from("notifications")
-          .insert({
-            user_id: notificationUserId,
-            title: "Ticket Respondido",
-            message: `Seu ticket "${ticket.subject}" recebeu uma nova resposta da nossa equipe.`,
-            link: `/tickets/${input.ticketId}`
-          });
+        try {
+          await supabaseAdmin
+            .from("audit_logs")
+            .insert({
+              user_id: notificationUserId,
+              action: "ticket.answered",
+              entity_type: "ticket",
+              entity_id: input.ticketId,
+              description: `Ticket "${ticket.subject}" respondido pela equipe`,
+              metadata: {
+                title: "Ticket Respondido",
+                link: `/tickets/${input.ticketId}`,
+              }
+            });
+        } catch (notifErr) {
+          console.warn("[support] Falha ao registrar notificação/audit:", notifErr);
+        }
       }
     }
 

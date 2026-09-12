@@ -53,13 +53,13 @@ export const getSystemLogs = createServerFn({ method: "GET" })
 
     let query = context.supabase
       .from("audit_logs")
-      .select("id, category, action, status, actor_email, entity_type, entity_id, description, ip_address, created_at, metadata", { count: "estimated" });
+      .select("id, user_id, action, entity_type, entity_id, description, ip_address, created_at, metadata", { count: "estimated" });
 
-    if (data.type === "auth") query = query.eq("category", "auth");
-    if (data.type === "data") query = query.eq("category", "data");
-    if (data.type === "system") query = query.in("category", ["system", "security"]);
-    if (data.type === "branding") query = query.eq("category", "branding");
-    if (data.type === "webhook") query = query.eq("category", "webhook");
+    if (data.type === "auth") query = query.ilike("action", "%auth%");
+    if (data.type === "data") query = query.in("entity_type", ["service", "invoice", "client", "product"]);
+    if (data.type === "system") query = query.in("entity_type", ["system", "server", "security"]);
+    if (data.type === "branding") query = query.ilike("action", "%branding%");
+    if (data.type === "webhook") query = query.ilike("action", "%webhook%");
 
     const { data: logs, count, error } = await query
       .order("created_at", { ascending: false })
@@ -68,20 +68,23 @@ export const getSystemLogs = createServerFn({ method: "GET" })
     if (error) throw error;
     return {
       type: data.type,
-      logs: (logs ?? []).map((log) => ({
-        id: log.id,
-        createdAt: log.created_at,
-        category: log.category,
-        action: log.action,
-        status: log.status,
-        actorEmail: log.actor_email,
-        description: log.description,
-        entityType: log.entity_type,
-        entityId: log.entity_id,
-        ipAddress: typeof log.ip_address === "string" ? log.ip_address : null,
-        profileName: null,
-        metadata: log.metadata,
-      })),
+      logs: (logs ?? []).map((log: any) => {
+        const meta = log.metadata || {};
+        return {
+          id: log.id,
+          createdAt: log.created_at,
+          category: log.entity_type || (log.action?.split('.')?.[0] ?? "system"),
+          action: log.action,
+          status: meta.status || "success",
+          actorEmail: meta.actorEmail || meta.email || null,
+          description: log.description,
+          entityType: log.entity_type,
+          entityId: log.entity_id,
+          ipAddress: typeof log.ip_address === "string" ? log.ip_address : null,
+          profileName: meta.profileName || null,
+          metadata: log.metadata,
+        };
+      }),
       count: count ?? 0,
     };
   });

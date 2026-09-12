@@ -218,45 +218,28 @@ export const getVPSMetricsHistory = createServerFn({ method: "GET" })
       Date.now() - (data.period === '24h' ? 24 * 60 * 60 * 1000 : data.period === '7d' ? 7 * 24 * 60 * 60 * 1000 : 30 * 24 * 60 * 60 * 1000)
     ).toISOString();
 
-    const PAGE = 1000;
-    const MAX_ROWS = 20000;
     const rows: any[] = [];
-    for (let from = 0; from < MAX_ROWS; from += PAGE) {
-      const { data: page, error } = await supabaseAdmin
-        .from('vps_metrics_history')
-        .select('cpu, ram, disk, created_at')
-        .eq('vps_id', data.instanceId)
-        .gte('created_at', since)
-        .order('created_at', { ascending: false })
-        .range(from, from + PAGE - 1);
 
-      if (error) {
-        break;
-      }
-      if (!page || page.length === 0) break;
-      rows.push(...page);
-      if (page.length < PAGE) break;
-    }
-
-    if (rows.length === 0) {
-      try {
-        const { data: metricsSetting } = await supabaseAdmin
-          .from('system_settings')
-          .select('value')
-          .eq('key', `vps_metrics_${data.instanceId}`)
-          .maybeSingle();
-        if (metricsSetting?.value) {
-          const m = typeof metricsSetting.value === 'string' ? JSON.parse(metricsSetting.value) : metricsSetting.value;
-          if (m && m.last_update) {
-            rows.push({
-              cpu: m.cpu ?? 0,
-              ram: m.ram ?? 0,
-              disk: m.disk ?? 0,
-              created_at: m.last_update,
-            });
-          }
+    // 1. Carregar métricas em tempo real de system_settings (repositório resiliente primário)
+    try {
+      const { data: metricsSetting } = await supabaseAdmin
+        .from('system_settings')
+        .select('value')
+        .eq('key', `vps_metrics_${data.instanceId}`)
+        .maybeSingle();
+      if (metricsSetting?.value) {
+        const m = typeof metricsSetting.value === 'string' ? JSON.parse(metricsSetting.value) : metricsSetting.value;
+        if (m && m.last_update) {
+          rows.push({
+            cpu: m.cpu ?? 0,
+            ram: m.ram ?? 0,
+            disk: m.disk ?? 0,
+            created_at: m.last_update,
+          });
         }
-      } catch {}
+      }
+    } catch (settErr) {
+      console.warn('[VPS] Falha ao carregar métricas de system_settings:', settErr);
     }
 
     rows.reverse();
