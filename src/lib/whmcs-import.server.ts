@@ -437,8 +437,10 @@ export async function finishImportJob(
     .from("whmcs_imports")
     .update({
       status: errorMessage ? "failed" : "completed",
-      error_message: errorMessage ?? null,
-      stats: stats as never,
+      summary: {
+        ...stats,
+        error_message: errorMessage ?? null,
+      } as any,
     })
     .eq("id", jobId);
 }

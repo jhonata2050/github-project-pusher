@@ -18,26 +18,23 @@ export async function logProvisioningAttempt({
   metadata?: any;
 }) {
   try {
-    // Buscar o número da última tentativa
-    const { data: lastLog } = await supabaseAdmin
-      .from("provisioning_logs")
-      .select("attempt_number")
-      .eq("service_id", serviceId)
-      .order("attempt_number", { ascending: false })
-      .limit(1)
-      .maybeSingle();
-
-    const nextAttempt = (lastLog?.attempt_number || 0) + 1;
-
-    await supabaseAdmin.from("provisioning_logs").insert({
-      service_id: serviceId,
-      user_id: userId,
-      attempt_number: nextAttempt,
-      status,
-      error_code: errorCode,
-      error_message: errorMessage,
-      metadata,
-    });
+    try {
+      await supabaseAdmin.from("audit_logs").insert({
+        user_id: userId,
+        action: status === 'success' ? 'provisioning_success' : 'provisioning_failure',
+        entity_type: 'service',
+        entity_id: serviceId,
+        details: {
+          status,
+          error_code: errorCode,
+          errorMessage,
+          metadata,
+          attempt_number: 1,
+        }
+      });
+    } catch (auditErr) {
+      console.warn("[ProvisioningAudit] Fallback de audit_logs:", auditErr);
+    }
 
     // Se falhar, verificar configurações de notificação e enviar alertas
     if (status === 'failure') {
@@ -53,7 +50,7 @@ export async function logProvisioningAttempt({
         : `Falha no provisionamento: ${errorMessage || 'Erro desconhecido'}`,
       serviceId,
       actorId: userId,
-      metadata: { ...metadata, attemptNumber: nextAttempt, errorCode }
+      metadata: { ...metadata, attemptNumber: 1, errorCode }
     });
 
   } catch (error) {

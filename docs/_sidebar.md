@@ -1,5 +1,11 @@
 * [Visão Geral e Introdução](/README.md)
 
+* **00. Dossiê de Engenharia & Blindagem**
+  * [Inventário de Rotas e Endpoints](/00-dossie-tecnico-de-engenharia/01-inventario-de-rotas-e-endpoints.md)
+  * [Schema e Arquitetura de Dados](/00-dossie-tecnico-de-engenharia/02-schema-e-arquitetura-de-dados.md)
+  * [Motores e Integrações do Backend](/00-dossie-tecnico-de-engenharia/03-motores-e-integracoes-do-backend.md)
+  * [Roadmap de Modularização Segura](/00-dossie-tecnico-de-engenharia/04-roadmap-de-modularizacao.md)
+
 * **01. Visão Geral & Arquitetura**
   * [Arquitetura Geral do Sistema](/01-visao-geral/arquitetura-do-sistema.md)
   * [Segurança, Resiliência e Isolamento](/01-visao-geral/seguranca-e-resiliencia.md)
