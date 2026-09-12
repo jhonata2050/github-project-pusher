@@ -68,6 +68,9 @@ import { AppEnvsTab } from "@/components/apps/tabs/AppEnvsTab";
 import { AppDomainsTab } from "@/components/apps/tabs/AppDomainsTab";
 import { AppTemplateCatalogModal } from "@/components/apps/modals/AppTemplateCatalogModal";
 import { AppLiveDeployModal } from "@/components/apps/modals/AppLiveDeployModal";
+import { AppHeader } from "@/components/apps/AppHeader";
+import { AppStopConfirmModal } from "@/components/apps/modals/AppStopConfirmModal";
+import { AppGitDeployConfirmModal } from "@/components/apps/modals/AppGitDeployConfirmModal";
 
 export const Route = createFileRoute("/_authenticated/apps/$appId")({
   head: () => ({
@@ -699,206 +702,27 @@ function AppDetailsPage() {
     <AppShell breadcrumb={app.name || "Gerenciar Aplicação"}>
       <div className="space-y-6 max-w-7xl mx-auto p-4 sm:p-6 pb-20">
         {/* Top Header */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b pb-6">
-          <div className="space-y-1.5">
-            <div className="flex items-center gap-2 text-xs text-muted-foreground">
-              <Link to="/services" className="hover:underline flex items-center gap-1">
-                <ArrowLeft className="h-3.5 w-3.5" /> Meus Serviços
-              </Link>
-              <span>/</span>
-              <span>Aplicações & Bots</span>
-            </div>
-            <div className="flex flex-wrap items-center gap-3">
-              {isEditingName ? (
-                <form
-                  onSubmit={(e) => {
-                    e.preventDefault();
-                    if (!editingNameInput.trim()) {
-                      toast.error("O nome da aplicação não pode ficar em branco.");
-                      return;
-                    }
-                    updateNameMutation.mutate(editingNameInput.trim());
-                  }}
-                  className="flex items-center gap-2"
-                >
-                  <Input
-                    value={editingNameInput}
-                    onChange={(e) => setEditingNameInput(e.target.value)}
-                    placeholder="Nome da aplicação"
-                    className="h-9 text-lg sm:text-xl font-bold rounded-xl max-w-xs bg-background border-primary shadow-xs"
-                    autoFocus
-                  />
-                  <Button
-                    type="submit"
-                    size="sm"
-                    disabled={updateNameMutation.isPending || !editingNameInput.trim()}
-                    className="h-9 px-3 rounded-xl gap-1 text-xs font-bold"
-                  >
-                    {updateNameMutation.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5" />}
-                    Salvar
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => {
-                      setEditingNameInput(app.name);
-                      setIsEditingName(false);
-                    }}
-                    className="h-9 px-2.5 rounded-xl text-xs text-muted-foreground hover:text-foreground"
-                  >
-                    <X className="h-3.5 w-3.5" />
-                  </Button>
-                </form>
-              ) : (
-                <div className="flex items-center gap-2 group">
-                  <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-foreground">
-                    {app.name}
-                  </h1>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => {
-                      setEditingNameInput(app.name);
-                      setIsEditingName(true);
-                    }}
-                    title="Editar nome da aplicação"
-                    className="h-8 w-8 rounded-xl opacity-70 hover:opacity-100 hover:bg-muted text-muted-foreground hover:text-foreground transition-opacity"
-                  >
-                    <Pencil className="h-3.5 w-3.5" />
-                  </Button>
-                </div>
-              )}
-              {getStatusBadge()}
-            </div>
-            {!isPendingDeploy && app.fqdn && (
-              <div className="flex flex-wrap items-center gap-2 pt-1">
-                {hasCustomDomain ? (
-                  <>
-                    <a
-                      href={`https://${activeCustomDomain}`}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="text-xs bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 px-3 py-1.5 rounded-xl hover:bg-emerald-500/20 flex items-center gap-1.5 font-mono font-bold transition-colors shadow-sm"
-                    >
-                      <Globe className="h-3.5 w-3.5 text-emerald-500" />
-                      https://{activeCustomDomain}
-                      <ExternalLink className="h-3 w-3 ml-0.5 opacity-70" />
-                    </a>
-                    <Badge variant="outline" className="text-[11px] font-mono text-emerald-600 dark:text-emerald-400 border-emerald-500/30 bg-emerald-500/5 py-1 px-2.5 rounded-lg">
-                      Domínio Personalizado
-                    </Badge>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => copyToClipboard(`https://${activeCustomDomain}`)}
-                      className="h-8 px-2.5 rounded-xl text-xs text-muted-foreground hover:text-foreground gap-1"
-                    >
-                      <Copy className="h-3.5 w-3.5" /> Copiar
-                    </Button>
-                    <span className="text-[11px] text-muted-foreground ml-1">
-                      (Subdomínio original: <code className="text-zinc-600 dark:text-zinc-400 font-mono">{cleanDefaultSubdomainHost}</code>)
-                    </span>
-                  </>
-                ) : (
-                  <>
-                    <a
-                      href={safeOnlineUrl}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="text-xs bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 px-3 py-1.5 rounded-xl hover:bg-emerald-500/20 flex items-center gap-1.5 font-mono font-bold transition-colors shadow-sm"
-                    >
-                      <Globe className="h-3.5 w-3.5 text-emerald-500" />
-                      {safeOnlineUrl}
-                      <ExternalLink className="h-3 w-3 ml-0.5 opacity-70" />
-                    </a>
-                    <Badge variant="outline" className="text-[11px] font-mono text-muted-foreground border-border bg-muted/30 py-1 px-2.5 rounded-lg">
-                      Subdomínio do Sistema
-                    </Badge>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => copyToClipboard(app.fqdn)}
-                      className="h-8 px-2.5 rounded-xl text-xs text-muted-foreground hover:text-foreground gap-1"
-                    >
-                      <Copy className="h-3.5 w-3.5" /> Copiar
-                    </Button>
-                  </>
-                )}
-              </div>
-            )}
-          </div>
-
-          {/* Botões de Ação de Ciclo de Vida */}
-          <div className="flex flex-wrap items-center gap-2">
-            {isPendingDeploy ? (
-              <Button 
-                onClick={() => setIsTemplateModalOpen(true)}
-                className="rounded-xl gap-2 font-bold bg-amber-500 hover:bg-amber-600 text-white shadow-sm"
-              >
-                <Sparkles className="h-4 w-4" />
-                Escolher Modelo & Fazer Deploy
-              </Button>
-            ) : (
-              <>
-                {isRunning ? (
-                  <Button
-                    variant="outline"
-                    className="rounded-xl gap-2 border-rose-500/30 text-rose-600 hover:bg-rose-500/10"
-                    disabled={actionMutation.isPending}
-                    onClick={() => actionMutation.mutate("stop")}
-                  >
-                    <Square className="h-4 w-4" />
-                    Parar
-                  </Button>
-                ) : (
-                  <Button
-                    variant="outline"
-                    className="rounded-xl gap-2 border-emerald-500/30 text-emerald-600 hover:bg-emerald-500/10"
-                    disabled={actionMutation.isPending}
-                    onClick={() => actionMutation.mutate("start")}
-                  >
-                    <Play className="h-4 w-4" />
-                    Iniciar
-                  </Button>
-                )}
-
-                <Button
-                  variant="outline"
-                  className="rounded-xl gap-2"
-                  disabled={actionMutation.isPending}
-                  onClick={() => actionMutation.mutate("restart")}
-                >
-                  <RotateCcw className="h-4 w-4" />
-                  Reiniciar
-                </Button>
-
-                <Button
-                  className="rounded-xl gap-2 font-bold bg-primary"
-                  disabled={actionMutation.isPending}
-                  onClick={() => actionMutation.mutate("deploy")}
-                >
-                  <Zap className="h-4 w-4" />
-                  Re-Deploy
-                </Button>
-
-                <Button
-                  variant="outline"
-                  className="rounded-xl gap-2 border-rose-500/30 text-rose-600 hover:bg-rose-500/10"
-                  disabled={actionMutation.isPending}
-                  onClick={() => setIsStopAppConfirmOpen(true)}
-                  title="Parar aplicação"
-                >
-                  <Trash2 className="h-4 w-4" />
-                  Excluir
-                </Button>
-              </>
-            )}
-          </div>
-        </div>
+        <AppHeader
+          app={app}
+          isEditingName={isEditingName}
+          setIsEditingName={setIsEditingName}
+          editingNameInput={editingNameInput}
+          setEditingNameInput={setEditingNameInput}
+          onSaveName={(name) => updateNameMutation.mutate(name)}
+          isSavingName={updateNameMutation.isPending}
+          getStatusBadge={getStatusBadge}
+          isPendingDeploy={isPendingDeploy}
+          hasCustomDomain={hasCustomDomain}
+          activeCustomDomain={activeCustomDomain}
+          cleanDefaultSubdomainHost={cleanDefaultSubdomainHost}
+          safeOnlineUrl={safeOnlineUrl}
+          copyToClipboard={copyToClipboard}
+          onOpenTemplateModal={() => setIsTemplateModalOpen(true)}
+          isRunning={isRunning}
+          isActionPending={actionMutation.isPending}
+          onAction={(action) => actionMutation.mutate(action)}
+          onOpenDeleteConfirm={() => setIsStopAppConfirmOpen(true)}
+        />
 
         {/* Abas do Painel */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
@@ -1033,89 +857,29 @@ function AppDetailsPage() {
         />
 
         {/* Modal de Confirmação para Reset Total / Exclusão do Serviço e Limpeza do Container */}
-        <AlertDialog open={isStopAppConfirmOpen} onOpenChange={setIsStopAppConfirmOpen}>
-          <AlertDialogContent className="rounded-3xl border border-border bg-card p-6 shadow-2xl max-w-md">
-            <AlertDialogHeader className="space-y-3">
-              <div className="size-12 rounded-2xl bg-destructive/15 text-destructive flex items-center justify-center border border-destructive/25">
-                <Trash2 className="size-6" />
-              </div>
-              <AlertDialogTitle className="text-lg font-bold text-foreground">
-                Excluir Serviço e Resetar Container?
-              </AlertDialogTitle>
-              <AlertDialogDescription className="text-xs text-muted-foreground leading-relaxed space-y-2">
-                <span className="block">
-                  Deseja realmente excluir permanentemente o serviço <strong className="text-foreground font-semibold">"{app?.name}"</strong>?
-                </span>
-                <span className="block text-rose-500 font-semibold">
-                  ⚠️ AÇÃO IRREVERSÍVEL: Todos os arquivos, volumes, banco de dados e dados do serviço atual serão permanentemente apagados do servidor.
-                </span>
-                <span className="block">
-                  O container retornará ao <strong>estado inicial limpo</strong>, permitindo que você escolha um novo modelo ou suba outro código do zero.
-                </span>
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter className="mt-5 gap-2 sm:gap-0">
-              <AlertDialogCancel disabled={resetMutation.isPending} className="rounded-xl h-10 px-4 text-xs font-semibold cursor-pointer">
-                Cancelar
-              </AlertDialogCancel>
-              <AlertDialogAction
-                disabled={resetMutation.isPending}
-                onClick={(e) => {
-                  e.preventDefault();
-                  resetMutation.mutate();
-                }}
-                className="rounded-xl h-10 px-5 text-xs font-bold bg-destructive text-destructive-foreground hover:bg-destructive/90 cursor-pointer"
-              >
-                {resetMutation.isPending ? "Excluindo..." : "Sim, Excluir Definitivamente"}
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
+        <AppStopConfirmModal
+          open={isStopAppConfirmOpen}
+          onOpenChange={setIsStopAppConfirmOpen}
+          appName={app?.name}
+          onConfirm={() => resetMutation.mutate()}
+          isPending={resetMutation.isPending}
+        />
 
         {/* Modal de Confirmação para Deploy de Git (Reset do Container Existente) */}
-        <AlertDialog open={isGitDeployConfirmOpen} onOpenChange={setIsGitDeployConfirmOpen}>
-          <AlertDialogContent className="rounded-3xl border border-border bg-card p-6 shadow-2xl max-w-md">
-            <AlertDialogHeader className="space-y-3">
-              <div className="size-12 rounded-2xl bg-amber-500/15 text-amber-500 flex items-center justify-center border border-amber-500/25">
-                <AlertTriangle className="size-6" />
-              </div>
-              <AlertDialogTitle className="text-lg font-bold text-foreground">
-                Substituir e Resetar Container?
-              </AlertDialogTitle>
-              <AlertDialogDescription className="text-xs text-muted-foreground leading-relaxed space-y-2">
-                <span>
-                  Este container está atualmente configurado com <strong className="text-foreground font-semibold">"{app?.name}"</strong>.
-                </span>
-                <span className="block">
-                  Fazer deploy a partir deste repositório Git irá <strong className="text-rose-500 font-semibold">resetar o container atual, remover os arquivos do serviço anterior</strong> e implantar o novo código-fonte de:
-                </span>
-                <code className="block p-2.5 rounded-xl bg-muted font-mono text-[11px] text-foreground truncate border">
-                  {gitRepoInput} ({gitBranchInput || "main"})
-                </code>
-                <span className="block text-[11px] text-amber-600 dark:text-amber-400 font-medium">
-                  ⚠️ Caso possua alterações ou dados importantes não salvos, certifique-se de salvar antes de prosseguir.
-                </span>
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter className="mt-5 gap-2 sm:gap-0">
-              <AlertDialogCancel className="rounded-xl h-10 px-4 text-xs font-semibold cursor-pointer">
-                Cancelar
-              </AlertDialogCancel>
-              <AlertDialogAction
-                onClick={() => {
-                  setIsGitDeployConfirmOpen(false);
-                  deployGitMutation.mutate({
-                    gitRepository: gitRepoInput.trim(),
-                    gitBranch: gitBranchInput.trim() || "main",
-                  });
-                }}
-                className="rounded-xl h-10 px-5 text-xs font-bold bg-primary text-primary-foreground hover:bg-primary/90 cursor-pointer"
-              >
-                Sim, Resetar e Fazer Deploy
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
+        <AppGitDeployConfirmModal
+          open={isGitDeployConfirmOpen}
+          onOpenChange={setIsGitDeployConfirmOpen}
+          appName={app?.name}
+          gitRepoInput={gitRepoInput}
+          gitBranchInput={gitBranchInput}
+          onConfirm={() => {
+            setIsGitDeployConfirmOpen(false);
+            deployGitMutation.mutate({
+              gitRepository: gitRepoInput.trim(),
+              gitBranch: gitBranchInput.trim() || "main",
+            });
+          }}
+        />
       </div>
     </AppShell>
   );

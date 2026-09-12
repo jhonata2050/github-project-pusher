@@ -98,6 +98,46 @@ describe("Lei da Preservação de Fachadas (Facade Integrity Tests)", () => {
     expect(typeof support.updateServiceDetails).toBe("function");
     expect(typeof support.adminCreateClientService).toBe("function");
   });
+
+  it("directadmin.server fachada deve reexportar todas as funções, utilitários e gerador de credenciais do DirectAdmin", async () => {
+    const da = await import("../../src/lib/directadmin.server");
+    expect(typeof da.callDA).toBe("function");
+    expect(typeof da.getDAPackages).toBe("function");
+    expect(typeof da.getDACapabilities).toBe("function");
+    expect(typeof da.testDAConnectionDetails).toBe("function");
+    expect(typeof da.createDAAccount).toBe("function");
+    expect(typeof da.suspendDAAccount).toBe("function");
+    expect(typeof da.unsuspendDAAccount).toBe("function");
+    expect(typeof da.deleteDAAccount).toBe("function");
+    expect(typeof da.checkDAUserExists).toBe("function");
+    expect(typeof da.getDASession).toBe("function");
+    expect(typeof da.modifyDAUserPackage).toBe("function");
+    expect(typeof da.generateStrongPassword).toBe("function");
+    expect(typeof da.normalizePackageList).toBe("function");
+    expect(typeof da.isValidDirectAdminLoginUrl).toBe("function");
+    expect(typeof da.parseDirectAdminLoginUrl).toBe("function");
+
+    // Validação do gerador de senhas seguras
+    const pwd1 = da.generateStrongPassword(24);
+    const pwd2 = da.generateStrongPassword(32);
+    expect(pwd1.length).toBe(24);
+    expect(pwd2.length).toBe(32);
+    expect(pwd1).not.toBe(pwd2);
+  });
+
+  it("swarm-deployer.server e submódulos de templates devem exportar funções de orquestração", async () => {
+    const deployer = await import("../../src/lib/swarm/swarm-deployer.server");
+    expect(typeof deployer.deployTemplateStackToSwarm).toBe("function");
+
+    const composeBuilder = await import("../../src/lib/swarm/templates/compose-builder");
+    expect(typeof composeBuilder.buildTemplateComposeYaml).toBe("function");
+
+    const bootstrapFiles = await import("../../src/lib/swarm/templates/bootstrap-files");
+    expect(typeof bootstrapFiles.writeStarterFilesIfEmpty).toBe("function");
+
+    const postDeploy = await import("../../src/lib/swarm/templates/post-deploy");
+    expect(typeof postDeploy.runPostDeployHooks).toBe("function");
+  });
 });
 
 describe("Motor Caddy & Hardening de Segurança OWASP", () => {
