@@ -166,62 +166,92 @@ export async function payInvoiceWithBalance(
 
   const invoiceAmount = Number(invoice.total_amount);
 
-  // 2. Buscar o Saldo do Cliente
-  const { data: profile, error: pError } = await supabaseAdmin
-    .from("profiles")
-    .select("id, account_balance, full_name, phone")
-    .eq("id", invoice.user_id)
-    .single();
+  // 2. Executar Débito e Liquidação Atômica (Previne Race Conditions / TOCTOU / Double Spending)
+  let newBalance = 0;
+  let clientPhone: string | null = null;
+  let clientName: string | null = null;
 
-  if (pError || !profile) throw new Error("Perfil do cliente não encontrado");
-
-  const currentBalance = Number(profile.account_balance || 0);
-
-  if (currentBalance < invoiceAmount) {
-    const diff = (invoiceAmount - currentBalance).toFixed(2);
-    throw new Error(
-      `Saldo insuficiente. Seu saldo atual é R$ ${currentBalance.toFixed(2)}, faltam R$ ${diff} para liquidar esta fatura.`
-    );
-  }
-
-  const newBalance = Number((currentBalance - invoiceAmount).toFixed(2));
-
-  // 3. Debitar Saldo do Perfil
-  const { error: updProfileErr } = await supabaseAdmin
-    .from("profiles")
-    .update({
-      account_balance: newBalance,
-      updated_at: new Date().toISOString(),
-    })
-    .eq("id", profile.id);
-
-  if (updProfileErr) throw new Error("Falha ao debitar saldo do perfil");
-
-  // 4. Liquidar a Fatura
-  const { error: updInvoiceErr } = await supabaseAdmin
-    .from("invoices")
-    .update({
-      status: "paid",
-      payment_method: "wallet",
-      paid_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    })
-    .eq("id", invoice.id);
-
-  if (updInvoiceErr) throw new Error("Falha ao liquidar fatura");
-
-  // 5. Registrar Transação no Extrato da Carteira
   try {
-    await supabaseAdmin.from("wallet_transactions").insert({
-      user_id: profile.id,
-      type: "payment",
-      amount: -invoiceAmount,
-      balance_after: newBalance,
-      description: `Pagamento da Fatura #${invoice.id.slice(0, 8)}`,
-      invoice_id: invoice.id,
-    });
-  } catch (e) {
-    console.warn("[Wallet] Aviso ao salvar extrato de transação:", e);
+    const { data: profile } = await supabaseAdmin
+      .from("profiles")
+      .select("full_name, phone")
+      .eq("id", invoice.user_id)
+      .maybeSingle();
+    clientPhone = profile?.phone || null;
+    clientName = profile?.full_name || null;
+  } catch (e) {}
+
+  const { data: rpcResult, error: rpcError } = await supabaseAdmin.rpc("debit_wallet_balance", {
+    _user_id: invoice.user_id,
+    _amount: invoiceAmount,
+    _invoice_id: invoice.id,
+  });
+
+  if (!rpcError && rpcResult) {
+    if (!rpcResult.success) {
+      throw new Error(rpcResult.error || "Saldo insuficiente para pagar esta fatura.");
+    }
+    newBalance = Number(rpcResult.balance_after);
+  } else {
+    // Fallback defensivo com condição atômica gte caso a RPC ainda não tenha sido aplicada no banco
+    const { data: profile, error: pError } = await supabaseAdmin
+      .from("profiles")
+      .select("id, account_balance, full_name, phone")
+      .eq("id", invoice.user_id)
+      .single();
+
+    if (pError || !profile) throw new Error("Perfil do cliente não encontrado");
+
+    const currentBalance = Number(profile.account_balance || 0);
+    if (currentBalance < invoiceAmount) {
+      const diff = (invoiceAmount - currentBalance).toFixed(2);
+      throw new Error(
+        `Saldo insuficiente. Seu saldo atual é R$ ${currentBalance.toFixed(2)}, faltam R$ ${diff} para liquidar esta fatura.`
+      );
+    }
+
+    newBalance = Number((currentBalance - invoiceAmount).toFixed(2));
+
+    // Debitar com cláusula atômica: só debita se account_balance for >= invoiceAmount
+    const { error: updProfileErr } = await supabaseAdmin
+      .from("profiles")
+      .update({
+        account_balance: newBalance,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", profile.id)
+      .gte("account_balance", invoiceAmount);
+
+    if (updProfileErr) {
+      throw new Error("Concorrência de requisições detectada ou saldo insuficiente durante a liquidação.");
+    }
+
+    // Liquidar a fatura
+    const { error: updInvoiceErr } = await supabaseAdmin
+      .from("invoices")
+      .update({
+        status: "paid",
+        payment_method: "wallet",
+        paid_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", invoice.id);
+
+    if (updInvoiceErr) throw new Error("Falha ao liquidar fatura");
+
+    // Registrar no extrato
+    try {
+      await supabaseAdmin.from("wallet_transactions").insert({
+        user_id: profile.id,
+        type: "payment",
+        amount: -invoiceAmount,
+        balance_after: newBalance,
+        description: `Pagamento da Fatura #${invoice.id.slice(0, 8)}`,
+        invoice_id: invoice.id,
+      });
+    } catch (e) {
+      console.warn("[Wallet] Aviso ao salvar extrato de transação:", e);
+    }
   }
 
   // 6. Processar Provisionamento Automático de Serviços/Domínios
@@ -233,12 +263,12 @@ export async function payInvoiceWithBalance(
   }
 
   // 7. Notificar Cliente via WhatsApp
-  if (profile.phone) {
+  if (clientPhone) {
     try {
       const { sendWhatsAppMessage } = await import("./whatsapp.server");
       await sendWhatsAppMessage({
-        to: profile.phone,
-        message: `💳 *Fatura Paga com Saldo em Conta!*\n\nOlá ${profile.full_name},\nA fatura *#${invoice.id.slice(0, 8)}* no valor de *R$ ${invoiceAmount.toFixed(2)}* foi liquidada com sucesso utilizando o saldo da sua carteira.\n\nSeu novo saldo é: *R$ ${newBalance.toFixed(2)}*.`,
+        to: clientPhone,
+        message: `💳 *Fatura Paga com Saldo em Conta!*\n\nOlá ${clientName || "Cliente"},\nA fatura *#${invoice.id.slice(0, 8)}* no valor de *R$ ${invoiceAmount.toFixed(2)}* foi liquidada com sucesso utilizando o saldo da sua carteira.\n\nSeu novo saldo é: *R$ ${newBalance.toFixed(2)}*.`,
         category: "invoice_payment"
       });
     } catch (wErr) {

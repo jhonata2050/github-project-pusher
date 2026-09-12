@@ -2,6 +2,9 @@
 // Server-side Supabase client with service role key - bypasses RLS.
 // Use this for admin operations in server functions and server routes only.
 // For user-authenticated queries (with RLS), use the auth middleware instead.
+if (typeof process !== "undefined" && process.env && process.env['NODE_ENV'] !== "production") {
+  process.env['NODE_TLS_REJECT_UNAUTHORIZED'] = "0";
+}
 import { createClient } from '@supabase/supabase-js';
 import type { Database } from './types';
 

@@ -11,7 +11,7 @@ export const Route = createFileRoute('/api/public/branding')({
           return new Response(JSON.stringify(branding), {
             headers: {
               'Content-Type': 'application/json',
-              'Cache-Control': 'public, max-age=300',
+              'Cache-Control': 'no-store, no-cache, must-revalidate',
             },
           });
         } catch (error) {

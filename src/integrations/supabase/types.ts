@@ -648,6 +648,7 @@ export type Database = {
           is_active: boolean | null
           last_capability_check: string | null
           max_accounts: number | null
+          name: string | null
           server_type: string | null
           sso_supported: boolean | null
         }
@@ -661,6 +662,7 @@ export type Database = {
           is_active?: boolean | null
           last_capability_check?: string | null
           max_accounts?: number | null
+          name?: string | null
           server_type?: string | null
           sso_supported?: boolean | null
         }
@@ -674,6 +676,7 @@ export type Database = {
           is_active?: boolean | null
           last_capability_check?: string | null
           max_accounts?: number | null
+          name?: string | null
           server_type?: string | null
           sso_supported?: boolean | null
         }

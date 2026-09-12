@@ -66,7 +66,7 @@ export class ResellerClubRegistrar {
       "tech-contact-id": params.customerId,
       "billing-contact-id": params.customerId,
       "invoice-option": "NoInvoice",
-      "protect-privacy": false,
+      "protect-privacy": "false",
     });
     return res;
   }

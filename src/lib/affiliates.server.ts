@@ -188,12 +188,13 @@ export async function trackAffiliateClick(code: string): Promise<{ success: bool
 
   const store = await getAffiliatesStore();
   const matchedUserId = Object.keys(store).find(
-    (uid) => store[uid].code && store[uid].code.toLowerCase() === cleanCode
+    (uid) => store[uid]?.code && store[uid]?.code?.toLowerCase() === cleanCode
   );
 
-  if (matchedUserId && store[matchedUserId]) {
-    store[matchedUserId].total_clicks = Number(store[matchedUserId].total_clicks || 0) + 1;
-    store[matchedUserId].updated_at = new Date().toISOString();
+  const matchedEntry = matchedUserId ? store[matchedUserId] : undefined;
+  if (matchedEntry) {
+    matchedEntry.total_clicks = Number(matchedEntry.total_clicks || 0) + 1;
+    matchedEntry.updated_at = new Date().toISOString();
     await saveAffiliatesStore(store);
     return { success: true, affiliateCode: cleanCode };
   }
@@ -345,7 +346,7 @@ export async function processAffiliateCommission(invoiceId: string, customAffCod
     if (!affCode) {
       const notesStr = `${invoice.notes || ""}`;
       const affMatch = notesStr.match(/aff:([a-zA-Z0-9_-]+)/i);
-      if (affMatch) {
+      if (affMatch && affMatch[1]) {
         affCode = affMatch[1];
       }
     }
@@ -355,7 +356,7 @@ export async function processAffiliateCommission(invoiceId: string, customAffCod
     const cleanCode = affCode.trim().toLowerCase();
     const store = await getAffiliatesStore();
     const matchedUserId = Object.keys(store).find(
-      (uid) => store[uid].code && store[uid].code.toLowerCase() === cleanCode
+      (uid) => store[uid]?.code && store[uid]?.code?.toLowerCase() === cleanCode
     );
 
     if (!matchedUserId) return;
@@ -516,12 +517,12 @@ export async function getAffiliateReferrals(supabaseClient: any, affiliateId: st
 
   // Enriquecer com nomes de clientes
   const { data: profiles } = await supabaseAdmin.from("profiles").select("id, full_name, email");
-  const profileMap = new Map((profiles || []).map((p) => [p.id, p]));
+  const profileMap = new Map((profiles || []).map((p: any) => [p.id, { full_name: p.full_name || "", email: p.email || "" }]));
 
   return filtered.map((r) => ({
     ...r,
     profiles: r.referred_user_id ? profileMap.get(r.referred_user_id) || null : null,
-  }));
+  })) as AffiliateReferral[];
 }
 
 /**
@@ -530,11 +531,12 @@ export async function getAffiliateReferrals(supabaseClient: any, affiliateId: st
 export async function getAdminAffiliatesList(supabaseClient: any): Promise<AffiliateAccount[]> {
   const store = await getAffiliatesStore();
   const { data: profiles } = await supabaseAdmin.from("profiles").select("id, full_name, email, phone");
-  const profileMap = new Map((profiles || []).map((p) => [p.id, p]));
+  const profileMap = new Map((profiles || []).map((p: any) => [p.id, p]));
 
   // Auto-registrar todos os perfis existentes no sistema como afiliados se ainda não existirem
   for (const p of profiles || []) {
-    if (!store[p.id]) {
+    const existing = store[p.id];
+    if (!existing) {
       const globalSettings = await getGlobalAffiliateSettings();
       store[p.id] = {
         id: p.id,
@@ -556,7 +558,7 @@ export async function getAdminAffiliatesList(supabaseClient: any): Promise<Affil
         },
       };
     } else {
-      store[p.id].profiles = {
+      existing.profiles = {
         full_name: p.full_name || "Cliente",
         email: p.email || "",
         phone: p.phone || "",

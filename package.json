@@ -10,7 +10,8 @@
     "preview": "vite preview",
     "lint": "eslint .",
     "format": "prettier --write .",
-    "backup": "node scripts/backup-database.mjs"
+    "backup": "node scripts/backup-database.mjs",
+    "docs": "node scripts/serve-docs.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
@@ -64,6 +65,7 @@
     "react-resizable-panels": "^4.6.5",
     "recharts": "^3.10.1",
     "sonner": "^2.0.7",
+    "ssh2": "^1.17.0",
     "tailwind-merge": "^3.5.0",
     "tailwindcss": "^4.2.1",
     "tw-animate-css": "^1.3.4",
@@ -73,7 +75,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.32.0",
-    "@lovable.dev/vite-tanstack-config": "2.13.1",
+    "@lovable.dev/vite-tanstack-config": "^2.13.1",
     "@types/jspdf": "^2.0.0",
     "@types/node": "^22.16.5",
     "@types/react": "^19.2.0",

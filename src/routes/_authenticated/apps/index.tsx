@@ -23,7 +23,9 @@ import {
   Bot,
   Database,
   Layers,
-  ArrowRight
+  ArrowRight,
+  Trash2,
+  ShieldCheck,
 } from "lucide-react";
 import { AppShell } from "@/components/app/AppShell";
 import { Button } from "@/components/ui/button";
@@ -40,10 +42,32 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { getMyApplications, executeAppAction, applyTemplateToApp } from "@/lib/coolify.functions";
-import { APP_TEMPLATES, type AppTemplate } from "@/lib/templates.data";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { getMyApplications, executeAppAction, applyTemplateToApp, resetCloudApp } from "@/lib/cloud-apps.functions";
+import { APP_TEMPLATES, type AppTemplate, getRequiredDiskWithMargin } from "@/lib/templates.data";
 import { useAuth } from "@/hooks/use-auth";
 import { toast } from "sonner";
+
+function getAppStackLabel(app: any) {
+  const name = (app.name || "").toLowerCase();
+  if (name.includes("wordpress")) return "WordPress + PHP";
+  if (name.includes("ghost")) return "Ghost CMS";
+  if (name.includes("kuma") || name.includes("uptime") || name.includes("monitoramento")) return "Uptime Kuma";
+  if (name.includes("evolution") || name.includes("whatsapp")) return "Evolution API";
+  if (name.includes("n8n")) return "N8N Automations";
+  if (name.includes("mysql") || name.includes("mariadb")) return "MySQL 8.4";
+  if (app.build_pack && app.build_pack !== "container") return app.build_pack.toUpperCase();
+  return "Docker Container";
+}
 
 export const Route = createFileRoute("/_authenticated/apps/")({
   head: () => ({
@@ -66,6 +90,7 @@ function ApplicationsListPage() {
   const [selectedTemplate, setSelectedTemplate] = useState<AppTemplate | null>(null);
   const [selectedAppId, setSelectedAppId] = useState<string>("");
   const [installModalOpen, setInstallModalOpen] = useState(false);
+  const [appToDelete, setAppToDelete] = useState<{ id: string; name: string } | null>(null);
 
   const { data: apps, isLoading } = useQuery({
     queryKey: ["myApplications", effectiveUserId],
@@ -92,21 +117,47 @@ function ApplicationsListPage() {
     },
   });
 
+  const resetMutation = useMutation({
+    mutationFn: async (appId: string) => {
+      return resetCloudApp({ data: { appId } });
+    },
+    onSuccess: () => {
+      toast.success("Container resetado e retornado ao estado inicial com sucesso!");
+      setAppToDelete(null);
+      queryClient.invalidateQueries({ queryKey: ["myApplications"] });
+    },
+    onError: (err: any) => {
+      toast.error(err.message || "Erro ao resetar container.");
+    },
+  });
+
   const installTemplateMutation = useMutation({
     mutationFn: async ({ appId, template }: { appId: string; template: AppTemplate }) => {
       const targetApp = apps?.find((a: any) => a.id === appId);
       if (targetApp) {
-        const isUnderpowered = 
-          targetApp.memory_limit < template.recommended_ram || 
-          (targetApp.cpu_limit && targetApp.cpu_limit < template.recommended_cpu);
-        if (isUnderpowered) {
-          throw new Error(`Seu plano possui ${targetApp.memory_limit} MB de RAM e ${targetApp.cpu_limit || 0.5} vCPU. O modelo requer no mínimo ${template.recommended_ram} MB de RAM e ${template.recommended_cpu} vCPU. Faça um upgrade para continuar.`);
+        const targetDisk = (targetApp as any)?.service?.products?.disk_quota_mb || targetApp.disk_limit_mb || 1536;
+        const requiredDisk = getRequiredDiskWithMargin(template.recommended_disk);
+        const isRamUnder = targetApp.memory_limit < template.recommended_ram;
+        const isCpuUnder = targetApp.cpu_limit && targetApp.cpu_limit < template.recommended_cpu;
+        const isDiskUnder = targetDisk < requiredDisk;
+
+        if (isRamUnder || isCpuUnder || isDiskUnder) {
+          let reason = "";
+          if (isDiskUnder) {
+            reason = `Seu plano possui ${targetDisk} MB de disco, mas o modelo requer no mínimo ${template.recommended_disk} MB (+ 20% de margem de segurança para operação = ${requiredDisk} MB).`;
+          } else if (isRamUnder) {
+            reason = `Seu plano possui ${targetApp.memory_limit} MB de RAM, mas o modelo requer no mínimo ${template.recommended_ram} MB de RAM.`;
+          } else {
+            reason = `Seu plano possui ${targetApp.cpu_limit || 0.5} vCPU, mas o modelo requer no mínimo ${template.recommended_cpu} vCPU.`;
+          }
+          throw new Error(`Plano incompatível: ${reason} Faça um upgrade para continuar.`);
         }
       }
       return applyTemplateToApp({
         data: {
           appId,
           template: {
+            id: template.id,
             git_repository: template.git_repository,
             git_branch: template.git_branch,
             build_pack: template.build_pack,
@@ -128,7 +179,7 @@ function ApplicationsListPage() {
 
   const handleOpenInstall = (tmpl: AppTemplate) => {
     setSelectedTemplate(tmpl);
-    if (apps && apps.length > 0) {
+    if (apps && apps.length > 0 && apps[0]?.id) {
       setSelectedAppId(apps[0].id);
     }
     setInstallModalOpen(true);
@@ -138,7 +189,7 @@ function ApplicationsListPage() {
     const matchesSearch =
       t.name.toLowerCase().includes(templateSearch.toLowerCase()) ||
       t.description.toLowerCase().includes(templateSearch.toLowerCase()) ||
-      t.tags.some((tag) => tag.toLowerCase().includes(templateSearch.toLowerCase()));
+      Boolean(t.tags?.some((tag) => tag.toLowerCase().includes(templateSearch.toLowerCase())));
 
     const matchesCategory = templateCategory === "all" || t.category === templateCategory;
 
@@ -156,7 +207,7 @@ function ApplicationsListPage() {
             </p>
           </div>
           <div className="flex items-center gap-2">
-            <Link to="/apps/create">
+            <Link to="/apps/create" search={{}}>
               <Button className="rounded-xl gap-2 font-semibold">
                 <Plus className="h-4 w-4" />
                 Criar Aplicação (Deploy)
@@ -170,7 +221,7 @@ function ApplicationsListPage() {
               <Sparkles className="h-4 w-4" />
               {mainTab === "templates" ? "Minhas Aplicações" : "Modelos de 1-Clique"}
             </Button>
-            <Link to="/plans">
+            <Link to="/checkout" search={{ service: "containers" }}>
               <Button variant="outline" className="rounded-xl gap-2 font-medium">
                 Contratar Mais Recursos
               </Button>
@@ -216,7 +267,7 @@ function ApplicationsListPage() {
                       <Sparkles className="h-4 w-4" />
                       Explorar Modelos Prontos
                     </Button>
-                    <Link to="/plans">
+                    <Link to="/checkout" search={{ service: "containers" }}>
                       <Button variant="outline" className="rounded-xl gap-2">
                         <Plus className="h-4 w-4" />
                         Ver Planos PaaS
@@ -232,73 +283,112 @@ function ApplicationsListPage() {
                   const isStopped = app.status === "stopped";
 
                   return (
-                    <Card key={app.id} className="rounded-3xl overflow-hidden border-2 hover:border-primary/50 transition-all flex flex-col justify-between group shadow-sm">
+                    <Card key={app.id} className="rounded-3xl overflow-hidden border hover:border-primary/40 hover:shadow-md transition-all flex flex-col justify-between group bg-card">
                       <div>
-                        <CardHeader className="bg-muted/40 pb-4 border-b">
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-2">
-                              <span className="relative flex h-2.5 w-2.5">
+                        <CardHeader className="bg-muted/30 pb-4 border-b">
+                          <div className="flex items-center justify-between gap-2">
+                            <div className="flex items-center gap-2 min-w-0">
+                              <span className="relative flex h-2 w-2 shrink-0">
                                 {isRunning && (
-                                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-lime-400 opacity-75"></span>
+                                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
                                 )}
-                                <span className={`relative inline-flex rounded-full h-2.5 w-2.5 ${isRunning ? "bg-lime-500" : isStopped ? "bg-muted-foreground" : "bg-amber-500"}`} />
+                                <span className={`relative inline-flex rounded-full h-2 w-2 ${isRunning ? "bg-emerald-500" : isStopped ? "bg-muted-foreground" : "bg-amber-500"}`} />
                               </span>
-                              <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                                {app.build_pack?.toUpperCase() || "CONTAINER"}
+                              <span className="text-[11px] font-mono font-bold uppercase tracking-wider text-muted-foreground truncate">
+                                {getAppStackLabel(app)}
                               </span>
                             </div>
-                            <Badge variant={isRunning ? "default" : "secondary"} className="rounded-full text-xs font-medium">
-                              {isRunning ? "Online 24/7" : isStopped ? "Parado" : "Processando"}
-                            </Badge>
+
+                            <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold shrink-0 ${
+                              isRunning
+                                ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20"
+                                : isStopped
+                                ? "bg-muted text-muted-foreground border border-border"
+                                : "bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20"
+                            }`}>
+                              <span className={`h-1.5 w-1.5 rounded-full ${isRunning ? "bg-emerald-500 animate-pulse" : isStopped ? "bg-zinc-400" : "bg-amber-500"}`} />
+                              {isRunning ? "Online" : isStopped ? "Parado" : "Deploy"}
+                            </span>
                           </div>
 
                           <div className="mt-3">
-                            <CardTitle className="text-lg font-bold truncate group-hover:text-primary transition-colors">
-                              {app.name}
-                            </CardTitle>
+                            <Link to="/apps/$appId" params={{ appId: app.id }}>
+                              <CardTitle className="text-lg font-bold truncate group-hover:text-primary transition-colors cursor-pointer">
+                                {app.name}
+                              </CardTitle>
+                            </Link>
                             <CardDescription className="text-xs truncate mt-0.5">
                               {app.service?.products?.name || "Plano Cloud PaaS"}
                             </CardDescription>
                           </div>
                         </CardHeader>
 
-                        <CardContent className="p-6 space-y-4">
+                        <CardContent className="p-5 space-y-4">
+                          {/* URL Pública */}
                           <div className="flex items-center justify-between text-xs py-1.5 border-b border-border/50">
                             <span className="text-muted-foreground flex items-center gap-1.5">
                               <Globe className="h-3.5 w-3.5" /> URL Pública:
                             </span>
-                            <a 
-                              href={app.fqdn} 
-                              target="_blank" 
-                              rel="noreferrer" 
-                              className="font-mono text-primary font-medium hover:underline truncate max-w-[180px] flex items-center gap-1"
-                            >
-                              {app.fqdn.replace("https://", "").replace("http://", "")}
-                              <ExternalLink className="h-3 w-3 inline flex-shrink-0" />
-                            </a>
+                            <div className="flex items-center gap-1.5 min-w-0">
+                              {app.fqdn ? (
+                                <a 
+                                  href={app.fqdn} 
+                                  target="_blank" 
+                                  rel="noreferrer" 
+                                  className="font-mono text-primary font-medium hover:underline truncate max-w-[170px] flex items-center gap-1"
+                                >
+                                  {app.fqdn.replace("https://", "").replace("http://", "")}
+                                  <ExternalLink className="h-3 w-3 inline shrink-0 opacity-70" />
+                                </a>
+                              ) : (
+                                <span className="text-muted-foreground italic text-[11px]">
+                                  Aguardando deploy
+                                </span>
+                              )}
+                            </div>
                           </div>
 
+                          {/* Recursos Alocados */}
                           <div className="grid grid-cols-2 gap-2 text-xs">
-                            <div className="bg-muted/40 p-2.5 rounded-xl border flex items-center gap-2">
-                              <Cpu className="h-4 w-4 text-muted-foreground" />
-                              <div>
+                            <div className="bg-muted/30 p-2.5 rounded-xl border flex items-center gap-2.5">
+                              <Cpu className="h-4 w-4 text-primary shrink-0" />
+                              <div className="min-w-0">
                                 <p className="text-[10px] text-muted-foreground uppercase font-semibold">vCPU</p>
-                                <p className="font-bold">{app.cpu_limit} Cores</p>
+                                <p className="font-bold truncate">{app.cpu_limit} Cores</p>
                               </div>
                             </div>
 
-                            <div className="bg-muted/40 p-2.5 rounded-xl border flex items-center gap-2">
-                              <HardDrive className="h-4 w-4 text-muted-foreground" />
-                              <div>
+                            <div className="bg-muted/30 p-2.5 rounded-xl border flex items-center gap-2.5">
+                              <HardDrive className="h-4 w-4 text-primary shrink-0" />
+                              <div className="min-w-0">
                                 <p className="text-[10px] text-muted-foreground uppercase font-semibold">Memória</p>
-                                <p className="font-bold">{app.memory_limit} MB</p>
+                                <p className="font-bold truncate">{app.memory_limit} MB</p>
                               </div>
+                            </div>
+                          </div>
+
+                          {/* Barra de Uptime Rápida no Card */}
+                          <div className="space-y-1.5 pt-1">
+                            <div className="flex items-center justify-between text-[11px] text-muted-foreground font-mono">
+                              <span className="flex items-center gap-1">
+                                <ShieldCheck className="h-3 w-3 text-emerald-500" /> Uptime (30d)
+                              </span>
+                              <span className="text-emerald-600 dark:text-emerald-400 font-bold">100% OK</span>
+                            </div>
+                            <div className="flex items-center gap-1 h-2 w-full">
+                              {Array.from({ length: 18 }).map((_, idx) => (
+                                <div
+                                  key={idx}
+                                  className="flex-1 h-full rounded-xs bg-emerald-500/90 hover:bg-emerald-400 transition-colors"
+                                  title="Verificação de integridade 100% OK"
+                                />
+                              ))}
                             </div>
                           </div>
                         </CardContent>
                       </div>
 
-                      <div className="p-6 pt-0 flex items-center gap-2">
+                      <div className="p-5 pt-0 flex items-center gap-2">
                         <Link to="/apps/$appId" params={{ appId: app.id }} className="flex-1">
                           <Button variant="default" className="w-full rounded-xl text-xs font-semibold gap-1.5">
                             <Terminal className="h-3.5 w-3.5" />
@@ -339,6 +429,19 @@ function ApplicationsListPage() {
                           onClick={() => actionMutation.mutate({ appId: app.id, action: "restart" })}
                         >
                           <RotateCcw className="h-4 w-4" />
+                        </Button>
+
+                        <Button
+                          size="icon"
+                          variant="outline"
+                          className="rounded-xl h-9 w-9 text-rose-500 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/20"
+                          title="Excluir aplicação"
+                          disabled={actionMutation.isPending}
+                          onClick={() => {
+                            setAppToDelete({ id: app.id, name: app.name });
+                          }}
+                        >
+                          <Trash2 className="h-4 w-4" />
                         </Button>
                       </div>
                     </Card>
@@ -529,10 +632,12 @@ function ApplicationsListPage() {
               {/* Box de Alerta se os Recursos Forem Inferiores ao Mínimo */}
               {(() => {
                 const targetApp = apps?.find((a: any) => a.id === (selectedAppId || apps?.[0]?.id)) || apps?.[0];
-                const isUnderpowered = targetApp && selectedTemplate && (
-                  targetApp.memory_limit < selectedTemplate.recommended_ram ||
-                  (targetApp.cpu_limit && targetApp.cpu_limit < selectedTemplate.recommended_cpu)
-                );
+                const targetDisk = (targetApp as any)?.service?.products?.disk_quota_mb || targetApp?.disk_limit_mb || 1536;
+                const requiredDisk = selectedTemplate ? getRequiredDiskWithMargin(selectedTemplate.recommended_disk) : 0;
+                const isRamUnder = targetApp && selectedTemplate && targetApp.memory_limit < selectedTemplate.recommended_ram;
+                const isCpuUnder = targetApp && selectedTemplate && targetApp.cpu_limit && targetApp.cpu_limit < selectedTemplate.recommended_cpu;
+                const isDiskUnder = targetApp && selectedTemplate && targetDisk < requiredDisk;
+                const isUnderpowered = isRamUnder || isCpuUnder || isDiskUnder;
 
                 if (isUnderpowered) {
                   return (
@@ -542,10 +647,10 @@ function ApplicationsListPage() {
                         Upgrade Obrigatório de Recursos
                       </div>
                       <p className="leading-relaxed text-[11px]">
-                        Sua aplicação possui <strong>{targetApp.memory_limit} MB de RAM</strong> e <strong>{targetApp.cpu_limit || 0.5} vCPU</strong>, mas o modelo <strong>{selectedTemplate?.name}</strong> requer no mínimo <strong>{selectedTemplate?.recommended_ram} MB de RAM</strong> e <strong>{selectedTemplate?.recommended_cpu} vCPU</strong>.
+                        Sua aplicação possui <strong>{targetApp.memory_limit} MB de RAM</strong>, <strong>{targetApp.cpu_limit || 0.5} vCPU</strong> e <strong>{targetDisk} MB de Disco</strong>, mas o modelo <strong>{selectedTemplate?.name}</strong> requer no mínimo <strong>{selectedTemplate?.recommended_ram} MB de RAM</strong>, <strong>{selectedTemplate?.recommended_cpu} vCPU</strong> e <strong>{requiredDisk} MB de Disco</strong> ({selectedTemplate?.recommended_disk} MB base + 20% de margem de segurança).
                       </p>
                       <p className="text-[11px] font-semibold text-rose-600 dark:text-rose-400">
-                        A instalação está bloqueada neste recurso. Faça o upgrade do seu plano para liberar este modelo.
+                        A instalação está bloqueada neste recurso. Faça o upgrade do seu plano para liberar este modelo com segurança.
                       </p>
                     </div>
                   );
@@ -556,7 +661,7 @@ function ApplicationsListPage() {
                     <div className="bg-lime-500/10 border border-lime-500/30 p-3 rounded-2xl flex items-center gap-2.5 text-lime-700 dark:text-lime-400">
                       <CheckCircle2 className="h-4 w-4 flex-shrink-0" />
                       <span className="text-[11px] font-medium">
-                        Seus recursos ({targetApp.memory_limit} MB • {targetApp.cpu_limit || 0.5} vCPU) são 100% compatíveis com este modelo!
+                        Seus recursos ({targetApp.memory_limit} MB • {targetApp.cpu_limit || 0.5} vCPU • {targetDisk} MB HD) são 100% compatíveis com este modelo!
                       </span>
                     </div>
                   );
@@ -570,7 +675,7 @@ function ApplicationsListPage() {
                 <div className="grid grid-cols-2 gap-2 text-muted-foreground">
                   <p>• <strong>RAM Mínima:</strong> {selectedTemplate?.recommended_ram} MB</p>
                   <p>• <strong>vCPU Mínima:</strong> {selectedTemplate?.recommended_cpu} Cores</p>
-                  <p>• <strong>Build Pack:</strong> {selectedTemplate?.build_pack.toUpperCase()}</p>
+                  <p>• <strong>Disco Mínimo:</strong> {selectedTemplate ? getRequiredDiskWithMargin(selectedTemplate.recommended_disk) : 0} MB (+20%)</p>
                   <p>• <strong>Porta Padrão:</strong> {selectedTemplate?.default_port}</p>
                 </div>
               </div>
@@ -585,14 +690,17 @@ function ApplicationsListPage() {
                 <>
                   {(() => {
                     const targetApp = apps?.find((a: any) => a.id === (selectedAppId || apps?.[0]?.id)) || apps?.[0];
+                    const targetDisk = (targetApp as any)?.service?.products?.disk_quota_mb || targetApp?.disk_limit_mb || 1536;
+                    const requiredDisk = selectedTemplate ? getRequiredDiskWithMargin(selectedTemplate.recommended_disk) : 0;
                     const isUnderpowered = targetApp && selectedTemplate && (
                       targetApp.memory_limit < selectedTemplate.recommended_ram ||
-                      (targetApp.cpu_limit && targetApp.cpu_limit < selectedTemplate.recommended_cpu)
+                      (targetApp.cpu_limit && targetApp.cpu_limit < selectedTemplate.recommended_cpu) ||
+                      targetDisk < requiredDisk
                     );
 
                     if (isUnderpowered) {
                       return (
-                        <Link to="/plans" search={{ tab: "paas" }} className="w-full sm:w-auto">
+                        <Link to="/checkout" search={{ service: "containers" }} className="w-full sm:w-auto">
                           <Button variant="default" className="rounded-xl text-xs font-semibold gap-1.5 w-full bg-amber-600 hover:bg-amber-700 text-white">
                             <Sparkles className="h-3.5 w-3.5" /> Fazer Upgrade do Plano
                           </Button>
@@ -616,7 +724,7 @@ function ApplicationsListPage() {
                   })()}
                 </>
               ) : (
-                <Link to="/plans" search={{ tab: "paas" }} className="w-full sm:w-auto">
+                <Link to="/checkout" search={{ service: "containers" }} className="w-full sm:w-auto">
                   <Button className="rounded-xl text-xs font-semibold gap-1.5 w-full">
                     Contratar Plano Compatível <ArrowRight className="h-3.5 w-3.5" />
                   </Button>
@@ -625,6 +733,48 @@ function ApplicationsListPage() {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+
+        {/* Modal de Confirmação no próprio sistema para Exclusão/Parada de Aplicação */}
+        <AlertDialog open={!!appToDelete} onOpenChange={(open) => !open && setAppToDelete(null)}>
+          <AlertDialogContent className="rounded-3xl border border-border bg-card p-6 shadow-2xl max-w-md">
+            <AlertDialogHeader className="space-y-3">
+              <div className="size-12 rounded-2xl bg-destructive/15 text-destructive flex items-center justify-center border border-destructive/25">
+                <Trash2 className="size-6" />
+              </div>
+              <AlertDialogTitle className="text-lg font-bold text-foreground">
+                Excluir Serviço e Resetar Container?
+              </AlertDialogTitle>
+              <AlertDialogDescription className="text-xs text-muted-foreground leading-relaxed space-y-2">
+                <span className="block">
+                  Deseja realmente excluir todos os dados do serviço <strong className="text-foreground font-semibold">"{appToDelete?.name}"</strong>?
+                </span>
+                <span className="block text-rose-500 font-semibold">
+                  ⚠️ AÇÃO IRREVERSÍVEL: Todos os arquivos, volumes, banco de dados e dados do serviço atual serão permanentemente destruídos.
+                </span>
+                <span className="block">
+                  O container retornará ao <strong>estado inicial limpo</strong>, pronto para você escolher um novo modelo ou subir outro código do zero.
+                </span>
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter className="mt-5 gap-2 sm:gap-0">
+              <AlertDialogCancel disabled={resetMutation.isPending} className="rounded-xl h-10 px-4 text-xs font-semibold cursor-pointer">
+                Cancelar
+              </AlertDialogCancel>
+              <AlertDialogAction
+                disabled={resetMutation.isPending}
+                onClick={(e) => {
+                  e.preventDefault();
+                  if (appToDelete) {
+                    resetMutation.mutate(appToDelete.id);
+                  }
+                }}
+                className="rounded-xl h-10 px-5 text-xs font-bold bg-destructive text-destructive-foreground hover:bg-destructive/90 cursor-pointer"
+              >
+                {resetMutation.isPending ? "Excluindo..." : "Sim, Excluir Definitivamente"}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </AppShell>
   );

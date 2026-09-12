@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useMemo } from "react";
+import React, { useState, useRef, useEffect, useMemo, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   FolderOpen,
@@ -45,6 +45,16 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -63,20 +73,279 @@ import {
   compressItemsFn,
   extractArchiveFn,
   uploadFilesBatchFn,
+  startExtractJobFn,
+  getJobStatusFn,
+  cancelJobFn,
+  forcePullFilesFromSwarmFn,
 } from "@/lib/file-manager/functions";
 import type { IFileInfo, IFileListResult, IFileReadResult } from "@/lib/file-manager/types";
 import { CodeEditorModal } from "./CodeEditorModal";
 import { ChmodModal } from "./ChmodModal";
 import { FilePropertiesModal } from "./FilePropertiesModal";
 
-interface FileManagerViewProps {
-  appId: string;
+function getItemIcon(item: IFileInfo) {
+  if (item.type === "directory") {
+    return <Folder className="h-5 w-5 text-amber-500 fill-amber-500/20" />;
+  }
+  const ext = item.name.split(".").pop()?.toLowerCase() || "";
+  if (["zip", "tar", "gz", "rar", "7z"].includes(ext)) {
+    return <FolderArchive className="h-5 w-5 text-amber-500" />;
+  }
+  if (["html", "htm"].includes(ext)) {
+    return <FileCode className="h-5 w-5 text-orange-500" />;
+  }
+  if (["css", "scss", "sass"].includes(ext)) {
+    return <FileCode className="h-5 w-5 text-sky-400" />;
+  }
+  if (["js", "ts", "jsx", "tsx"].includes(ext)) {
+    return <FileCode className="h-5 w-5 text-amber-400" />;
+  }
+  if (["json"].includes(ext)) {
+    return <FileCode className="h-5 w-5 text-emerald-400" />;
+  }
+  if (["php"].includes(ext)) {
+    return <FileCode className="h-5 w-5 text-indigo-400" />;
+  }
+  if (["env"].includes(ext)) {
+    return <KeyRound className="h-5 w-5 text-purple-400" />;
+  }
+  if (["md", "txt"].includes(ext)) {
+    return <FileText className="h-5 w-5 text-zinc-400" />;
+  }
+  return <FileText className="h-5 w-5 text-primary" />;
 }
 
-export function FileManagerView({ appId }: FileManagerViewProps) {
+interface FileRowItemProps {
+  item: IFileInfo;
+  isSelected: boolean;
+  onToggleSelect: (path: string) => void;
+  onNavigate: (path: string) => void;
+  onOpenFileForEdit: (path: string) => void;
+  onOpenChmod: (item: IFileInfo) => void;
+  onOpenExtract: (path: string) => void;
+  onOpenRename: (item: IFileInfo) => void;
+  onDownload: (item: IFileInfo) => void;
+  onOpenProperties: (item: IFileInfo) => void;
+  onDelete: (item: IFileInfo) => void;
+}
+
+const FileRowItem = React.memo(function FileRowItem({
+  item,
+  isSelected,
+  onToggleSelect,
+  onNavigate,
+  onOpenFileForEdit,
+  onOpenChmod,
+  onOpenExtract,
+  onOpenRename,
+  onDownload,
+  onOpenProperties,
+  onDelete,
+}: FileRowItemProps) {
+  const ext = item.name.split(".").pop()?.toLowerCase() || "";
+  const isZip = ["zip", "tar", "gz", "tgz", "rar", "7z", "bz2", "xz"].includes(ext);
+  const isBinary = [
+    "png", "jpg", "jpeg", "gif", "webp", "svg", "ico", "bmp", "tiff",
+    "mp4", "webm", "mp3", "wav", "ogg", "flac", "aac",
+    "pdf", "exe", "bin", "iso", "dmg", "apk", "jar", "wasm", "db", "sqlite",
+  ].includes(ext);
+
+  const handleSelectClick = useCallback(
+    (e: React.MouseEvent) => {
+      e.stopPropagation();
+      onToggleSelect(item.path);
+    },
+    [onToggleSelect, item.path],
+  );
+
+  const handleRowClick = useCallback(() => {
+    if (item.type === "directory") {
+      onNavigate(item.path);
+    } else if (isZip) {
+      // Se for arquivo compactado (.zip, .tar, etc.), abre o modal de descompactação imediatamente!
+      onOpenExtract(item.path);
+    } else if (isBinary) {
+      // Se for arquivo binário ou imagem, abre as propriedades/download sem travar o editor
+      onOpenProperties(item);
+    } else {
+      onOpenFileForEdit(item.path);
+    }
+  }, [item.type, item.path, isZip, isBinary, onNavigate, onOpenExtract, onOpenProperties, onOpenFileForEdit]);
+
+  const handleChmodClick = useCallback(() => {
+    onOpenChmod(item);
+  }, [onOpenChmod, item]);
+
+  const handleEditClick = useCallback(() => {
+    if (isZip) {
+      onOpenExtract(item.path);
+    } else if (isBinary) {
+      onOpenProperties(item);
+    } else {
+      onOpenFileForEdit(item.path);
+    }
+  }, [isZip, isBinary, onOpenExtract, onOpenProperties, onOpenFileForEdit, item]);
+
+  const handleExtractClick = useCallback(() => {
+    onOpenExtract(item.path);
+  }, [onOpenExtract, item.path]);
+
+  const handleRenameClick = useCallback(() => {
+    onOpenRename(item);
+  }, [onOpenRename, item]);
+
+  const handleDownloadClick = useCallback(() => {
+    onDownload(item);
+  }, [onDownload, item]);
+
+  const handlePropertiesClick = useCallback(() => {
+    onOpenProperties(item);
+  }, [onOpenProperties, item]);
+
+  const handleDeleteClick = useCallback(() => {
+    onDelete(item);
+  }, [onDelete, item]);
+
+  return (
+    <div
+      className={`flex flex-col sm:flex-row sm:items-center justify-between p-3 px-6 gap-3 transition-colors group ${
+        isSelected ? "bg-primary/5" : "hover:bg-muted/40"
+      }`}
+    >
+      <div className="flex items-center gap-3 flex-1 min-w-0">
+        <button
+          type="button"
+          onClick={handleSelectClick}
+          className="cursor-pointer text-muted-foreground hover:text-foreground p-0.5"
+        >
+          {isSelected ? (
+            <CheckSquare className="h-4 w-4 text-primary" />
+          ) : (
+            <Square className="h-4 w-4 text-muted-foreground/50" />
+          )}
+        </button>
+
+        <div
+          className="flex items-center gap-3 flex-1 min-w-0 cursor-pointer"
+          onClick={handleRowClick}
+        >
+          <div className="h-9 w-9 rounded-xl bg-muted/60 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
+            {getItemIcon(item)}
+          </div>
+          <div className="space-y-0.5 min-w-0">
+            <div className="flex items-center gap-2">
+              <span className="font-bold text-sm text-foreground group-hover:text-primary transition-colors font-mono truncate">
+                {item.name}
+              </span>
+              <Badge variant="outline" className="text-[10px] uppercase font-mono px-1.5 py-0 shrink-0">
+                {item.type === "directory" ? "DIR" : ext || "FILE"}
+              </Badge>
+            </div>
+            <p className="text-[11px] text-muted-foreground font-mono truncate">
+              {item.path}
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <div className="flex items-center justify-between sm:justify-end gap-8 shrink-0 text-xs">
+        <span className="font-mono text-muted-foreground hidden sm:block w-24 text-right">
+          {item.sizeFormatted}
+        </span>
+
+        <button
+          type="button"
+          onClick={handleChmodClick}
+          className="font-mono text-muted-foreground hover:text-primary hidden md:block w-20 text-right underline-offset-2 hover:underline"
+          title="Clique para alterar permissão"
+        >
+          {item.permissions}
+        </button>
+
+        <span className="font-mono text-muted-foreground hidden lg:block w-32 text-right">
+          {new Date(item.mtime).toLocaleDateString("pt-BR")}
+        </span>
+
+        <div className="flex items-center gap-1 w-36 justify-end">
+          {item.type !== "directory" && !isZip && !isBinary && (
+            <Button
+              size="icon"
+              variant="ghost"
+              onClick={handleEditClick}
+              className="rounded-xl h-8 w-8 text-primary hover:text-primary hover:bg-primary/10"
+              title="Editar Código"
+            >
+              <Code2 className="h-3.5 w-3.5" />
+            </Button>
+          )}
+
+          {isZip && (
+            <Button
+              size="icon"
+              variant="ghost"
+              onClick={handleExtractClick}
+              className="rounded-xl h-8 w-8 text-amber-500 hover:text-amber-600 hover:bg-amber-500/10"
+              title="Descompactar / Extrair Arquivo ZIP"
+            >
+              <FolderArchive className="h-3.5 w-3.5" />
+            </Button>
+          )}
+
+          <Button
+            size="icon"
+            variant="ghost"
+            onClick={handleRenameClick}
+            className="rounded-xl h-8 w-8 text-muted-foreground hover:text-foreground"
+            title="Renomear (F2)"
+          >
+            <Edit2 className="h-3.5 w-3.5" />
+          </Button>
+
+          {item.type !== "directory" && (
+            <Button
+              size="icon"
+              variant="ghost"
+              onClick={handleDownloadClick}
+              className="rounded-xl h-8 w-8 text-muted-foreground hover:text-foreground"
+              title="Download"
+            >
+              <Download className="h-3.5 w-3.5" />
+            </Button>
+          )}
+
+          <Button
+            size="icon"
+            variant="ghost"
+            onClick={handlePropertiesClick}
+            className="rounded-xl h-8 w-8 text-muted-foreground hover:text-foreground"
+            title="Propriedades"
+          >
+            <Info className="h-3.5 w-3.5" />
+          </Button>
+
+          <Button
+            size="icon"
+            variant="ghost"
+            onClick={handleDeleteClick}
+            className="rounded-xl h-8 w-8 text-rose-500 hover:text-rose-600 hover:bg-rose-500/10"
+            title="Excluir"
+          >
+            <Trash2 className="h-3.5 w-3.5" />
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+});
+
+interface FileManagerViewProps {
+  appId: string;
+  containerRoot?: string;
+}
+
+export function FileManagerView({ appId, containerRoot }: FileManagerViewProps) {
   const queryClient = useQueryClient();
 
-  // Estados de navegação
   const [currentPath, setCurrentPath] = useState<string>("");
   const [history, setHistory] = useState<string[]>([""]);
   const [historyIndex, setHistoryIndex] = useState<number>(0);
@@ -118,6 +387,12 @@ export function FileManagerView({ appId }: FileManagerViewProps) {
   const [isCompressModalOpen, setIsCompressModalOpen] = useState(false);
   const [compressArchiveName, setCompressArchiveName] = useState("");
 
+  const [deleteConfirmState, setDeleteConfirmState] = useState<{
+    isOpen: boolean;
+    paths: string[];
+    displayName: string;
+  }>({ isOpen: false, paths: [], displayName: "" });
+
   // Estados de Upload
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isUploading, setIsUploading] = useState(false);
@@ -136,6 +411,8 @@ export function FileManagerView({ appId }: FileManagerViewProps) {
     queryFn: () => getFileManagerFiles({ data: { appId, path: currentPath, showHidden } }),
     refetchOnWindowFocus: true,
   });
+
+  const docRoot = (fileListData?.documentRoot || containerRoot || "/var/www/html").replace(/\/+$/, "");
 
   // Limpa seleções ao navegar para outro diretório
   useEffect(() => {
@@ -222,59 +499,29 @@ export function FileManagerView({ appId }: FileManagerViewProps) {
   }, [fileListData, searchQuery, sortBy, sortOrder]);
 
   // Alterna seleção de arquivo
-  const toggleSelect = (path: string) => {
+  const toggleSelect = useCallback((path: string) => {
     setSelectedPaths((prev) =>
       prev.includes(path) ? prev.filter((p) => p !== path) : [...prev, path]
     );
-  };
+  }, []);
+
+  // Set otimizado de caminhos selecionados para verificação O(1)
+  const selectedPathsSet = useMemo(() => new Set(selectedPaths), [selectedPaths]);
 
   // Selecionar Todos
   const isAllSelected =
     filteredAndSortedItems.length > 0 &&
-    filteredAndSortedItems.every((item) => selectedPaths.includes(item.path));
+    filteredAndSortedItems.every((item) => selectedPathsSet.has(item.path));
   const isSomeSelected =
-    filteredAndSortedItems.some((item) => selectedPaths.includes(item.path)) && !isAllSelected;
+    filteredAndSortedItems.some((item) => selectedPathsSet.has(item.path)) && !isAllSelected;
 
-  const handleToggleSelectAll = () => {
+  const handleToggleSelectAll = useCallback(() => {
     if (isAllSelected) {
       setSelectedPaths([]);
     } else {
       setSelectedPaths(filteredAndSortedItems.map((item) => item.path));
     }
-  };
-
-  // Ícones por extensão
-  const getItemIcon = (item: IFileInfo) => {
-    if (item.type === "directory") {
-      return <Folder className="h-5 w-5 text-amber-500 fill-amber-500/20" />;
-    }
-    const ext = item.name.split(".").pop()?.toLowerCase() || "";
-    if (["zip", "tar", "gz", "rar", "7z"].includes(ext)) {
-      return <FolderArchive className="h-5 w-5 text-amber-500" />;
-    }
-    if (["html", "htm"].includes(ext)) {
-      return <FileCode className="h-5 w-5 text-orange-500" />;
-    }
-    if (["css", "scss", "sass"].includes(ext)) {
-      return <FileCode className="h-5 w-5 text-sky-400" />;
-    }
-    if (["js", "ts", "jsx", "tsx"].includes(ext)) {
-      return <FileCode className="h-5 w-5 text-amber-400" />;
-    }
-    if (["json"].includes(ext)) {
-      return <FileCode className="h-5 w-5 text-emerald-400" />;
-    }
-    if (["php"].includes(ext)) {
-      return <FileCode className="h-5 w-5 text-indigo-400" />;
-    }
-    if (["env"].includes(ext)) {
-      return <KeyRound className="h-5 w-5 text-purple-400" />;
-    }
-    if (["md", "txt"].includes(ext)) {
-      return <FileText className="h-5 w-5 text-zinc-400" />;
-    }
-    return <FileText className="h-5 w-5 text-primary" />;
-  };
+  }, [isAllSelected, filteredAndSortedItems]);
 
   // Mutações do TanStack Query
   const createFileMutation = useMutation({
@@ -395,30 +642,44 @@ export function FileManagerView({ appId }: FileManagerViewProps) {
 
     const interval = setInterval(async () => {
       try {
-        const res = await fetch(`/api/file-manager/jobs/${activeJob.id}`);
-        if (!res.ok) return;
-        const data = await res.json();
-        if (data.job) {
-          setActiveJob(data.job);
-          if (data.job.status === "completed") {
+        let jobData: any = null;
+        try {
+          const res = await getJobStatusFn({ data: { jobId: activeJob.id } });
+          if (res?.success && res.job) {
+            jobData = res.job;
+          }
+        } catch {
+          const res = await fetch(`/api/file-manager/jobs/${activeJob.id}`, { credentials: "include" });
+          if (res.ok) {
+            const data = await res.json();
+            if (data.job) jobData = data.job;
+          }
+        }
+
+        if (jobData) {
+          setActiveJob(jobData);
+          if (
+            jobData.status === "completed" ||
+            (jobData.progress >= 100 && jobData.processedFiles >= jobData.totalFiles && jobData.totalFiles > 0)
+          ) {
             toast.success(
-              data.job.type === "extract"
-                ? `✓ Descompactação concluída com sucesso (${data.job.resultSummary?.extractedCount || data.job.totalFiles} arquivos)!`
-                : `✓ Compressão concluída com sucesso (${data.job.resultSummary?.totalPacked || data.job.totalFiles} arquivos)!`
+              jobData.type === "extract"
+                ? `✓ Descompactação concluída com sucesso (${jobData.resultSummary?.extractedCount || jobData.totalFiles} arquivos)!`
+                : `✓ Compressão concluída com sucesso (${jobData.resultSummary?.totalPacked || jobData.totalFiles} arquivos)!`
             );
             queryClient.invalidateQueries({ queryKey: ["realFileManagerFiles", appId] });
             refetch();
             setTimeout(() => {
               setIsJobModalOpen(false);
               setActiveJob(null);
-            }, 1000);
-          } else if (data.job.status === "failed") {
-            toast.error(`✕ Falha no processamento: ${data.job.error}`);
+            }, 800);
+          } else if (jobData.status === "failed") {
+            toast.error(`✕ Falha no processamento: ${jobData.error}`);
             setTimeout(() => {
               setIsJobModalOpen(false);
               setActiveJob(null);
             }, 2500);
-          } else if (data.job.status === "cancelled") {
+          } else if (jobData.status === "cancelled") {
             toast.info("Operação cancelada pelo usuário.");
             setTimeout(() => {
               setIsJobModalOpen(false);
@@ -434,37 +695,77 @@ export function FileManagerView({ appId }: FileManagerViewProps) {
     return () => clearInterval(interval);
   }, [activeJob?.id, activeJob?.status]);
 
-  // Iniciar Extração Assíncrona com Job
+  // Iniciar Extração Assíncrona com Job e Fallback Imediato
   const handleStartExtractJob = async (archivePath: string, conflictPolicy: "overwrite" | "skip" | "abort" = "overwrite") => {
     try {
-      const { data: sessionData } = await supabase.auth.getSession();
-      const token = sessionData?.session?.access_token;
-      
-      const res = await fetch("/api/file-manager/jobs/extract", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        },
-        body: JSON.stringify({
+      setIsExtractConflictModalOpen(false);
+      setPendingExtractPath(null);
+
+      // 1. Tentar via Server Function segura do TanStack Start
+      try {
+        const res: any = await startExtractJobFn({
+          data: {
+            appId,
+            archivePath,
+            targetDir: currentPath,
+            conflictPolicy,
+          },
+        });
+
+        if (res?.success && res.job) {
+          setActiveJob(res.job);
+          setIsJobModalOpen(true);
+          return;
+        }
+      } catch (jobErr: any) {
+        console.warn("[Job ServerFn Error, falling back]:", jobErr?.message);
+      }
+
+      // 2. Fallback via API Fetch com credentials: "include"
+      try {
+        const { data: sessionData } = await supabase.auth.getSession();
+        const token = sessionData?.session?.access_token;
+        
+        const res = await fetch("/api/file-manager/jobs/extract", {
+          method: "POST",
+          credentials: "include",
+          headers: {
+            "Content-Type": "application/json",
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          },
+          body: JSON.stringify({
+            appId,
+            archivePath,
+            targetDir: currentPath,
+            conflictPolicy,
+          }),
+        });
+
+        const data = await res.json();
+        if (res.ok && data.success && data.job) {
+          setActiveJob(data.job);
+          setIsJobModalOpen(true);
+          return;
+        }
+      } catch (fetchErr: any) {
+        console.warn("[Fetch Job Error, trying direct extract]:", fetchErr?.message);
+      }
+
+      // 3. Fallback definitivo: extração direta via extractArchiveFn
+      toast.loading("Descompactando arquivo e sincronizando com o cluster...", { id: "extract-sync" });
+      const extractResult = await extractArchiveFn({
+        data: {
           appId,
           archivePath,
           targetDir: currentPath,
-          conflictPolicy,
-        }),
+        },
       });
 
-      const data = await res.json();
-      if (!res.ok || !data.success) {
-        throw new Error(data.error || "Erro ao iniciar descompactação.");
-      }
-
-      setActiveJob(data.job);
-      setIsJobModalOpen(true);
-      setIsExtractConflictModalOpen(false);
-      setPendingExtractPath(null);
+      toast.success(`✓ Descompactação concluída (${extractResult.extractedCount} arquivos extraídos e sincronizados)!`, { id: "extract-sync" });
+      queryClient.invalidateQueries({ queryKey: ["realFileManagerFiles", appId] });
+      refetch();
     } catch (err: any) {
-      toast.error("Erro ao iniciar descompactação: " + err.message);
+      toast.error("Erro na descompactação: " + err.message, { id: "extract-sync" });
     }
   };
 
@@ -476,6 +777,7 @@ export function FileManagerView({ appId }: FileManagerViewProps) {
 
       const res = await fetch("/api/file-manager/jobs/compress", {
         method: "POST",
+        credentials: "include",
         headers: {
           "Content-Type": "application/json",
           ...(token ? { Authorization: `Bearer ${token}` } : {}),
@@ -507,31 +809,61 @@ export function FileManagerView({ appId }: FileManagerViewProps) {
   const handleCancelActiveJob = async () => {
     if (!activeJob) return;
     try {
-      const { data: sessionData } = await supabase.auth.getSession();
-      const token = sessionData?.session?.access_token;
+      try {
+        await cancelJobFn({ data: { jobId: activeJob.id } });
+      } catch {
+        const { data: sessionData } = await supabase.auth.getSession();
+        const token = sessionData?.session?.access_token;
 
-      await fetch(`/api/file-manager/jobs/${activeJob.id}`, {
-        method: "POST",
-        headers: {
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        },
-      });
+        await fetch(`/api/file-manager/jobs/${activeJob.id}`, {
+          method: "POST",
+          credentials: "include",
+          headers: {
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          },
+        });
+      }
       toast.info("Cancelamento solicitado...");
     } catch (err: any) {
       toast.error("Erro ao solicitar cancelamento: " + err.message);
     }
   };
 
-  // Abrir arquivo para edição
-  const handleOpenFileForEdit = async (filePath: string) => {
+  // Abrir modal de extração de arquivo compactado (ZIP, TAR, GZ, etc.)
+  const handleOpenExtract = useCallback((path: string) => {
+    setPendingExtractPath(path);
+    setIsExtractConflictModalOpen(true);
+  }, []);
+
+  // Abrir arquivo para edição (com bloqueio contra arquivos binários e desvio automático de ZIPs)
+  const handleOpenFileForEdit = useCallback(async (filePath: string) => {
+    const ext = filePath.split(".").pop()?.toLowerCase() || "";
+    if (["zip", "tar", "gz", "tgz", "rar", "7z", "bz2", "xz"].includes(ext)) {
+      handleOpenExtract(filePath);
+      return;
+    }
+
+    if ([
+      "png", "jpg", "jpeg", "gif", "webp", "svg", "ico", "bmp", "tiff",
+      "mp4", "webm", "mp3", "wav", "ogg", "flac", "aac",
+      "pdf", "exe", "bin", "iso", "dmg", "apk", "jar", "wasm", "db", "sqlite",
+    ].includes(ext)) {
+      toast.info(`O arquivo '${filePath.split("/").pop()}' é binário e não pode ser editado como código.`);
+      return;
+    }
+
     try {
       const fileData = await readFileContentFn({ data: { appId, filePath } });
+      if (fileData.encoding === "base64") {
+        toast.info(`O arquivo '${fileData.name}' é um arquivo binário. Faça o download para visualizá-lo.`);
+        return;
+      }
       setActiveEditorFile(fileData);
       setIsEditorOpen(true);
     } catch (err: any) {
       toast.error("Erro ao abrir arquivo: " + err.message);
     }
-  };
+  }, [appId, handleOpenExtract]);
 
   // Upload de arquivos com progresso real de 0% a 100% e suporte a grandes arquivos
   const handleUploadFiles = async (files: FileList | null) => {
@@ -549,7 +881,8 @@ export function FileManagerView({ appId }: FileManagerViewProps) {
 
       let totalBytesAllFiles = 0;
       for (let i = 0; i < files.length; i++) {
-        totalBytesAllFiles += files[i].size;
+        const f = files[i];
+        if (f) totalBytesAllFiles += f.size;
       }
 
       const formatBytes = (bytes: number): string => {
@@ -565,6 +898,7 @@ export function FileManagerView({ appId }: FileManagerViewProps) {
 
       for (let i = 0; i < files.length; i++) {
         const file = files[i];
+        if (!file) continue;
 
         await new Promise<void>((resolve, reject) => {
           const xhr = new XMLHttpRequest();
@@ -636,7 +970,7 @@ export function FileManagerView({ appId }: FileManagerViewProps) {
   };
 
   // Download de item individual
-  const handleDownloadFile = async (item: IFileInfo) => {
+  const handleDownloadFile = useCallback(async (item: IFileInfo) => {
     try {
       const fileData = await readFileContentFn({ data: { appId, filePath: item.path } });
       const byteChars = fileData.encoding === "base64" 
@@ -658,7 +992,31 @@ export function FileManagerView({ appId }: FileManagerViewProps) {
     } catch (err: any) {
       toast.error("Erro ao baixar arquivo: " + err.message);
     }
-  };
+  }, [appId]);
+
+  const handleOpenChmod = useCallback((item: IFileInfo) => {
+    setActiveChmodFile(item);
+    setIsChmodOpen(true);
+  }, []);
+
+  const handleOpenRename = useCallback((item: IFileInfo) => {
+    setRenameTarget(item);
+    setRenameNewName(item.name);
+    setIsRenameModalOpen(true);
+  }, []);
+
+  const handleOpenProperties = useCallback((item: IFileInfo) => {
+    setActivePropertiesFile(item);
+    setIsPropertiesOpen(true);
+  }, []);
+
+  const handleDeleteSingle = useCallback((item: IFileInfo) => {
+    setDeleteConfirmState({
+      isOpen: true,
+      paths: [item.path],
+      displayName: item.name,
+    });
+  }, []);
 
   return (
     <div className="space-y-4">
@@ -702,10 +1060,19 @@ export function FileManagerView({ appId }: FileManagerViewProps) {
           <Button
             size="sm"
             variant="outline"
-            onClick={() => refetch()}
+            onClick={async () => {
+              try {
+                toast.loading("Sincronizando com o container...", { id: "sync-refresh" });
+                await forcePullFilesFromSwarmFn({ data: { appId } }).catch(() => {});
+                await refetch();
+                toast.success("Arquivos sincronizados com o container!", { id: "sync-refresh" });
+              } catch {
+                refetch();
+              }
+            }}
             disabled={isFetching}
             className="rounded-xl h-8 px-2.5 text-xs font-semibold gap-1.5"
-            title="Atualizar filesystem"
+            title="Sincronizar e atualizar lista com o container"
           >
             <RefreshCw className={`h-3.5 w-3.5 ${isFetching ? "animate-spin text-primary" : ""}`} />
             <span className="hidden sm:inline">Atualizar</span>
@@ -788,7 +1155,7 @@ export function FileManagerView({ appId }: FileManagerViewProps) {
             }`}
           >
             <FolderOpen className="h-3.5 w-3.5 text-primary" />
-            <span>/var/www/html</span>
+            <span>{docRoot}</span>
           </button>
 
           {breadcrumbSegments.map((segment, idx) => (
@@ -875,9 +1242,11 @@ export function FileManagerView({ appId }: FileManagerViewProps) {
               variant="destructive"
               disabled={deleteMutation.isPending}
               onClick={() => {
-                if (confirm(`Deseja realmente excluir permanentemente os ${selectedPaths.length} item(ns) selecionados no servidor?`)) {
-                  deleteMutation.mutate(selectedPaths);
-                }
+                setDeleteConfirmState({
+                  isOpen: true,
+                  paths: selectedPaths,
+                  displayName: `${selectedPaths.length} item(ns) selecionados`,
+                });
               }}
               className="rounded-xl h-7 text-xs gap-1.5 font-semibold bg-rose-600 hover:bg-rose-700 text-white"
             >
@@ -980,170 +1349,22 @@ export function FileManagerView({ appId }: FileManagerViewProps) {
               <p className="text-xs">Crie um novo arquivo, pasta ou faça upload abaixo.</p>
             </div>
           ) : (
-            filteredAndSortedItems.map((item) => {
-              const isSelected = selectedPaths.includes(item.path);
-              const ext = item.name.split(".").pop()?.toLowerCase() || "";
-              const isZip = ["zip", "tar", "gz"].includes(ext);
-
-              return (
-                <div
-                  key={item.path}
-                  className={`flex flex-col sm:flex-row sm:items-center justify-between p-3 px-6 gap-3 transition-colors group ${
-                    isSelected ? "bg-primary/5" : "hover:bg-muted/40"
-                  }`}
-                >
-                  <div className="flex items-center gap-3 flex-1 min-w-0">
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        toggleSelect(item.path);
-                      }}
-                      className="cursor-pointer text-muted-foreground hover:text-foreground p-0.5"
-                    >
-                      {isSelected ? (
-                        <CheckSquare className="h-4 w-4 text-primary" />
-                      ) : (
-                        <Square className="h-4 w-4 text-muted-foreground/50" />
-                      )}
-                    </button>
-
-                    <div
-                      className="flex items-center gap-3 flex-1 min-w-0 cursor-pointer"
-                      onClick={() => {
-                        if (item.type === "directory") {
-                          navigateTo(item.path);
-                        } else {
-                          handleOpenFileForEdit(item.path);
-                        }
-                      }}
-                    >
-                      <div className="h-9 w-9 rounded-xl bg-muted/60 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
-                        {getItemIcon(item)}
-                      </div>
-                      <div className="space-y-0.5 min-w-0">
-                        <div className="flex items-center gap-2">
-                          <span className="font-bold text-sm text-foreground group-hover:text-primary transition-colors font-mono truncate">
-                            {item.name}
-                          </span>
-                          <Badge variant="outline" className="text-[10px] uppercase font-mono px-1.5 py-0 shrink-0">
-                            {item.type === "directory" ? "DIR" : ext || "FILE"}
-                          </Badge>
-                        </div>
-                        <p className="text-[11px] text-muted-foreground font-mono truncate">
-                          /var/www/html/{item.path}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center justify-between sm:justify-end gap-8 shrink-0 text-xs">
-                    <span className="font-mono text-muted-foreground hidden sm:block w-24 text-right">
-                      {item.sizeFormatted}
-                    </span>
-
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setActiveChmodFile(item);
-                        setIsChmodOpen(true);
-                      }}
-                      className="font-mono text-muted-foreground hover:text-primary hidden md:block w-20 text-right underline-offset-2 hover:underline"
-                      title="Clique para alterar permissão"
-                    >
-                      {item.permissions}
-                    </button>
-
-                    <span className="font-mono text-muted-foreground hidden lg:block w-32 text-right">
-                      {new Date(item.mtime).toLocaleDateString("pt-BR")}
-                    </span>
-
-                    {/* Botões de Ação */}
-                    <div className="flex items-center gap-1 w-36 justify-end">
-                      {item.type !== "directory" && (
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          onClick={() => handleOpenFileForEdit(item.path)}
-                          className="rounded-xl h-8 w-8 text-primary hover:text-primary hover:bg-primary/10"
-                          title="Editar Código"
-                        >
-                          <Code2 className="h-3.5 w-3.5" />
-                        </Button>
-                      )}
-
-                      {isZip && (
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          onClick={() => {
-                            setPendingExtractPath(item.path);
-                            setIsExtractConflictModalOpen(true);
-                          }}
-                          className="rounded-xl h-8 w-8 text-amber-500 hover:text-amber-600 hover:bg-amber-500/10"
-                          title="Extrair Arquivo Compactado com Job Assíncrono"
-                        >
-                          <FolderArchive className="h-3.5 w-3.5" />
-                        </Button>
-                      )}
-
-                      <Button
-                        size="icon"
-                        variant="ghost"
-                        onClick={() => {
-                          setRenameTarget(item);
-                          setRenameNewName(item.name);
-                          setIsRenameModalOpen(true);
-                        }}
-                        className="rounded-xl h-8 w-8 text-muted-foreground hover:text-foreground"
-                        title="Renomear (F2)"
-                      >
-                        <Edit2 className="h-3.5 w-3.5" />
-                      </Button>
-
-                      {item.type !== "directory" && (
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          onClick={() => handleDownloadFile(item)}
-                          className="rounded-xl h-8 w-8 text-muted-foreground hover:text-foreground"
-                          title="Download"
-                        >
-                          <Download className="h-3.5 w-3.5" />
-                        </Button>
-                      )}
-
-                      <Button
-                        size="icon"
-                        variant="ghost"
-                        onClick={() => {
-                          setActivePropertiesFile(item);
-                          setIsPropertiesOpen(true);
-                        }}
-                        className="rounded-xl h-8 w-8 text-muted-foreground hover:text-foreground"
-                        title="Propriedades"
-                      >
-                        <Info className="h-3.5 w-3.5" />
-                      </Button>
-
-                      <Button
-                        size="icon"
-                        variant="ghost"
-                        onClick={() => {
-                          if (confirm(`Deseja realmente excluir ${item.name} do servidor?`)) {
-                            deleteMutation.mutate([item.path]);
-                          }
-                        }}
-                        className="rounded-xl h-8 w-8 text-rose-500 hover:text-rose-600 hover:bg-rose-500/10"
-                        title="Excluir"
-                      >
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </Button>
-                    </div>
-                  </div>
-                </div>
-              );
-            })
+            filteredAndSortedItems.map((item) => (
+              <FileRowItem
+                key={item.path}
+                item={item}
+                isSelected={selectedPathsSet.has(item.path)}
+                onToggleSelect={toggleSelect}
+                onNavigate={navigateTo}
+                onOpenFileForEdit={handleOpenFileForEdit}
+                onOpenChmod={handleOpenChmod}
+                onOpenExtract={handleOpenExtract}
+                onOpenRename={handleOpenRename}
+                onDownload={handleDownloadFile}
+                onOpenProperties={handleOpenProperties}
+                onDelete={handleDeleteSingle}
+              />
+            ))
           )}
         </div>
 
@@ -1185,7 +1406,7 @@ export function FileManagerView({ appId }: FileManagerViewProps) {
                 </div>
                 <Progress value={uploadProgress} className="h-2.5 rounded-full" />
                 <p className="text-[11px] text-muted-foreground">
-                  Gravando diretamente no filesystem real em <code>/var/www/html/{currentPath}</code>
+                  Gravando diretamente no filesystem real em <code>{docRoot}/{currentPath}</code>
                 </p>
               </div>
             ) : (
@@ -1195,7 +1416,7 @@ export function FileManagerView({ appId }: FileManagerViewProps) {
                 </div>
                 <h5 className="font-bold text-sm text-foreground">Upload de Arquivos & Pacotes .ZIP</h5>
                 <p className="text-xs text-muted-foreground max-w-md mx-auto">
-                  Arraste arquivos ou clique para selecionar do computador. Os arquivos são salvos diretamente em <code>/var/www/html/{currentPath}</code>.
+                  Arraste arquivos ou clique para selecionar do computador. Os arquivos são salvos diretamente em <code>{docRoot}/{currentPath}</code>.
                 </p>
               </div>
             )}
@@ -1213,7 +1434,7 @@ export function FileManagerView({ appId }: FileManagerViewProps) {
               <FilePlus className="h-5 w-5 text-primary" /> Criar Novo Arquivo
             </DialogTitle>
             <DialogDescription className="text-xs">
-              Informe o nome do arquivo a ser criado em <code>/var/www/html/{currentPath}</code>
+              Informe o nome do arquivo a ser criado em <code>{docRoot}/{currentPath}</code>
             </DialogDescription>
           </DialogHeader>
           <form
@@ -1253,7 +1474,7 @@ export function FileManagerView({ appId }: FileManagerViewProps) {
               <FolderPlus className="h-5 w-5 text-primary" /> Criar Nova Pasta
             </DialogTitle>
             <DialogDescription className="text-xs">
-              Informe o nome do novo diretório em <code>/var/www/html/{currentPath}</code>
+              Informe o nome do novo diretório em <code>{docRoot}/{currentPath}</code>
             </DialogDescription>
           </DialogHeader>
           <form
@@ -1350,7 +1571,7 @@ export function FileManagerView({ appId }: FileManagerViewProps) {
             className="space-y-4 pt-2"
           >
             <div className="space-y-2">
-              <Label>Diretório de Destino (em branco para raiz /var/www/html)</Label>
+              <Label>Diretório de Destino (em branco para raiz {docRoot})</Label>
               <Input
                 value={targetDirectoryInput}
                 onChange={(e) => setTargetDirectoryInput(e.target.value)}
@@ -1420,7 +1641,7 @@ export function FileManagerView({ appId }: FileManagerViewProps) {
               <FolderArchive className="h-5 w-5 text-amber-500" /> Descompactar Arquivo ZIP
             </DialogTitle>
             <DialogDescription className="text-xs">
-              Como deseja proceder caso existam arquivos com o mesmo nome no diretório <code>/var/www/html/{currentPath}</code>?
+              Como deseja proceder caso existam arquivos com o mesmo nome no diretório <code>{docRoot}/{currentPath}</code>?
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-3 pt-2">
@@ -1492,7 +1713,13 @@ export function FileManagerView({ appId }: FileManagerViewProps) {
               <span>
                 Arquivos: {activeJob?.processedFiles || 0} / {activeJob?.totalFiles || 0}
               </span>
-              <span className="capitalize font-semibold text-primary">{activeJob?.status || "executando"}</span>
+              <span className="capitalize font-semibold text-primary">
+                {activeJob?.status === "completed"
+                  ? "Concluído"
+                  : (activeJob?.progress || 0) >= 100
+                  ? "Finalizando..."
+                  : activeJob?.status || "executando"}
+              </span>
             </div>
 
             {activeJob?.status === "running" && (
@@ -1517,6 +1744,7 @@ export function FileManagerView({ appId }: FileManagerViewProps) {
         isOpen={isEditorOpen}
         onClose={() => setIsEditorOpen(false)}
         fileData={activeEditorFile}
+        documentRoot={docRoot}
         onSave={async (filePath, content, expectedSha256, force) => {
           const res = await saveFileContentFn({
             data: { appId, filePath, content, expectedSha256, force: Boolean(force) },
@@ -1552,7 +1780,46 @@ export function FileManagerView({ appId }: FileManagerViewProps) {
           setActivePropertiesFile(null);
         }}
         file={activePropertiesFile}
+        documentRoot={docRoot}
       />
+
+      {/* Modal de Confirmação para Exclusão de Arquivos */}
+      <AlertDialog
+        open={deleteConfirmState.isOpen}
+        onOpenChange={(open) => {
+          if (!open) {
+            setDeleteConfirmState((prev) => ({ ...prev, isOpen: false }));
+          }
+        }}
+      >
+        <AlertDialogContent className="rounded-3xl border border-border bg-card p-6 shadow-2xl max-w-md">
+          <AlertDialogHeader className="space-y-3">
+            <div className="size-12 rounded-2xl bg-destructive/15 text-destructive flex items-center justify-center border border-destructive/25">
+              <Trash2 className="size-6" />
+            </div>
+            <AlertDialogTitle className="text-lg font-bold text-foreground">
+              Excluir do Servidor?
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-xs text-muted-foreground leading-relaxed">
+              Deseja realmente excluir permanentemente <strong className="text-foreground font-semibold">"{deleteConfirmState.displayName}"</strong>? Esta ação não pode ser desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="mt-5 gap-2 sm:gap-0">
+            <AlertDialogCancel className="rounded-xl h-10 px-4 text-xs font-semibold cursor-pointer">
+              Cancelar
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                deleteMutation.mutate(deleteConfirmState.paths);
+                setDeleteConfirmState({ isOpen: false, paths: [], displayName: "" });
+              }}
+              className="rounded-xl h-10 px-5 text-xs font-bold bg-destructive text-destructive-foreground hover:bg-destructive/90 cursor-pointer"
+            >
+              Sim, Excluir Definitivamente
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

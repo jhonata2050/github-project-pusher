@@ -14,7 +14,10 @@ import {
   extractRealArchive,
   searchRealFiles,
   auditLogOperation,
+  calculateDirectorySize,
 } from "./filesystem";
+import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import { getApplicationsStore } from "@/lib/cloud-apps.server";
 import type {
   IFileListResult,
   IFileReadResult,
@@ -23,15 +26,78 @@ import type {
   IChmodResult,
 } from "./types";
 
+/**
+ * Valida se a adição de novos bytes respeita a cota de disco do plano do cliente.
+ */
+export async function verifyAppDiskQuota(
+  appId: string,
+  additionalBytes: number,
+  userId: string
+): Promise<{ allowed: boolean; usedBytes: number; quotaBytes: number; planName: string }> {
+  const store = await getApplicationsStore();
+  const app = store[appId];
+  if (!app) throw new Error("Aplicação não encontrada");
+
+  let diskQuotaMb = (app as any).disk_limit_mb;
+  let planName = "Plano Cloud";
+
+  if (app.service_id) {
+    const { data: service } = await supabaseAdmin
+      .from("services")
+      .select("id, products(id, name, disk_quota_mb)")
+      .eq("id", app.service_id)
+      .maybeSingle();
+
+    if (service?.products?.disk_quota_mb) {
+      diskQuotaMb = service.products.disk_quota_mb;
+    }
+    if (service?.products?.name) {
+      planName = service.products.name;
+    }
+  }
+
+  // Fallback padrão se não configurado: 2.048 MB (2 GB)
+  if (!diskQuotaMb || diskQuotaMb <= 0) {
+    diskQuotaMb = 2048;
+  }
+
+  const quotaBytes = diskQuotaMb * 1024 * 1024;
+  const clientRoot = await resolveClientRoot(appId);
+  const currentUsedBytes = await calculateDirectorySize(clientRoot);
+
+  if (currentUsedBytes + additionalBytes > quotaBytes) {
+    const quotaFormatted = diskQuotaMb >= 1024 
+      ? `${(diskQuotaMb / 1024).toFixed(1)} GB` 
+      : `${diskQuotaMb} MB`;
+    const usedFormatted = `${(currentUsedBytes / (1024 * 1024)).toFixed(1)} MB`;
+    const attemptedFormatted = `${(additionalBytes / (1024 * 1024)).toFixed(1)} MB`;
+
+    throw new Error(
+      `Espaço em disco insuficiente. Seu plano (${planName}) permite até ${quotaFormatted}. ` +
+      `Uso atual: ${usedFormatted}, tentativa de gravação: ${attemptedFormatted}. ` +
+      `Faça um upgrade de plano para aumentar seu armazenamento.`
+    );
+  }
+
+  return {
+    allowed: true,
+    usedBytes: currentUsedBytes,
+    quotaBytes,
+    planName,
+  };
+}
+
 export async function listAppFiles(
   appId: string,
   relativePath: string = "",
   showHidden: boolean = true,
   userId: string
 ): Promise<IFileListResult> {
-  await verifyAppAuthorization(appId, userId);
+  const app = await verifyAppAuthorization(appId, userId);
   const clientRoot = await resolveClientRoot(appId);
-  return listRealDirectory(clientRoot, relativePath, showHidden);
+  const { getTemplateContainerRoot } = await import("./template-definitions");
+  const documentRoot = getTemplateContainerRoot(app.template_id, app.build_pack);
+  return listRealDirectory(clientRoot, relativePath, showHidden, documentRoot);
 }
 
 export async function readAppFile(
@@ -55,10 +121,27 @@ export async function writeAppFile(
   userId: string
 ): Promise<IFileWriteResult> {
   await verifyAppAuthorization(appId, userId);
+  const additionalBytes = new TextEncoder().encode(content).length;
+  await verifyAppDiskQuota(appId, additionalBytes, userId);
+
   const clientRoot = await resolveClientRoot(appId);
   const result = await writeRealFileContent(clientRoot, filePath, content, expectedSha256, force);
   await auditLogOperation(userId, appId, "WRITE", { path: filePath, size: result.size, sha256: result.sha256 });
-  syncAppFilesToCoolify(appId).catch(() => {});
+
+  // 1. Gravação direta no host e container Swarm (tempo real ~50ms)
+  try {
+    const store = await getApplicationsStore();
+    const app = store[appId];
+    if (app && app.status !== "provisioning") {
+      const { writeRemoteSwarmFile } = await import("@/lib/swarm-cluster.server");
+      await writeRemoteSwarmFile(app, filePath, content);
+    }
+  } catch (swarmErr: any) {
+    console.warn("[writeAppFile Direct Swarm Warning]:", swarmErr.message);
+  }
+
+  // 2. Backup e sincronização em segundo plano
+  syncAppFilesToContainer(appId).catch((err: any) => console.warn("[writeAppFile Sync Warning]:", err?.message));
   return result;
 }
 
@@ -69,10 +152,25 @@ export async function createAppFile(
   userId: string
 ): Promise<IFileInfo> {
   await verifyAppAuthorization(appId, userId);
+  const additionalBytes = new TextEncoder().encode(initialContent).length;
+  await verifyAppDiskQuota(appId, additionalBytes, userId);
+
   const clientRoot = await resolveClientRoot(appId);
   const result = await createRealFile(clientRoot, filePath, initialContent);
   await auditLogOperation(userId, appId, "CREATE_FILE", { path: filePath });
-  syncAppFilesToCoolify(appId).catch(() => {});
+
+  try {
+    const store = await getApplicationsStore();
+    const app = store[appId];
+    if (app && app.status !== "provisioning") {
+      const { writeRemoteSwarmFile } = await import("@/lib/swarm-cluster.server");
+      await writeRemoteSwarmFile(app, filePath, initialContent);
+    }
+  } catch (swarmErr: any) {
+    console.warn("[createAppFile Direct Swarm Warning]:", swarmErr.message);
+  }
+
+  syncAppFilesToContainer(appId).catch((err: any) => console.warn("[createAppFile Sync Warning]:", err?.message));
   return result;
 }
 
@@ -85,7 +183,19 @@ export async function createAppDirectory(
   const clientRoot = await resolveClientRoot(appId);
   const result = await createRealDirectory(clientRoot, dirPath);
   await auditLogOperation(userId, appId, "CREATE_DIR", { path: dirPath });
-  syncAppFilesToCoolify(appId).catch(() => {});
+
+  try {
+    const store = await getApplicationsStore();
+    const app = store[appId];
+    if (app && app.status !== "provisioning") {
+      const { createRemoteSwarmDirectory } = await import("@/lib/swarm-cluster.server");
+      await createRemoteSwarmDirectory(app, dirPath);
+    }
+  } catch (swarmErr: any) {
+    console.warn("[createAppDirectory Direct Swarm Warning]:", swarmErr.message);
+  }
+
+  syncAppFilesToContainer(appId).catch((err: any) => console.warn("[createAppDirectory Sync Warning]:", err?.message));
   return result;
 }
 
@@ -99,7 +209,19 @@ export async function deleteAppItems(
   const clientRoot = await resolveClientRoot(appId);
   const result = await deleteRealItems(clientRoot, paths, useTrash);
   await auditLogOperation(userId, appId, "DELETE", { paths, deleted: result.deleted, failed: result.failed });
-  syncAppFilesToCoolify(appId).catch(() => {});
+
+  try {
+    const store = await getApplicationsStore();
+    const app = store[appId];
+    if (app && app.status !== "provisioning" && result.deleted.length > 0) {
+      const { deleteRemoteSwarmItems } = await import("@/lib/swarm-cluster.server");
+      await deleteRemoteSwarmItems(app, result.deleted);
+    }
+  } catch (swarmErr: any) {
+    console.warn("[deleteAppItems Direct Swarm Warning]:", swarmErr.message);
+  }
+
+  syncAppFilesToContainer(appId).catch((err: any) => console.warn("[deleteAppItems Sync Warning]:", err?.message));
   return result;
 }
 
@@ -113,7 +235,7 @@ export async function renameAppItem(
   const clientRoot = await resolveClientRoot(appId);
   const result = await renameRealItem(clientRoot, oldPath, newName);
   await auditLogOperation(userId, appId, "RENAME", { oldPath, newName, newPath: result.path });
-  syncAppFilesToCoolify(appId).catch(() => {});
+  await syncAppFilesToContainer(appId).catch((err: any) => console.warn("[renameAppItem Sync Warning]:", err?.message));
   return result;
 }
 
@@ -127,7 +249,7 @@ export async function copyAppItems(
   const clientRoot = await resolveClientRoot(appId);
   const result = await copyRealItems(clientRoot, paths, targetDir);
   await auditLogOperation(userId, appId, "COPY", { paths, targetDir, copiedCount: result.length });
-  syncAppFilesToCoolify(appId).catch(() => {});
+  await syncAppFilesToContainer(appId).catch((err: any) => console.warn("[copyAppItems Sync Warning]:", err?.message));
   return result;
 }
 
@@ -141,7 +263,7 @@ export async function moveAppItems(
   const clientRoot = await resolveClientRoot(appId);
   const result = await moveRealItems(clientRoot, paths, targetDir);
   await auditLogOperation(userId, appId, "MOVE", { paths, targetDir, movedCount: result.length });
-  syncAppFilesToCoolify(appId).catch(() => {});
+  await syncAppFilesToContainer(appId).catch((err: any) => console.warn("[moveAppItems Sync Warning]:", err?.message));
   return result;
 }
 
@@ -182,7 +304,7 @@ export async function extractAppArchive(
   const clientRoot = await resolveClientRoot(appId);
   const extractedCount = await extractRealArchive(clientRoot, archivePath, targetDir);
   await auditLogOperation(userId, appId, "EXTRACT", { archivePath, targetDir, extractedCount });
-  syncAppFilesToCoolify(appId).catch(() => {});
+  await syncAppFilesToContainer(appId).catch((err: any) => console.warn("[extractAppArchive Sync Warning]:", err?.message));
   return { extractedCount };
 }
 
@@ -193,6 +315,14 @@ export async function uploadAppFilesBatch(
   userId: string
 ): Promise<{ savedCount: number; files: string[] }> {
   await verifyAppAuthorization(appId, userId);
+
+  // Calcular tamanho total do lote e validar cota
+  const totalBatchBytes = files.reduce((acc, f) => {
+    const raw = (f.contentBase64 || "").replace(/^data:.*?;base64,/, "");
+    return acc + Math.round(raw.length * 0.75);
+  }, 0);
+  await verifyAppDiskQuota(appId, totalBatchBytes, userId);
+
   const clientRoot = await resolveClientRoot(appId);
   const savedFiles: string[] = [];
 
@@ -210,25 +340,23 @@ export async function uploadAppFilesBatch(
   }
 
   await auditLogOperation(userId, appId, "UPLOAD", { targetDir, filesCount: files.length, savedFiles });
-  syncAppFilesToCoolify(appId).catch(() => {});
+  await syncAppFilesToContainer(appId).catch((err: any) => console.warn("[uploadAppFilesBatch Sync Warning]:", err?.message));
   return { savedCount: savedFiles.length, files: savedFiles };
 }
 
-export async function syncAppFilesToCoolify(appId: string): Promise<void> {
+export async function syncAppFilesToContainer(appId: string, _userId?: string): Promise<void> {
   try {
-    const { getCoolifyApplicationsStore, getActiveCoolifyServer } = await import("@/lib/coolify.server");
+    const { getApplicationsStore, getActiveClusterServer } = await import("@/lib/cloud-apps.server");
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const JSZip = (await import("jszip")).default;
     const fs = await import("fs/promises");
     const path = await import("path");
 
-    const store = await getCoolifyApplicationsStore();
+    const store = await getApplicationsStore();
     const app = store[appId];
-    const coolifyAppUuid = app?.coolify_app_uuid || "9dltqgbguyyylrazdyxaz317";
+    if (!app) return;
 
-    const server = await getActiveCoolifyServer();
-    if (!server?.apiToken || server.apiToken.includes("placeholder")) return;
-
+    const server = await getActiveClusterServer();
     const clientRoot = await resolveClientRoot(appId);
     const zip = new JSZip();
 
@@ -247,48 +375,25 @@ export async function syncAppFilesToCoolify(appId: string): Promise<void> {
     }
 
     await addRecursive(clientRoot);
-    const zipBuf = await zip.generateAsync({ type: "nodebuffer", compression: "DEFLATE", compressionOptions: { level: 6 } });
+    const zipBuf = await zip.generateAsync({ type: "nodebuffer", compression: "DEFLATE", compressionOptions: { level: 1 } });
 
+    // 1. Persistir cópia no Supabase Storage em segundo plano (não bloqueia o sync do contêiner)
     const bundlePath = `${appId}/site_bundle.zip`;
-    await supabaseAdmin.storage.from("app-bundles").upload(bundlePath, zipBuf, {
+    supabaseAdmin.storage.from("app-bundles").upload(bundlePath, zipBuf, {
       contentType: "application/zip",
       upsert: true,
-    });
+    }).catch((uploadErr: any) => console.warn("[Supabase Storage Backup Warning]:", uploadErr?.message));
 
-    const { data: pubUrl } = supabaseAdmin.storage.from("app-bundles").getPublicUrl(bundlePath);
-    const downloadUrl = pubUrl.publicUrl;
-
-    const caddyfile = `:80 {\n    root * /usr/share/caddy\n    file_server\n    encode zstd gzip\n    try_files {path} {path}/ /index.html\n}\n`;
-    const caddyfileB64 = Buffer.from(caddyfile).toString("base64");
-
-    const postCmd = `apk add --no-cache unzip wget curl && mkdir -p /usr/share/caddy /var/www/html /srv /etc/caddy && rm -rf /usr/share/caddy/* /var/www/html/* && wget -qO /tmp/site.zip "${downloadUrl}" && unzip -q -o /tmp/site.zip -d /usr/share/caddy && cp -r /usr/share/caddy/* /var/www/html/ 2>/dev/null || true && rm -f /tmp/site.zip && echo "${caddyfileB64}" | base64 -d > /etc/caddy/Caddyfile && caddy reload --config /etc/caddy/Caddyfile || true`;
-
-    const baseUrl = server.apiUrl.trim().replace(/\/+$/, "").replace(/\/api\/v1$/, "") + "/api/v1";
-    await fetch(`${baseUrl}/applications/${coolifyAppUuid}`, {
-      method: "PATCH",
-      headers: {
-        Authorization: `Bearer ${server.apiToken.trim()}`,
-        "Content-Type": "application/json",
-        Accept: "application/json",
-      },
-      body: JSON.stringify({
-        publish_directory: "/usr/share/caddy",
-        static_image: "caddy:2-alpine",
-        post_deployment_command: postCmd,
-      }),
-    });
-
-    await fetch(`${baseUrl}/deploy`, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${server.apiToken.trim()}`,
-        "Content-Type": "application/json",
-        Accept: "application/json",
-      },
-      body: JSON.stringify({ uuid: coolifyAppUuid, force: true }),
-    });
+    // 2. Sincronizar em tempo real no servidor remoto DK1 (bind-mounts, volumes e containers)
+    try {
+      const { syncFilesToSwarmContainer } = await import("@/lib/swarm-cluster.server");
+      await syncFilesToSwarmContainer(app, zipBuf, server);
+      console.log(`[FileManager Sync] Arquivos sincronizados com sucesso no cluster Swarm para app ${appId}`);
+    } catch (swarmErr: any) {
+      console.warn("[Cluster Live Auto-Sync Swarm]:", swarmErr.message);
+    }
   } catch (err: any) {
-    console.warn("[Coolify Live Auto-Sync Warning]:", err.message);
+    console.warn("[Cluster Live Auto-Sync]:", err.message);
   }
 }
 

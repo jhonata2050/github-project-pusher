@@ -18,11 +18,16 @@ export const Route = createFileRoute('/api/public/webhooks/abacatepay')({
             .eq('key', 'abacatepay_webhook_secret')
             .maybeSingle();
 
-          const webhookSecret = setting?.value as string;
+          const webhookSecret = (setting?.value as string) || process.env['ABACATEPAY_WEBHOOK_SECRET'] || '';
 
-          // 2. Validar assinatura se o segredo estiver configurado
-          if (webhookSecret && !verifyHmacSignature(body, signature, webhookSecret)) {
-            console.error('[AbacatePay Webhook] Assinatura inválida');
+          // Fail-closed: segredo e assinatura obrigatórios
+          if (!webhookSecret) {
+            console.error('[AbacatePay Webhook] Segredo não configurado');
+            return new Response('Webhook not configured', { status: 401 });
+          }
+
+          if (!signature || !verifyHmacSignature(body, signature, webhookSecret)) {
+            console.error('[AbacatePay Webhook] Assinatura inválida ou ausente');
             return new Response('Invalid signature', { status: 401 });
           }
           
@@ -48,11 +53,10 @@ export const Route = createFileRoute('/api/public/webhooks/abacatepay')({
         } catch (err: any) {
           console.error('[AbacatePay Webhook] Erro:', err.message);
           await supabaseAdmin.from('audit_logs').insert({
-            category: 'webhook',
+            entity_type: 'webhook',
             action: 'abacatepay.error',
-            status: 'failure',
             description: `Erro no processamento AbacatePay: ${err.message}`,
-            metadata: { error: err.message, body } as any
+            metadata: { category: 'webhook', status: 'failure', error: err.message, body } as any
           });
           return new Response('ok', { status: 200 });
         }

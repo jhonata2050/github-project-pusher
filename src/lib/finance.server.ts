@@ -73,7 +73,8 @@ export async function placeOrder(
     }
   }
 
-  const affNotes = data.affCode ? `aff:${data.affCode.trim()}` : null;
+  const affCode = (data as any).affCode;
+  const affNotes = affCode ? `aff:${affCode.trim()}` : null;
 
   const { data: order, error: oError } = await supabaseAdmin
     .from("orders")
@@ -138,55 +139,33 @@ export async function placeOrder(
 }
 
 export async function fetchInvoiceDetails(supabaseClient: any, userId: string, id: string) {
-  // 1. Tenta buscar usando o cliente autenticado (suporta dono da fatura e admins via RLS)
-  const { data: invoice, error } = await supabaseClient
-    .from("invoices")
-    .select("*, invoice_items(*), profiles(*)")
-    .eq("id", id)
-    .maybeSingle();
-
-  if (invoice) return invoice;
-
-  // 2. Se a query detalhada com join profiles falhou por restrição de FK, tenta query básica
-  const { data: basicInvoice, error: basicError } = await supabaseClient
+  // 1. Tenta buscar usando o cliente autenticado
+  let { data: invoice } = await supabaseClient
     .from("invoices")
     .select("*, invoice_items(*)")
     .eq("id", id)
     .maybeSingle();
 
-  if (basicInvoice) {
-    if (basicInvoice.user_id) {
-      const { data: profile } = await supabaseClient
-        .from("profiles")
-        .select("*")
-        .eq("id", basicInvoice.user_id)
-        .maybeSingle();
-      return { ...basicInvoice, profiles: profile || null };
-    }
-    return basicInvoice;
+  // 2. Fallback com supabaseAdmin se não encontrado
+  if (!invoice) {
+    const { data: adminInvoice } = await supabaseAdmin
+      .from("invoices")
+      .select("*, invoice_items(*)")
+      .eq("id", id)
+      .maybeSingle();
+    invoice = adminInvoice;
   }
 
-  // 3. Fallback adicional usando supabaseAdmin caso seja impersonation de admin
-  const { data: adminInvoice } = await supabaseAdmin
-    .from("invoices")
-    .select("*, invoice_items(*)")
-    .eq("id", id)
-    .maybeSingle();
-
-  if (adminInvoice) {
-    if (adminInvoice.user_id) {
+  if (invoice) {
+    if (invoice.user_id) {
       const { data: profile } = await supabaseAdmin
         .from("profiles")
         .select("*")
-        .eq("id", adminInvoice.user_id)
+        .eq("id", invoice.user_id)
         .maybeSingle();
-      return { ...adminInvoice, profiles: profile || null };
+      return { ...invoice, profiles: profile || null };
     }
-    return adminInvoice;
-  }
-
-  if (error || basicError) {
-    console.error("[fetchInvoiceDetails] Erro:", error?.message || basicError?.message);
+    return invoice;
   }
 
   throw new Error("Fatura não encontrada ou acesso negado");
@@ -429,8 +408,77 @@ export async function processProvisioning(invoiceId: string) {
       }
     }
 
+    // Se o serviço já é existente e foi pago para renovação ou reativação
+    if (service.status === "active" || service.status === "suspended") {
+      console.log(`[Provisioning] Processando RENOVAÇÃO/REATIVAÇÃO do serviço ${service.id} (Status anterior: ${service.status})`);
+      
+      const cycle = service.billing_cycle || 'monthly';
+      const baseDate = new Date(service.next_due_date && new Date(service.next_due_date) > new Date() ? service.next_due_date : new Date());
+      let nextDueDate = new Date(baseDate);
+
+      switch (cycle) {
+        case 'quarterly':
+          nextDueDate.setMonth(nextDueDate.getMonth() + 3);
+          break;
+        case 'semiannually':
+          nextDueDate.setMonth(nextDueDate.getMonth() + 6);
+          break;
+        case 'annually':
+          nextDueDate.setFullYear(nextDueDate.getFullYear() + 1);
+          break;
+        case 'biennially':
+          nextDueDate.setFullYear(nextDueDate.getFullYear() + 2);
+          break;
+        case 'triennially':
+          nextDueDate.setFullYear(nextDueDate.getFullYear() + 3);
+          break;
+        case 'monthly':
+        default:
+          nextDueDate.setMonth(nextDueDate.getMonth() + 1);
+          break;
+      }
+
+      // Se o serviço estava suspenso, reativar no provedor correspondente
+      if (service.status === "suspended") {
+        // DirectAdmin
+        if (service.server_id && service.username) {
+          try {
+            const { unsuspendDAAccount } = await import("./directadmin.server");
+            await unsuspendDAAccount(service.server_id, service.username);
+            console.log(`[Provisioning] Conta DirectAdmin ${service.username} reativada com sucesso.`);
+          } catch (daErr: any) {
+            console.warn(`[Provisioning] Aviso ao reativar no DirectAdmin:`, daErr.message);
+          }
+        }
+        // Cloud Apps / Bots
+        if (product?.product_type === 'app' || product?.product_type === 'bot' || service.app_uuid) {
+          try {
+            const { startCloudApplication } = await import("./cloud-apps.server");
+            await startCloudApplication(service.id, invoice.user_id);
+            console.log(`[Provisioning] Contêiner PaaS ${service.domain} reativado com sucesso.`);
+          } catch (appErr: any) {
+            console.warn(`[Provisioning] Aviso ao reativar contêiner PaaS:`, appErr.message);
+          }
+        }
+      }
+
+      await supabaseAdmin.from("services").update({
+        status: "active",
+        next_due_date: nextDueDate.toISOString(),
+        suspension_reason: null,
+        updated_at: new Date().toISOString(),
+      }).eq("id", service.id);
+
+      results.push({ 
+        serviceId: service.id, 
+        success: true, 
+        message: `Serviço renovado com sucesso até ${nextDueDate.toLocaleDateString('pt-BR')}` 
+      });
+      continue;
+    }
+
     if (service.status !== "pending") {
-      console.log(`[Provisioning] Serviço ${service.id} já está ${service.status}. Pulando.`);
+      console.log(`[Provisioning] Serviço ${service.id} está com status '${service.status}'. Pulando.`);
       continue;
     }
 
@@ -561,12 +609,12 @@ export async function processProvisioning(invoiceId: string) {
       try {
         const { provisionContaboVPS } = await import("./contabo.server");
         const provisioned = await provisionContaboVPS(service.id, {
-          productId: product.external_id,
+          productId: (product as any).external_id || product.slug || 'V4',
           hostname: service.vps_hostname,
           imageId: service.vps_os_template,
           region: service.vps_region,
           billingCycle: service.billing_cycle,
-        });
+        } as any);
 
         await logProvisioningAttempt({
           serviceId: service.id,
@@ -581,7 +629,6 @@ export async function processProvisioning(invoiceId: string) {
         await supabaseAdmin.from("services").update({
           notes: `Falha no provisionamento automático da VPS: ${errorDetail}`,
           status: "pending",
-          error_message: errorDetail,
         }).eq("id", service.id);
         await logProvisioningAttempt({
           serviceId: service.id,
@@ -589,27 +636,28 @@ export async function processProvisioning(invoiceId: string) {
           status: 'failure',
           errorCode: 'VPS_API_ERROR',
           errorMessage: errorDetail,
-          metadata: { productId: product.id, externalProductId: product.external_id }
+          metadata: { productId: product.id, externalProductId: (product as any).external_id || product.slug }
         });
         results.push({ serviceId: service.id, success: false, error: errorDetail });
       }
     }
-    // 3. Caso: Aplicações & Bots (Coolify PaaS)
-    else if (product?.product_type === 'app' || product?.product_type === 'bot' || product?.product_type === 'coolify') {
-      console.log(`[Provisioning] Provisionando Aplicação PaaS no Coolify para o serviço ${service.id}.`);
+    // 3. Caso: Aplicações & Bots (Eqsam Cloud PaaS)
+    else if (product?.product_type === 'app' || product?.product_type === 'bot') {
+      console.log(`[Provisioning] Provisionando Aplicação Cloud PaaS para o serviço ${service.id}.`);
       try {
-        const { provisionCoolifyApplication } = await import("./coolify.server");
-        const app = await provisionCoolifyApplication(service.id, {
+        const { provisionCloudApplication } = await import("./cloud-apps.server");
+        const app = await provisionCloudApplication(service.id, {
           name: service.domain || product.name,
-          memoryLimit: product.disk_quota_mb || 512,
+          memoryLimit: 512,
           cpuLimit: 1.0,
+          diskLimitMb: product.disk_quota_mb || 2048,
         });
 
-        results.push({ serviceId: service.id, success: true, appId: app.id, appUuid: app.coolify_app_uuid });
+        results.push({ serviceId: service.id, success: true, appId: app.id, appUuid: app.app_uuid });
       } catch (err: any) {
-        const errorDetail = err?.message || "Falha ao provisionar container Coolify";
+        const errorDetail = err?.message || "Falha ao provisionar container PaaS";
         await supabaseAdmin.from("services").update({
-          notes: `Falha no provisionamento Coolify: ${errorDetail}`,
+          notes: `Falha no provisionamento PaaS: ${errorDetail}`,
           status: "pending",
         }).eq("id", service.id);
         results.push({ serviceId: service.id, success: false, error: errorDetail });
@@ -638,12 +686,22 @@ export async function handlePaymentSuccess(
     // 1. Buscar fatura e perfil do cliente
     const { data: invoice, error: iError } = await supabaseAdmin
       .from("invoices")
-      .select("*, profiles(*)")
+      .select("*")
       .eq("id", invoiceId)
       .single();
 
     if (iError || !invoice) {
       throw new Error(`Fatura #${invoiceId} não encontrada.`);
+    }
+
+    let profile: any = null;
+    if (invoice.user_id) {
+      const { data: p } = await supabaseAdmin
+        .from("profiles")
+        .select("*")
+        .eq("id", invoice.user_id)
+        .maybeSingle();
+      profile = p;
     }
 
     if (invoice.status === "paid") {
@@ -690,7 +748,6 @@ export async function handlePaymentSuccess(
     }
 
     // 5. Notificações
-    const profile = invoice.profiles;
     const amountStr = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number(invoice.total_amount || 0));
 
     // Notificar Admin
@@ -710,9 +767,9 @@ export async function handlePaymentSuccess(
 
     // 6. Log de auditoria
     await supabaseAdmin.from("audit_logs").insert({
-      category: "finance",
       action: "payment.processed",
-      status: "success",
+      entity_type: "invoice",
+      entity_id: invoiceId,
       description: `Pagamento processado com sucesso para fatura #${invoiceId} via ${gatewayName}`,
       metadata: { invoiceId, gatewayName, externalReference } as any
     });
@@ -722,9 +779,9 @@ export async function handlePaymentSuccess(
     console.error(`[Finance] Erro ao processar pagamento fatura #${invoiceId}:`, error);
     
     await supabaseAdmin.from("audit_logs").insert({
-      category: "finance",
       action: "payment.failed",
-      status: "failure",
+      entity_type: "invoice",
+      entity_id: invoiceId,
       description: `Erro ao processar pagamento fatura #${invoiceId}: ${error.message}`,
       metadata: { invoiceId, gatewayName, externalReference, error: error.message } as any
     });
@@ -732,5 +789,215 @@ export async function handlePaymentSuccess(
     throw error;
   }
 }
+
+export async function adminUpdateInvoiceImplementation(
+  invoiceData: {
+    id: string;
+    status?: "pending" | "paid" | "cancelled" | "refunded" | "overdue";
+    due_date?: string;
+    total_amount?: number;
+    subtotal?: number;
+    discount_amount?: number;
+    payment_method?: string | null;
+    paid_at?: string | null;
+    notes?: string | null;
+  },
+  context: { supabase: any; userId: string }
+) {
+  // Verificar se o usuário autenticado é admin
+  const { data: isAdmin, error: roleError } = await context.supabase.rpc("has_role", {
+    _user_id: context.userId,
+    _role: "admin",
+  });
+
+  if (roleError || !isAdmin) {
+    throw new Error("Acesso negado. Apenas administradores podem gerenciar faturas.");
+  }
+
+  // Buscar estado atual da fatura
+  const { data: currentInvoice, error: fetchErr } = await supabaseAdmin
+    .from("invoices")
+    .select("*")
+    .eq("id", invoiceData.id)
+    .single();
+
+  if (fetchErr || !currentInvoice) {
+    console.error(`[AdminFinance] Erro ao buscar fatura #${invoiceData.id}:`, fetchErr);
+    throw new Error(`Fatura #${invoiceData.id} não encontrada: ${fetchErr?.message || "Registro inexistente"}`);
+  }
+
+  const updates: any = {
+    updated_at: new Date().toISOString(),
+  };
+
+  if (invoiceData.status !== undefined) updates.status = invoiceData.status;
+  if (invoiceData.due_date !== undefined) updates.due_date = invoiceData.due_date;
+  if (invoiceData.total_amount !== undefined) updates.total_amount = Number(invoiceData.total_amount);
+  if (invoiceData.subtotal !== undefined) updates.subtotal = Number(invoiceData.subtotal);
+  if (invoiceData.discount_amount !== undefined) updates.discount_amount = Number(invoiceData.discount_amount);
+  if (invoiceData.payment_method !== undefined) updates.payment_method = invoiceData.payment_method;
+  if (invoiceData.paid_at !== undefined) updates.paid_at = invoiceData.paid_at;
+  if (invoiceData.notes !== undefined) updates.notes = invoiceData.notes;
+
+  const isMarkingPaid = updates.status === "paid" && currentInvoice.status !== "paid";
+  if (isMarkingPaid && !updates.paid_at) {
+    updates.paid_at = new Date().toISOString();
+  }
+  if (isMarkingPaid && !updates.payment_method) {
+    updates.payment_method = "manual_admin";
+  }
+
+  const { data: updatedInvoice, error: updateErr } = await supabaseAdmin
+    .from("invoices")
+    .update(updates)
+    .eq("id", invoiceData.id)
+    .select()
+    .single();
+
+  if (updateErr) {
+    console.error(`[AdminFinance] Erro ao atualizar fatura #${invoiceData.id}:`, updateErr);
+    throw new Error(`Erro ao atualizar fatura: ${updateErr.message}`);
+  }
+
+  let provisioningTriggered = false;
+  if (isMarkingPaid) {
+    try {
+      console.log(`[AdminFinance] Disparando processProvisioning para fatura #${invoiceData.id} após baixa manual.`);
+      await processProvisioning(invoiceData.id);
+      provisioningTriggered = true;
+    } catch (provErr: any) {
+      console.error(`[AdminFinance] Erro no provisionamento após baixa manual da fatura #${invoiceData.id}:`, provErr);
+    }
+  }
+
+  // Registrar auditoria
+  try {
+    await supabaseAdmin.from("audit_logs").insert({
+      user_id: context.userId,
+      action: "invoice.admin_updated",
+      entity_type: "invoice",
+      entity_id: invoiceData.id,
+      description: `Fatura #${invoiceData.id} atualizada pelo admin.${isMarkingPaid ? " (Baixa efetuada)" : ""}`,
+      metadata: {
+        invoiceId: invoiceData.id,
+        previous: {
+          status: currentInvoice.status,
+          due_date: currentInvoice.due_date,
+          total_amount: currentInvoice.total_amount,
+          notes: currentInvoice.notes,
+        },
+        updates,
+        provisioningTriggered,
+      } as any,
+    });
+  } catch (logErr) {
+    console.warn("[AdminFinance] Falha ao registrar log de auditoria:", logErr);
+  }
+
+  return {
+    success: true,
+    invoice: updatedInvoice,
+    provisioningTriggered,
+  };
+}
+
+export async function adminCreateManualInvoiceImplementation(
+  invoiceData: {
+    userId: string;
+    description: string;
+    amount: number;
+    dueDate: string;
+    serviceId?: string | null;
+    notes?: string | null;
+    status?: "pending" | "paid";
+    paymentMethod?: string | null;
+  },
+  context: { supabase: any; userId: string }
+) {
+  // Verificar se o usuário autenticado é admin
+  const { data: isAdmin, error: roleError } = await context.supabase.rpc("has_role", {
+    _user_id: context.userId,
+    _role: "admin",
+  });
+
+  if (roleError || !isAdmin) {
+    throw new Error("Acesso negado. Apenas administradores podem gerar faturas manuais.");
+  }
+
+  const isPaid = invoiceData.status === "paid";
+  const now = new Date().toISOString();
+
+  // 1. Criar fatura
+  const { data: invoice, error: iErr } = await supabaseAdmin
+    .from("invoices")
+    .insert({
+      user_id: invoiceData.userId,
+      total_amount: Number(invoiceData.amount),
+      subtotal: Number(invoiceData.amount),
+      tax_amount: 0,
+      discount_amount: 0,
+      status: (invoiceData.status || "pending") as any,
+      due_date: invoiceData.dueDate,
+      paid_at: isPaid ? now : null,
+      payment_method: isPaid ? (invoiceData.paymentMethod || "manual_admin") : null,
+      notes: invoiceData.notes || null,
+    })
+    .select()
+    .single();
+
+  if (iErr || !invoice) {
+    console.error("[AdminFinance] Erro ao criar fatura avulsa:", iErr);
+    throw new Error(`Erro ao gerar fatura: ${iErr?.message}`);
+  }
+
+  // 2. Criar item da fatura
+  const { error: itemErr } = await supabaseAdmin
+    .from("invoice_items")
+    .insert({
+      invoice_id: invoice.id,
+      description: invoiceData.description || "Serviço Avulso",
+      amount: Number(invoiceData.amount),
+      quantity: 1,
+      service_id: invoiceData.serviceId || null,
+    });
+
+  if (itemErr) {
+    console.warn("[AdminFinance] Aviso: Não foi possível registrar item da fatura:", itemErr.message);
+  }
+
+  // 3. Se foi criada como paga e vinculada a serviço, provisionar
+  let provisioningTriggered = false;
+  if (isPaid && invoiceData.serviceId) {
+    try {
+      await processProvisioning(invoice.id);
+      provisioningTriggered = true;
+    } catch (provErr: any) {
+      console.error(`[AdminFinance] Erro ao provisionar fatura criada já paga #${invoice.id}:`, provErr);
+    }
+  }
+
+  // 4. Log de auditoria
+  try {
+    await supabaseAdmin.from("audit_logs").insert({
+      user_id: context.userId,
+      action: "invoice.admin_created",
+      entity_type: "invoice",
+      entity_id: invoice.id,
+      description: `Fatura manual #${invoice.id} gerada para o cliente no valor de R$ ${Number(invoiceData.amount).toFixed(2)}`,
+      metadata: {
+        invoiceId: invoice.id,
+        userId: invoiceData.userId,
+        amount: invoiceData.amount,
+        serviceId: invoiceData.serviceId,
+        status: invoice.status,
+      } as any,
+    });
+  } catch (logErr) {
+    console.warn("[AdminFinance] Falha ao registrar log de criação de fatura:", logErr);
+  }
+
+  return { success: true, invoice, provisioningTriggered };
+}
+
 
 

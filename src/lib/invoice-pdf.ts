@@ -64,9 +64,12 @@ function parseColorToRGB(colorStr?: string, defaultRGB: [number, number, number]
   if (colorStr.startsWith("rgb")) {
     const parts = colorStr.replace(/rgba?\(|\)/g, "").split(",");
     if (parts.length >= 3) {
-      const r = parseInt(parts[0].trim(), 10);
-      const g = parseInt(parts[1].trim(), 10);
-      const b = parseInt(parts[2].trim(), 10);
+      const p0 = parts[0] ?? "0";
+      const p1 = parts[1] ?? "0";
+      const p2 = parts[2] ?? "0";
+      const r = parseInt(p0.trim(), 10);
+      const g = parseInt(p1.trim(), 10);
+      const b = parseInt(p2.trim(), 10);
       if (!isNaN(r) && !isNaN(g) && !isNaN(b)) return [r, g, b];
     }
   }
@@ -126,12 +129,15 @@ export async function generateInvoicePDF(data: InvoicePDFData, isReceipt = false
   const paidColor = [22, 163, 74]; // Emerald-600 #16a34a
   const pendingColor = [217, 119, 6]; // Amber-600 #d97706
 
+  const setFill = (c: number[]) => doc.setFillColor(c[0] ?? 0, c[1] ?? 0, c[2] ?? 0);
+  const setText = (c: number[]) => doc.setTextColor(c[0] ?? 0, c[1] ?? 0, c[2] ?? 0);
+
   // 1. Top Header Banner com Fundo Escuro Moderno
-  doc.setFillColor(headerDarkBg[0], headerDarkBg[1], headerDarkBg[2]);
+  setFill(headerDarkBg);
   doc.rect(0, 0, 210, 38, "F");
 
   // Linha de Destaque da Cor da Marca no topo
-  doc.setFillColor(brandColor[0], brandColor[1], brandColor[2]);
+  setFill(brandColor);
   doc.rect(0, 0, 210, 2.5, "F");
 
   let hasImageLogo = false;
@@ -154,7 +160,7 @@ export async function generateInvoicePDF(data: InvoicePDFData, isReceipt = false
     doc.setTextColor(255, 255, 255);
     doc.text(appName, 15, 18);
 
-    doc.setFillColor(brandColor[0], brandColor[1], brandColor[2]);
+    setFill(brandColor);
     doc.roundedRect(15, 22, 32, 6, 1.5, 1.5, "F");
     doc.setFont("helvetica", "bold");
     doc.setFontSize(7.5);
@@ -172,7 +178,7 @@ export async function generateInvoicePDF(data: InvoicePDFData, isReceipt = false
   // Badge de Status Colorido no Header
   const statusBadgeBg = isPaid ? [22, 163, 74] : [217, 119, 6];
   const statusText = isPaid ? "PAGO / QUITADO" : "AGUARDANDO PAGAMENTO";
-  doc.setFillColor(statusBadgeBg[0], statusBadgeBg[1], statusBadgeBg[2]);
+  setFill(statusBadgeBg);
   doc.roundedRect(145, 21, 50, 6.5, 1.5, 1.5, "F");
 
   doc.setFont("helvetica", "bold");
@@ -194,19 +200,19 @@ export async function generateInvoicePDF(data: InvoicePDFData, isReceipt = false
   doc.roundedRect(107, y, 88, 38, 3, 3, "FD");
 
   // Faixa de destaque lateral nos cards
-  doc.setFillColor(brandColor[0], brandColor[1], brandColor[2]);
+  setFill(brandColor);
   doc.roundedRect(15, y, 2, 38, 1, 1, "F");
   doc.roundedRect(107, y, 2, 38, 1, 1, "F");
 
   // Left: Cliente
   doc.setFont("helvetica", "bold");
   doc.setFontSize(9.5);
-  doc.setTextColor(darkTextColor[0], darkTextColor[1], darkTextColor[2]);
+  setText(darkTextColor);
   doc.text("DADOS DO CLIENTE", 21, y + 7.5);
 
   doc.setFont("helvetica", "normal");
   doc.setFontSize(8.5);
-  doc.setTextColor(darkTextColor[0], darkTextColor[1], darkTextColor[2]);
+  setText(darkTextColor);
   doc.text(`Nome: ${client?.full_name || "Cliente"}`, 21, y + 15);
   doc.text(`E-mail: ${client?.email || "-"}`, 21, y + 21);
   if (client?.document) {
@@ -219,12 +225,12 @@ export async function generateInvoicePDF(data: InvoicePDFData, isReceipt = false
   // Right: Datas e Meio de Pagamento
   doc.setFont("helvetica", "bold");
   doc.setFontSize(9.5);
-  doc.setTextColor(darkTextColor[0], darkTextColor[1], darkTextColor[2]);
+  setText(darkTextColor);
   doc.text("DETALHES DA FATURA", 113, y + 7.5);
 
   doc.setFont("helvetica", "normal");
   doc.setFontSize(8.5);
-  doc.setTextColor(darkTextColor[0], darkTextColor[1], darkTextColor[2]);
+  setText(darkTextColor);
 
   const createdDate = invoice.created_at ? format(new Date(invoice.created_at), "dd/MM/yyyy", { locale: ptBR }) : "-";
   const dueDate = invoice.due_date ? format(new Date(invoice.due_date), "dd/MM/yyyy", { locale: ptBR }) : "-";
@@ -242,7 +248,7 @@ export async function generateInvoicePDF(data: InvoicePDFData, isReceipt = false
   y += 46;
 
   // 3. Tabela de Itens da Fatura
-  doc.setFillColor(brandColor[0], brandColor[1], brandColor[2]);
+  setFill(brandColor);
   doc.roundedRect(15, y, 180, 8, 1.5, 1.5, "F");
 
   doc.setFont("helvetica", "bold");
@@ -267,7 +273,7 @@ export async function generateInvoicePDF(data: InvoicePDFData, isReceipt = false
       doc.rect(15, y, 180, 8.5, "F");
     }
 
-    doc.setTextColor(darkTextColor[0], darkTextColor[1], darkTextColor[2]);
+    setText(darkTextColor);
     doc.text(item.description || "Item de Serviço", 20, y + 5.5);
     doc.setFont("helvetica", "bold");
     doc.text(brl.format(Number(item.amount || 0)), 190, y + 5.5, { align: "right" });
@@ -292,10 +298,10 @@ export async function generateInvoicePDF(data: InvoicePDFData, isReceipt = false
 
   doc.setFont("helvetica", "normal");
   doc.setFontSize(8.5);
-  doc.setTextColor(mutedTextColor[0], mutedTextColor[1], mutedTextColor[2]);
+  setText(mutedTextColor);
 
   doc.text("Subtotal:", summaryX, y);
-  doc.setTextColor(darkTextColor[0], darkTextColor[1], darkTextColor[2]);
+  setText(darkTextColor);
   doc.text(brl.format(originalAmt), 190, y, { align: "right" });
   y += 6;
 
@@ -314,14 +320,14 @@ export async function generateInvoicePDF(data: InvoicePDFData, isReceipt = false
   }
 
   if (discount > 0) {
-    doc.setTextColor(brandColor[0], brandColor[1], brandColor[2]);
+    setText(brandColor);
     doc.text("Desconto Aplicado:", summaryX, y);
     doc.text(`- ${brl.format(discount)}`, 190, y, { align: "right" });
     y += 6;
   }
 
   // Caixa de Total com Fundo de Destaque
-  doc.setFillColor(headerDarkBg[0], headerDarkBg[1], headerDarkBg[2]);
+  setFill(headerDarkBg);
   doc.roundedRect(summaryX - 5, y, summaryWidth + 5, 11, 2, 2, "F");
 
   doc.setFont("helvetica", "bold");
@@ -329,7 +335,7 @@ export async function generateInvoicePDF(data: InvoicePDFData, isReceipt = false
   doc.setTextColor(255, 255, 255);
   doc.text("VALOR TOTAL:", summaryX, y + 7);
 
-  doc.setTextColor(brandColor[0], brandColor[1], brandColor[2]);
+  setText(brandColor);
   doc.setFontSize(11);
   doc.text(brl.format(finalAmt), 190, y + 7, { align: "right" });
 
@@ -349,7 +355,7 @@ export async function generateInvoicePDF(data: InvoicePDFData, isReceipt = false
 
     doc.setFont("helvetica", "normal");
     doc.setFontSize(8);
-    doc.setTextColor( darkTextColor[0], darkTextColor[1], darkTextColor[2] );
+    setText(darkTextColor);
     doc.text(`Identificador da Transação: ${invoice.id}`, 22, y + 16);
     doc.text(`Serviço liberado e ativo em conformidade com os termos da ${companyName}.`, 22, y + 21);
   } else {
@@ -372,7 +378,7 @@ export async function generateInvoicePDF(data: InvoicePDFData, isReceipt = false
   // 6. Rodapé com Informações da Empresa e Horário
   doc.setFont("helvetica", "normal");
   doc.setFontSize(7.5);
-  doc.setTextColor(mutedTextColor[0], mutedTextColor[1], mutedTextColor[2]);
+  setText(mutedTextColor);
   doc.text(
     `${companyName} • Suporte: ${supportEmail} • Emitido em ${format(new Date(), "dd/MM/yyyy 'às' HH:mm:ss")}`,
     105,

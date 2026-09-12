@@ -62,9 +62,24 @@ function AdminDomainsPage() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("domains")
-        .select("*, profiles(*)")
+        .select("*")
         .order("created_at", { ascending: false });
       if (error) throw error;
+
+      if (data && data.length > 0) {
+        const userIds = Array.from(new Set(data.map((d: any) => d.user_id).filter(Boolean)));
+        if (userIds.length > 0) {
+          const { data: profiles } = await supabase
+            .from("profiles")
+            .select("id, full_name, email, phone")
+            .in("id", userIds);
+          const pMap = new Map((profiles || []).map((p: any) => [p.id, p]));
+          return data.map((d: any) => ({
+            ...d,
+            profiles: pMap.get(d.user_id) || null
+          }));
+        }
+      }
       return data || [];
     },
   });

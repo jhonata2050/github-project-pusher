@@ -16,7 +16,8 @@ import {
   X, 
   Globe, 
   KeyRound,
-  Check
+  Check,
+  Plus
 } from "lucide-react";
 import { AppShell } from "@/components/app/AppShell";
 import { Button } from "@/components/ui/button";
@@ -24,17 +25,27 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { getMyApplications, applyTemplateToApp } from "@/lib/coolify.functions";
-import { APP_TEMPLATES, type AppTemplate } from "@/lib/templates.data";
+import { getMyApplications, applyTemplateToApp } from "@/lib/cloud-apps.functions";
+import { APP_TEMPLATES, type AppTemplate, getRequiredDiskWithMargin } from "@/lib/templates.data";
 import { useAuth } from "@/hooks/use-auth";
 import { toast } from "sonner";
 
+type CreateAppSearchParams = {
+  mode?: "zip" | "github" | "templates";
+  appId?: string;
+  category?: string;
+};
+
 export const Route = createFileRoute("/_authenticated/apps/create")({
-  validateSearch: (search: Record<string, unknown>) => ({
-    mode: (search.mode as "zip" | "github" | "templates") || undefined,
-    appId: (search.appId as string) || undefined,
-    category: (search.category as string) || undefined,
-  }),
+  validateSearch: (search: Record<string, unknown>): CreateAppSearchParams => {
+    const params: CreateAppSearchParams = {};
+    if (search["mode"] === "zip" || search["mode"] === "github" || search["mode"] === "templates") {
+      params.mode = search["mode"];
+    }
+    if (typeof search["appId"] === "string") params.appId = search["appId"];
+    if (typeof search["category"] === "string") params.category = search["category"];
+    return params;
+  },
   head: () => ({
     meta: [
       { title: "Criar Aplicação — Eqsam PaaS" },
@@ -54,7 +65,9 @@ function CreateAppPage() {
   const effectiveUserId = impersonatedClientId || user?.id;
 
   const [deployType, setDeployType] = useState<DeployType>(search.mode || "zip");
-  const [appName, setAppName] = useState("");
+  const [appName, setAppName] = useState(
+    search.mode === "templates" || !search.mode ? (APP_TEMPLATES[0]?.name || "") : ""
+  );
   const [selectedAppId, setSelectedAppId] = useState<string>(search.appId || "");
 
   // Estado para ZIP
@@ -67,7 +80,7 @@ function CreateAppPage() {
   const [buildPack, setBuildPack] = useState<"nixpacks" | "dockerfile">("nixpacks");
 
   // Estado para Templates
-  const [selectedTemplate, setSelectedTemplate] = useState<AppTemplate | null>(APP_TEMPLATES[0]);
+  const [selectedTemplate, setSelectedTemplate] = useState<AppTemplate | null>(APP_TEMPLATES[0] ?? null);
   const [templateCategory, setTemplateCategory] = useState<string>(search.category || "all");
 
   const { data: apps, isLoading: loadingApps } = useQuery({
@@ -77,33 +90,66 @@ function CreateAppPage() {
   });
 
   const activeApp = apps?.find((a: any) => a.id === (selectedAppId || apps?.[0]?.id)) || apps?.[0];
+  const activeAppDisk = (activeApp as any)?.service?.products?.disk_quota_mb || activeApp?.disk_limit_mb || 1536;
+  const requiredDiskWithMargin = selectedTemplate ? getRequiredDiskWithMargin(selectedTemplate.recommended_disk) : 0;
 
-  const isTemplateUnderpowered = Boolean(
+  const isRamUnderpowered = Boolean(
     deployType === "templates" && 
     activeApp && 
     selectedTemplate && 
-    (
-      activeApp.memory_limit < selectedTemplate.recommended_ram ||
-      (activeApp.cpu_limit && activeApp.cpu_limit < selectedTemplate.recommended_cpu)
-    )
+    activeApp.memory_limit < selectedTemplate.recommended_ram
   );
+
+  const isCpuUnderpowered = Boolean(
+    deployType === "templates" && 
+    activeApp && 
+    selectedTemplate && 
+    activeApp.cpu_limit && 
+    activeApp.cpu_limit < selectedTemplate.recommended_cpu
+  );
+
+  const isDiskUnderpowered = Boolean(
+    deployType === "templates" && 
+    activeApp && 
+    selectedTemplate && 
+    requiredDiskWithMargin > 0 && 
+    activeAppDisk < requiredDiskWithMargin
+  );
+
+  const isTemplateUnderpowered = isRamUnderpowered || isCpuUnderpowered || isDiskUnderpowered;
 
   const deployMutation = useMutation({
     mutationFn: async () => {
       if (!activeApp) throw new Error("Selecione uma aplicação/recurso para o deploy.");
 
+      const trimmedName = appName.trim();
+      if (!trimmedName) {
+        throw new Error("O nome da aplicação é obrigatório. Por favor, informe o nome para prosseguir.");
+      }
+
       if (deployType === "templates" && selectedTemplate) {
         if (isTemplateUnderpowered) {
-          throw new Error(`Seu plano contratado possui ${activeApp.memory_limit} MB de RAM e ${activeApp.cpu_limit || 0.5} vCPU. O modelo ${selectedTemplate.name} exige no mínimo ${selectedTemplate.recommended_ram} MB de RAM e ${selectedTemplate.recommended_cpu} vCPU. Faça upgrade do seu plano para continuar.`);
+          let reason = "";
+          if (isDiskUnderpowered) {
+            reason = `seu plano contratado possui ${activeAppDisk} MB de disco, mas o modelo ${selectedTemplate.name} exige no mínimo ${selectedTemplate.recommended_disk} MB (+ 20% de margem de segurança para operação = ${requiredDiskWithMargin} MB).`;
+          } else if (isRamUnderpowered) {
+            reason = `seu plano contratado possui ${activeApp.memory_limit} MB de RAM, mas o modelo ${selectedTemplate.name} exige no mínimo ${selectedTemplate.recommended_ram} MB de RAM.`;
+          } else {
+            reason = `seu plano contratado possui ${activeApp.cpu_limit || 0.5} vCPU, mas o modelo ${selectedTemplate.name} exige no mínimo ${selectedTemplate.recommended_cpu} vCPU.`;
+          }
+          throw new Error(`Plano incompatível: ${reason} Faça upgrade do seu plano para continuar.`);
         }
         return applyTemplateToApp({
           data: {
             appId: activeApp.id,
             template: {
+              id: selectedTemplate.id,
               git_repository: selectedTemplate.git_repository,
               git_branch: selectedTemplate.git_branch,
               build_pack: selectedTemplate.build_pack,
               default_envs: selectedTemplate.default_envs,
+              default_port: selectedTemplate.default_port,
+              name: trimmedName,
             },
           },
         });
@@ -118,6 +164,7 @@ function CreateAppPage() {
               git_repository: gitRepo,
               git_branch: gitBranch || "main",
               build_pack: buildPack,
+              name: trimmedName,
             },
           },
         });
@@ -130,13 +177,15 @@ function CreateAppPage() {
           data: {
             appId: activeApp.id,
             template: {
-              git_repository: "https://github.com/coollabsio/coolify-examples",
-              git_branch: "nodejs-fastify",
+              git_repository: "https://github.com/eqsam/nodejs-starter",
+              git_branch: "main",
               build_pack: "nixpacks",
+              name: trimmedName,
             },
           },
         });
       }
+      return null;
     },
     onSuccess: () => {
       toast.success("Aplicação criada e deploy iniciado com sucesso!");
@@ -388,7 +437,9 @@ function CreateAppPage() {
                             type="button"
                             onClick={() => {
                               setSelectedTemplate(tmpl);
-                              if (!appName) setAppName(tmpl.name.toLowerCase().replace(/[^a-z0-9]/g, "-"));
+                              if (!appName.trim() || APP_TEMPLATES.some(t => t.name === appName || t.name.toLowerCase().replace(/[^a-z0-9]/g, "-") === appName)) {
+                                setAppName(tmpl.name);
+                              }
                             }}
                             className={`p-3 rounded-2xl border text-left flex items-start gap-3 transition-all cursor-pointer ${
                               isSelected
@@ -407,7 +458,7 @@ function CreateAppPage() {
                             <div className="overflow-hidden min-w-0">
                               <p className="font-bold text-xs truncate text-foreground">{tmpl.name}</p>
                               <p className="text-[10px] text-muted-foreground truncate mt-0.5">
-                                <span className="font-semibold text-primary">{tmpl.recommended_ram}MB</span> • {tmpl.recommended_cpu} vCPU
+                                <span className="font-semibold text-primary">{tmpl.recommended_ram}MB RAM</span> • {tmpl.recommended_cpu} vCPU • <span className="font-medium text-amber-600 dark:text-amber-400">{getRequiredDiskWithMargin(tmpl.recommended_disk)}MB HD</span>
                               </p>
                             </div>
                           </button>
@@ -422,17 +473,43 @@ function CreateAppPage() {
             {/* Configurações da Aplicação */}
             <Card className="rounded-3xl border shadow-sm">
               <CardHeader className="pb-4">
-                <CardTitle className="text-base font-bold">Parâmetros da Aplicação</CardTitle>
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-base font-bold">Parâmetros da Aplicação</CardTitle>
+                  <Badge variant="outline" className="text-[10px] font-semibold text-amber-600 dark:text-amber-400 border-amber-500/30 bg-amber-500/5">
+                    Campo Obrigatório
+                  </Badge>
+                </div>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="space-y-2">
-                  <Label className="text-xs">Nome da Aplicação</Label>
+                  <div className="flex items-center justify-between">
+                    <Label className="text-xs font-semibold flex items-center gap-1">
+                      Nome da Aplicação <span className="text-rose-500 font-bold text-sm">*</span>
+                    </Label>
+                    {!appName.trim() && (
+                      <span className="text-[10px] font-bold text-rose-500">Obrigatório preencher</span>
+                    )}
+                  </div>
                   <Input
                     value={appName}
                     onChange={(e) => setAppName(e.target.value)}
-                    placeholder="Ex: meu-bot-whatsapp ou api-node"
-                    className="rounded-xl font-medium text-xs"
+                    placeholder="Ex: meu-bot-whatsapp, n8n, api-node"
+                    className={`rounded-xl font-medium text-xs h-11 ${
+                      !appName.trim() 
+                        ? "border-rose-500/60 focus-visible:ring-rose-500 bg-rose-500/5" 
+                        : "border-border"
+                    }`}
+                    required
                   />
+                  {!appName.trim() ? (
+                    <p className="text-[11px] text-rose-500 font-medium">
+                      ⚠️ O preenchimento do nome da aplicação é obrigatório para identificação no painel.
+                    </p>
+                  ) : (
+                    <p className="text-[11px] text-muted-foreground">
+                      Identificação visual da sua aplicação na lista de serviços e no painel.
+                    </p>
+                  )}
                 </div>
               </CardContent>
             </Card>
@@ -449,19 +526,42 @@ function CreateAppPage() {
               </CardHeader>
               <CardContent className="space-y-4 text-xs">
                 {apps && apps.length > 0 ? (
-                  <div className="space-y-2">
-                    <Label className="text-xs font-semibold">Recurso / Serviço Contratado:</Label>
+                  <div className="space-y-2.5">
+                    <div className="flex items-center justify-between">
+                      <Label className="text-xs font-semibold">Recurso / Serviço Contratado:</Label>
+                      <Link to="/plans" search={{ tab: "paas" }} className="text-[11px] font-bold text-primary hover:underline flex items-center gap-1">
+                        <Plus className="h-3 w-3" /> Contratar novo
+                      </Link>
+                    </div>
                     <select
-                      className="w-full h-10 px-3 rounded-xl border bg-background font-semibold text-xs focus:ring-1 focus:ring-primary"
+                      className="w-full h-10 px-3 rounded-xl border bg-background font-semibold text-xs focus:ring-1 focus:ring-primary cursor-pointer"
                       value={selectedAppId || apps[0]?.id}
-                      onChange={(e) => setSelectedAppId(e.target.value)}
+                      onChange={(e) => {
+                        if (e.target.value === "__new_plan__") {
+                          navigate({ to: "/plans", search: { tab: "paas" } });
+                          return;
+                        }
+                        setSelectedAppId(e.target.value);
+                      }}
                     >
                       {apps.map((a: any) => (
                         <option key={a.id} value={a.id}>
                           {a.name} ({a.memory_limit} MB • {a.cpu_limit} vCPU)
                         </option>
                       ))}
+                      <option value="__new_plan__">➕ Contratar novo plano...</option>
                     </select>
+
+                    <Link to="/checkout" search={{ service: "containers" }} className="block pt-1">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="w-full rounded-xl text-xs border-dashed gap-1.5 font-semibold text-muted-foreground hover:text-primary hover:border-primary/50 hover:bg-primary/5"
+                      >
+                        <Plus className="h-3.5 w-3.5 text-primary" /> Contratar novo plano PaaS
+                      </Button>
+                    </Link>
                   </div>
                 ) : (
                   <div className="bg-amber-500/10 border border-amber-500/30 p-3.5 rounded-2xl space-y-2 text-amber-700 dark:text-amber-300">
@@ -471,9 +571,9 @@ function CreateAppPage() {
                     <p className="text-[11px] leading-relaxed">
                       Você precisa de um plano de aplicação para iniciar o container.
                     </p>
-                    <Link to="/plans" search={{ tab: "paas" }}>
-                      <Button size="sm" className="w-full rounded-xl text-xs mt-1">
-                        Contratar Plano PaaS
+                    <Link to="/checkout" search={{ service: "containers" }}>
+                      <Button size="sm" className="w-full rounded-xl text-xs mt-1 font-bold">
+                        <Plus className="h-3.5 w-3.5 mr-1" /> Contratar Novo Plano PaaS
                       </Button>
                     </Link>
                   </div>
@@ -490,6 +590,10 @@ function CreateAppPage() {
                       <span className="font-bold">{activeApp.cpu_limit} vCPU</span>
                     </div>
                     <div className="flex justify-between">
+                      <span className="text-muted-foreground">Espaço em Disco:</span>
+                      <span className="font-bold">{activeAppDisk} MB HD</span>
+                    </div>
+                    <div className="flex justify-between">
                       <span className="text-muted-foreground">SSL & Domínio:</span>
                       <span className="text-lime-600 font-semibold flex items-center gap-1">
                         <CheckCircle2 className="h-3 w-3" /> Automático
@@ -504,10 +608,18 @@ function CreateAppPage() {
                       <AlertTriangle className="h-4 w-4" /> Upgrade Obrigatório de Recursos
                     </p>
                     <p className="text-[11px] leading-relaxed">
-                      O modelo <strong>{selectedTemplate?.name}</strong> requer no mínimo <strong>{selectedTemplate?.recommended_ram} MB de RAM</strong> e <strong>{selectedTemplate?.recommended_cpu} vCPU</strong>. Seu plano atual fornece <strong>{activeApp?.memory_limit} MB</strong> e <strong>{activeApp?.cpu_limit || 0.5} vCPU</strong>.
+                      O modelo <strong>{selectedTemplate?.name}</strong> requer no mínimo{" "}
+                      <strong>{selectedTemplate?.recommended_ram} MB de RAM</strong>,{" "}
+                      <strong>{selectedTemplate?.recommended_cpu} vCPU</strong> e{" "}
+                      <strong>{requiredDiskWithMargin} MB de Disco</strong> ({selectedTemplate?.recommended_disk} MB base + 20% de margem de segurança para operação e dados).
+                    </p>
+                    <p className="text-[11px] leading-relaxed">
+                      Seu plano atual fornece: <strong>{activeApp?.memory_limit} MB RAM</strong>,{" "}
+                      <strong>{activeApp?.cpu_limit || 0.5} vCPU</strong> e{" "}
+                      <strong>{activeAppDisk} MB de Disco</strong>.
                     </p>
                     <p className="text-[11px] font-semibold text-rose-600 dark:text-rose-400">
-                      Faça o upgrade do seu plano para liberar o deploy deste modelo.
+                      Faça o upgrade do seu plano para liberar o deploy deste modelo com segurança.
                     </p>
                   </div>
                 )}
@@ -525,7 +637,7 @@ function CreateAppPage() {
                 ) : (
                   <Button
                     onClick={() => deployMutation.mutate()}
-                    disabled={deployMutation.isPending || !activeApp || (deployType === "zip" && !zipFile)}
+                    disabled={deployMutation.isPending || !activeApp || !appName.trim() || (deployType === "zip" && !zipFile)}
                     className="w-full rounded-xl gap-2 font-bold h-11 text-xs"
                   >
                     <Zap className="h-4 w-4" />

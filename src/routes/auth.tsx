@@ -12,6 +12,7 @@ import { Label } from "@/components/ui/label";
 import { CountrySelector } from "@/components/app/CountrySelector";
 import { useAuth, useIsStaff } from "@/hooks/use-auth";
 import { useBranding } from "@/hooks/use-branding";
+import { cn } from "@/lib/utils";
 import { lovable } from "@/integrations/lovable/index";
 import { supabase } from "@/integrations/supabase/client";
 import { logPublicAuthEvent, logSessionEvent } from "@/lib/audit.functions";
@@ -193,7 +194,17 @@ function AuthPage() {
           },
         });
         if (error) throw error;
-        if (data.session) {
+        if (data.session && data.user) {
+          try {
+            await supabase.from("profiles").update({
+              phone: phone.trim() || null,
+              tax_id: tax_id.trim() || null,
+              country: country || "BR",
+              full_name: fullName.trim().slice(0, 120),
+            }).eq("id", data.user.id);
+          } catch (pErr) {
+            console.warn("[SignUp] Aviso ao atualizar dados complementares do perfil:", pErr);
+          }
           void logSessionEvent({ data: { action: "signup.succeeded", description: "Conta criada com sucesso" } });
           trackEvent("sign_up", { method: "email", lead_source: leadSource });
         }
@@ -261,16 +272,15 @@ function AuthPage() {
             />
           </div>
 
-          <div className="flex justify-center mb-6">
-            {branding.logo_url ? (
-              <img
-                src={branding.logo_url}
-                alt={branding.app_name}
-                className="h-10 w-auto max-w-[180px] object-contain"
-              />
-            ) : (
-              <span className="text-2xl font-bold text-brand">{branding.app_name}</span>
-            )}
+          <div className="flex justify-center items-center mb-6">
+            <img
+              src={branding.logo_url || "/images/logo-branco.webp"}
+              alt={branding.app_name}
+              className={cn(
+                "h-10 w-auto max-w-[200px] object-contain",
+                (!branding.logo_url || branding.logo_url.includes("logo-branco") || branding.logo_url === "/images/logo.webp") && "invert dark:invert-0"
+              )}
+            />
           </div>
 
           {checkEmail ? (

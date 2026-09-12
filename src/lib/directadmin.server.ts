@@ -324,14 +324,19 @@ export async function getDACapabilities(serverId: string) {
       console.warn(`[DA-Capability] /api/login/url indisponível:`, e);
     }
 
-    // Salvar o resultado no banco para evitar consultas repetidas
-    await supabaseAdmin
-      .from('servers')
-      .update({ 
-        sso_supported: capabilities.delegated_sso,
-        last_capability_check: new Date().toISOString()
-      })
-      .eq('id', serverId);
+    // Salvar o resultado em system_settings para evitar consultas repetidas e erros de schema
+    try {
+      await supabaseAdmin
+        .from('system_settings')
+        .upsert({ 
+          key: `server_caps_${serverId}`,
+          value: JSON.stringify({
+            sso_supported: capabilities.delegated_sso,
+            last_capability_check: new Date().toISOString(),
+            capabilities
+          })
+        });
+    } catch {}
 
     return capabilities;
   } catch (e: any) {
@@ -371,6 +376,7 @@ export async function createDAAccount(serverId: string, details: {
   email: string;
   domain: string;
   package: string;
+  password?: string | undefined;
 }) {
   const { data: server, error } = await supabaseAdmin
     .from("servers")
@@ -380,8 +386,8 @@ export async function createDAAccount(serverId: string, details: {
 
   if (error || !server) throw new Error("Servidor não encontrado");
 
-  // REGRA WHMCS: Senha do DirectAdmin é gerada e separada da senha do cliente no sistema
-  const daPassword = generateStrongPassword(24);
+  // Senha informada ou gerada automaticamente
+  const daPassword = details.password || generateStrongPassword(24);
 
   const result = await callDA({
     hostname: server.hostname,
@@ -429,6 +435,30 @@ export async function suspendDAAccount(serverId: string, username: string) {
     }
   });
 }
+
+export async function unsuspendDAAccount(serverId: string, username: string) {
+  const { data: server, error } = await supabaseAdmin
+    .from("servers")
+    .select("*")
+    .eq("id", serverId)
+    .single();
+
+  if (error || !server) throw new Error("Servidor não encontrado");
+
+  return await callDA({
+    hostname: server.hostname,
+    apiUser: server.api_user ?? "",
+    apiToken: server.api_token ?? "",
+    command: 'CMD_API_SELECT_USERS',
+    method: 'POST',
+    params: {
+      location: 'users',
+      suspend: 'Unsuspend',
+      select0: username
+    }
+  });
+}
+
 export async function deleteDAAccount(serverId: string, username: string) {
   const { data: server, error } = await supabaseAdmin
     .from("servers")
@@ -582,11 +612,11 @@ export async function checkDAUserExists(serverId: string, username: string, serv
 
         // Bloqueio imediato do serviço
         await supabaseAdmin.from("services").update({
-          block_directadmin: true,
           status: 'suspended',
+          suspension_reason: "BLOCK_DIRECTADMIN: Conflito de domínio detectado no servidor. Por favor, contate o suporte para resolução.",
           notes: "BLOQUEIO DE SEGURANÇA: Conflito de domínio detectado no servidor. Por favor, contate o suporte para resolução.",
           updated_at: new Date().toISOString()
-        } as any).eq("id", serviceId);
+        }).eq("id", serviceId);
         
         // Notificar via WhatsApp sobre o conflito
         const { notifyAdminWhatsApp } = await import("./whatsapp.server");

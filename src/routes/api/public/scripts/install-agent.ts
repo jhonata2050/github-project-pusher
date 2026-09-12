@@ -143,13 +143,8 @@ export const Route = createFileRoute('/api/public/scripts/install-agent')({
   server: {
     handlers: {
       GET: async ({ request }) => {
-        let origin = "http://localhost:8080";
-        try {
-          const url = new URL(request.url);
-          origin = `${url.protocol}//${url.host}`;
-        } catch {
-          // fallback
-        }
+        const { getCanonicalPublicUrl } = await import('@/lib/payments.server');
+        const origin = getCanonicalPublicUrl(request);
         
         const content = getAgentScript(origin);
         return new Response(content, {

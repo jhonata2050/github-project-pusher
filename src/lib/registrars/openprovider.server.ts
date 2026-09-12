@@ -53,14 +53,17 @@ export class OpenproviderRegistrar {
 
   private async request(endpoint: string, method = "GET", body?: any) {
     const token = await this.getAuthToken();
-    const res = await fetch(`${this.apiUrl}${endpoint}`, {
+    const init: RequestInit = {
       method,
       headers: {
         "Content-Type": "application/json",
         Authorization: `Bearer ${token}`,
       },
-      body: body ? JSON.stringify(body) : undefined,
-    });
+    };
+    if (body) {
+      init.body = JSON.stringify(body);
+    }
+    const res = await fetch(`${this.apiUrl}${endpoint}`, init);
 
     const data = await res.json();
     if (!res.ok || (data.code && data.code !== 0)) {

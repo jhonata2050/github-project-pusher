@@ -169,9 +169,12 @@ function AdminAffiliatesPage() {
   });
 
   const handleProductRuleChange = (productId: string, field: "type" | "value" | "isEnabled", val: any) => {
-    setProductRules((prev) => ({
+    setProductRules((prev: any) => ({
       ...prev,
       [productId]: {
+        type: "percentage",
+        value: 10,
+        isEnabled: false,
         ...prev[productId],
         [field]: val,
       },

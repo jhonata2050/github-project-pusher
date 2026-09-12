@@ -18,11 +18,16 @@ export const Route = createFileRoute('/api/public/webhooks/stripe')({
             .eq('key', 'stripe_webhook_secret')
             .maybeSingle();
 
-          const webhookSecret = setting?.value as string;
+          const webhookSecret = (setting?.value as string) || process.env['STRIPE_WEBHOOK_SECRET'] || '';
 
-          // 2. Validar assinatura se o segredo estiver configurado
-          if (webhookSecret && !verifyStripeSignature(body, sig, webhookSecret)) {
-            console.error('[Stripe Webhook] Assinatura inválida');
+          // Fail-closed: segredo e assinatura obrigatórios
+          if (!webhookSecret) {
+            console.error('[Stripe Webhook] Segredo stripe_webhook_secret não configurado');
+            return new Response('Webhook not configured', { status: 401 });
+          }
+
+          if (!sig || !verifyStripeSignature(body, sig, webhookSecret)) {
+            console.error('[Stripe Webhook] Assinatura inválida ou ausente');
             return new Response('Invalid signature', { status: 401 });
           }
           
@@ -47,11 +52,10 @@ export const Route = createFileRoute('/api/public/webhooks/stripe')({
           // Respondemos 200 para evitar retries infinitos se o erro for de processamento,
           // mas logamos o erro para auditoria.
           await supabaseAdmin.from('audit_logs').insert({
-            category: 'webhook',
+            entity_type: 'webhook',
             action: 'stripe.error',
-            status: 'failure',
             description: `Erro no processamento Stripe: ${err.message}`,
-            metadata: { error: err.message, body } as any
+            metadata: { category: 'webhook', status: 'failure', error: err.message, body } as any
           });
           return new Response('OK', { status: 200 });
         }

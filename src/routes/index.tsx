@@ -9,6 +9,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useBranding } from "@/hooks/use-branding";
 import { useAuth } from "@/hooks/use-auth";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { cn } from "@/lib/utils";
 
 
 export const Route = createFileRoute("/")({
@@ -78,23 +79,15 @@ function Index() {
   return (
     <div className="min-h-screen">
       <header className="mx-auto flex max-w-6xl items-center justify-between px-4 py-6">
-        <span className="flex min-w-0 items-center gap-2 text-lg font-semibold">
-          {branding.logo_url ? (
-            <span className="flex items-center rounded-2xl px-4 py-2.5">
-              <img
-                src={branding.logo_url}
-                alt={branding.app_name}
-                className="h-8 w-auto max-w-[180px] object-contain sm:h-9 sm:max-w-[220px]"
-              />
-            </span>
-          ) : (
-            <>
-              <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-brand text-sm font-bold text-brand-foreground">
-                {branding.app_name.charAt(0)}
-              </span>
-              <span className="truncate">{branding.app_name}</span>
-            </>
-          )}
+        <span className="flex min-w-0 items-center">
+          <img
+            src={branding.logo_url || "/images/logo-branco.webp"}
+            alt={branding.app_name}
+            className={cn(
+              "h-8 w-auto max-w-[180px] object-contain sm:h-9",
+              (!branding.logo_url || branding.logo_url.includes("logo-branco") || branding.logo_url === "/images/logo.webp") && "invert dark:invert-0"
+            )}
+          />
         </span>
         <Button asChild variant="outline" className="rounded-xl">
           <Link to="/auth" search={{ redirect: "/dashboard" }}>Área do cliente</Link>

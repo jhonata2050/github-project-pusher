@@ -6,10 +6,22 @@
 // You can pass additional config via defineConfig({ vite: { ... }, etc... }) if needed.
 import { defineConfig } from "@lovable.dev/vite-tanstack-config";
 
+if (process.env['NODE_ENV'] !== "production") {
+  process.env['NODE_TLS_REJECT_UNAUTHORIZED'] = "0";
+}
+
 export default defineConfig({
+  vite: {
+    server: {
+      watch: {
+        ignored: ["**/storage/**", "**/backups/**"],
+      },
+    },
+  },
   tanstackStart: {
     // Redirect TanStack Start's bundled server entry to src/server.ts (our SSR error wrapper).
     // nitro/vite builds from this
     server: { entry: "server" },
   },
 });
+

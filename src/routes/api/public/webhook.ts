@@ -127,15 +127,45 @@ export const Route = createFileRoute('/api/public/webhook')({
             const action = payload.action || topic;
             
             if (resourceId && (action === 'payment.created' || action === 'payment.updated' || topic === 'payment')) {
-              const { handlePaymentSuccess } = await import('@/lib/finance.server');
-              const { data: transaction } = await supabaseAdmin
-                .from('transactions')
-                .select('id, invoice_id, status')
-                .eq('gateway_reference', resourceId.toString())
+              let isApproved = false;
+              const { data: tokenSetting } = await supabaseAdmin
+                .from('system_settings')
+                .select('value')
+                .eq('key', 'mercadopago_access_token')
                 .maybeSingle();
 
-              if (transaction && transaction.status !== 'completed' && transaction.invoice_id) {
-                await handlePaymentSuccess(transaction.invoice_id, 'Mercado Pago', resourceId.toString());
+              const accessToken = (tokenSetting?.value as string) || process.env['MERCADOPAGO_ACCESS_TOKEN'] || '';
+
+              if (accessToken) {
+                try {
+                  const mpRes = await fetch(`https://api.mercadopago.com/v1/payments/${resourceId}`, {
+                    headers: {
+                      Authorization: `Bearer ${accessToken}`,
+                      'Content-Type': 'application/json',
+                    },
+                  });
+                  if (mpRes.ok) {
+                    const paymentDetails = await mpRes.json();
+                    if (paymentDetails?.status === 'approved') {
+                      isApproved = true;
+                    }
+                  }
+                } catch (fetchErr: any) {
+                  console.error('[Generic Webhook] Erro ao consultar Mercado Pago:', fetchErr.message);
+                }
+              }
+
+              if (isApproved) {
+                const { handlePaymentSuccess } = await import('@/lib/finance.server');
+                const { data: transaction } = await supabaseAdmin
+                  .from('transactions')
+                  .select('id, invoice_id, status')
+                  .eq('gateway_reference', resourceId.toString())
+                  .maybeSingle();
+
+                if (transaction && transaction.status !== 'completed' && transaction.invoice_id) {
+                  await handlePaymentSuccess(transaction.invoice_id, 'Mercado Pago', resourceId.toString());
+                }
               }
             }
           }

@@ -17,9 +17,10 @@ interface FilePropertiesModalProps {
   isOpen: boolean;
   onClose: () => void;
   file: IFileInfo | null;
+  documentRoot?: string;
 }
 
-export function FilePropertiesModal({ isOpen, onClose, file }: FilePropertiesModalProps) {
+export function FilePropertiesModal({ isOpen, onClose, file, documentRoot }: FilePropertiesModalProps) {
   const [copiedKey, setCopiedKey] = React.useState<string | null>(null);
 
   if (!file) return null;
@@ -34,7 +35,7 @@ export function FilePropertiesModal({ isOpen, onClose, file }: FilePropertiesMod
   const properties = [
     { label: "Nome do Arquivo", value: file.name, key: "name" },
     { label: "Caminho Relativo", value: file.path, key: "path" },
-    { label: "Caminho no Servidor", value: `/var/www/html/${file.path}`, key: "fullPath" },
+    { label: "Caminho no Servidor", value: `${documentRoot || "/app"}/${file.path}`, key: "fullPath" },
     { label: "Tipo", value: file.type === "directory" ? "Diretório" : file.mimeType, key: "type" },
     { label: "Tamanho", value: `${file.sizeFormatted} (${file.size.toLocaleString("pt-BR")} bytes)`, key: "size" },
     { label: "Permissões Linux", value: `${file.permissions} (${file.rwx})`, key: "perms" },

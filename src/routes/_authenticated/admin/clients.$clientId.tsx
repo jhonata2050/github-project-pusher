@@ -25,6 +25,19 @@ import {
    Monitor,
    Wallet,
    PlusCircle,
+   Key,
+   Copy,
+   Check,
+   RotateCcw,
+   DollarSign,
+   Calendar,
+   Percent,
+   FileEdit,
+   ShieldCheck,
+   Eye,
+   EyeOff,
+   MessageSquare,
+   Gift,
  } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useState } from "react";
@@ -32,9 +45,19 @@ import { toast } from "sonner";
 import { useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useAuth } from "@/hooks/use-auth";
-import { impersonateClient, updateClientProfile } from "@/lib/admin.functions";
+import { 
+  impersonateClient, 
+  updateClientProfile, 
+  adminChangeUserPassword, 
+  adminSendPasswordReset 
+} from "@/lib/admin.functions";
+import { 
+  adminUpdateInvoice, 
+  adminCreateManualInvoice 
+} from "@/lib/finance.functions";
 import { logSessionEvent } from "@/lib/audit.functions";
 import { adminAdjustUserBalance } from "@/lib/wallet.functions";
+import { supabase } from "@/integrations/supabase/client";
 
 
 import { AppShell } from "@/components/app/AppShell";
@@ -43,6 +66,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { CountrySelector } from "@/components/app/CountrySelector";
 import { countries } from "@/lib/countries";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -185,13 +209,103 @@ function ClientDetailPage() {
     }
   });
 
+  // Estados para Gestão de Faturas
+  const [managingInvoice, setManagingInvoice] = useState<any>(null);
+  const [isManageInvoiceModalOpen, setIsManageInvoiceModalOpen] = useState(false);
+  const [isNewInvoiceModalOpen, setIsNewInvoiceModalOpen] = useState(false);
+
+  // Estados para Nova Fatura Manual
+  const [newInvoiceDesc, setNewInvoiceDesc] = useState("");
+  const [newInvoiceAmount, setNewInvoiceAmount] = useState("");
+  const [newInvoiceDueDate, setNewInvoiceDueDate] = useState(() => {
+    const d = new Date();
+    d.setDate(d.getDate() + 3);
+    return d.toISOString().split("T")[0];
+  });
+  const [newInvoiceServiceId, setNewInvoiceServiceId] = useState<string>("none");
+  const [newInvoiceStatus, setNewInvoiceStatus] = useState<"pending" | "paid">("pending");
+  const [newInvoicePaymentMethod, setNewInvoicePaymentMethod] = useState("pix");
+  const [newInvoiceNotes, setNewInvoiceNotes] = useState("");
+
+  // Estados para Segurança e Credenciais
+  const [isChangePasswordModalOpen, setIsChangePasswordModalOpen] = useState(false);
+  const [newPasswordValue, setNewPasswordValue] = useState("");
+  const [showPasswordText, setShowPasswordText] = useState(false);
+  const [resetLinkResult, setResetLinkResult] = useState<{ link: string; emailSent: boolean } | null>(null);
+
+  // Server functions
+  const executeUpdateInvoice = useServerFn(adminUpdateInvoice);
+  const updateInvoiceMutation = useMutation({
+    mutationFn: (data: any) => executeUpdateInvoice({ data }),
+    onSuccess: (res: any) => {
+      queryClient.invalidateQueries({ queryKey: ["admin-client-dossier", clientId] });
+      setIsManageInvoiceModalOpen(false);
+      setManagingInvoice(null);
+      if (res?.provisioningTriggered) {
+        toast.success("Fatura baixada com sucesso! Serviços ativados/renovados.");
+      } else {
+        toast.success("Fatura atualizada com sucesso!");
+      }
+    },
+    onError: (err: any) => {
+      toast.error("Erro ao atualizar fatura: " + err.message);
+    }
+  });
+
+  const executeCreateManualInvoice = useServerFn(adminCreateManualInvoice);
+  const createManualInvoiceMutation = useMutation({
+    mutationFn: (data: any) => executeCreateManualInvoice({ data }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin-client-dossier", clientId] });
+      setIsNewInvoiceModalOpen(false);
+      setNewInvoiceDesc("");
+      setNewInvoiceAmount("");
+      setNewInvoiceNotes("");
+      toast.success("Fatura manual criada com sucesso!");
+    },
+    onError: (err: any) => {
+      toast.error("Erro ao criar fatura: " + err.message);
+    }
+  });
+
+  const executeChangePassword = useServerFn(adminChangeUserPassword);
+  const changePasswordMutation = useMutation({
+    mutationFn: (newPassword: string) => executeChangePassword({ data: { userId: clientId, newPassword } }),
+    onSuccess: () => {
+      setIsChangePasswordModalOpen(false);
+      setNewPasswordValue("");
+      toast.success("Senha do cliente alterada com sucesso!");
+    },
+    onError: (err: any) => {
+      toast.error("Erro ao alterar senha: " + err.message);
+    }
+  });
+
+  const executeSendPasswordReset = useServerFn(adminSendPasswordReset);
+  const sendPasswordResetMutation = useMutation({
+    mutationFn: () => executeSendPasswordReset({ data: { userId: clientId, email: client.email } }),
+    onSuccess: (res: any) => {
+      if (res?.actionLink) {
+        setResetLinkResult({ link: res.actionLink, emailSent: res.emailSent });
+        if (res.emailSent) {
+          toast.success("E-mail de recuperação enviado e link disponível para cópia!");
+        } else {
+          toast.success("Link de recuperação gerado!");
+        }
+      }
+    },
+    onError: (err: any) => {
+      toast.error("Erro ao gerar link de recuperação: " + err.message);
+    }
+  });
+
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
     const raw = Object.fromEntries(formData.entries()) as Record<string, string>;
 
-    // O e-mail é gerenciado pela autenticação e o ID nunca deve ser alterado
-    const { email, id, ...values } = raw;
+    // O ID nunca deve ser alterado no body do update
+    const { id, ...values } = raw;
     updateProfile.mutate(values);
   };
 
@@ -300,7 +414,7 @@ function ClientDetailPage() {
     queryFn: async () => {
       const { data } = await supabase
         .from('vps_instances')
-        .select('id, external_id, name, ip_address, status, region, os_template, service_id');
+        .select('id, external_id, ip_address, status, region, os_template, service_id');
       return (data || []).filter((i: any) => !i.service_id);
     },
     enabled: isAddServiceModalOpen,
@@ -481,9 +595,20 @@ function ClientDetailPage() {
                     <Input id="full_name" name="full_name" defaultValue={client.full_name || ""} disabled={!isEditing} className="rounded-xl h-11" />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="email">E-mail</Label>
-                    <Input id="email" name="email" defaultValue={client.email || ""} disabled={true} className="rounded-xl h-11 bg-muted/30" />
-                    <p className="text-[10px] text-muted-foreground">O e-mail é gerenciado via autenticação e não pode ser alterado aqui.</p>
+                    <Label htmlFor="email">E-mail de Acesso e Contato</Label>
+                    <Input 
+                      id="email" 
+                      name="email" 
+                      type="email"
+                      defaultValue={client.email || ""} 
+                      disabled={!isEditing} 
+                      className={cn("rounded-xl h-11", !isEditing && "bg-muted/30")} 
+                    />
+                    <p className="text-[10px] text-muted-foreground">
+                      {isEditing 
+                        ? "Alterar o e-mail atualizará simultaneamente o login e as notificações do cliente." 
+                        : "E-mail de acesso e notificações."}
+                    </p>
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="company_name">Empresa</Label>
@@ -610,6 +735,65 @@ function ClientDetailPage() {
                 </form>
               </CardContent>
             </Card>
+
+            {/* Card de Segurança e Credenciais do Cliente */}
+            <Card className="rounded-3xl border-none bg-card shadow-sm mt-6">
+              <CardHeader className="py-4">
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <Key className="size-5 text-brand" /> Segurança & Acesso do Cliente
+                </CardTitle>
+                <CardDescription className="text-xs">
+                  Gerencie as credenciais de acesso, redefina senhas ou gere links de recuperação imediata para suporte.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="pb-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="p-4 rounded-2xl bg-muted/20 border border-border/60 space-y-3 flex flex-col justify-between">
+                    <div className="space-y-1.5">
+                      <div className="flex items-center gap-2 text-foreground font-bold text-sm">
+                        <Key className="size-4 text-brand" />
+                        <span>Alterar Senha do Cliente</span>
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        Defina uma nova senha imediatamente para o cliente sem necessidade de confirmação por e-mail.
+                      </p>
+                    </div>
+                    <Button 
+                      type="button"
+                      variant="outline" 
+                      onClick={() => {
+                        setNewPasswordValue("");
+                        setIsChangePasswordModalOpen(true);
+                      }}
+                      className="rounded-xl w-full gap-2 border-brand/40 text-brand hover:bg-brand/10"
+                    >
+                      <Key className="size-4" /> Alterar Senha Diretamente
+                    </Button>
+                  </div>
+
+                  <div className="p-4 rounded-2xl bg-muted/20 border border-border/60 space-y-3 flex flex-col justify-between">
+                    <div className="space-y-1.5">
+                      <div className="flex items-center gap-2 text-foreground font-bold text-sm">
+                        <Send className="size-4 text-blue-500" />
+                        <span>Link de Redefinição de Senha</span>
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        Gera um link seguro de recuperação para enviar ao cliente pelo WhatsApp ou ticket de suporte.
+                      </p>
+                    </div>
+                    <Button 
+                      type="button"
+                      variant="outline" 
+                      onClick={() => sendPasswordResetMutation.mutate()}
+                      disabled={sendPasswordResetMutation.isPending}
+                      className="rounded-xl w-full gap-2 border-blue-500/40 text-blue-600 hover:bg-blue-500/10"
+                    >
+                      <ExternalLink className="size-4" /> {sendPasswordResetMutation.isPending ? "Gerando link..." : "Gerar Link de Redefinição"}
+                    </Button>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
           </TabsContent>
 
           <TabsContent value="services" className="mt-6">
@@ -624,7 +808,7 @@ function ClientDetailPage() {
                   onClick={() => {
                     const nextDate = new Date();
                     nextDate.setDate(nextDate.getDate() + 30);
-                    setNewServiceNextDue(nextDate.toISOString().split("T")[0]);
+                    setNewServiceNextDue(nextDate.toISOString().split("T")[0] || "");
                     setIsAddServiceModalOpen(true);
                   }}
                   className="rounded-xl h-9 gap-1.5 bg-brand text-brand-foreground hover:bg-brand/90 shrink-0 font-medium"
@@ -891,9 +1075,18 @@ function ClientDetailPage() {
             </Dialog>
 
             <Card className="rounded-3xl border-none shadow-sm">
-              <CardHeader>
-                <CardTitle>Histórico Financeiro</CardTitle>
-                <CardDescription>Faturas pagas e pendentes</CardDescription>
+              <CardHeader className="py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div>
+                  <CardTitle className="text-lg">Histórico Financeiro</CardTitle>
+                  <CardDescription className="text-xs">Faturas pagas, pendentes e canceladas</CardDescription>
+                </div>
+                <Button 
+                  size="sm"
+                  onClick={() => setIsNewInvoiceModalOpen(true)}
+                  className="rounded-xl h-9 gap-1.5 bg-brand text-brand-foreground hover:bg-brand/90 shrink-0 font-medium"
+                >
+                  <PlusCircle className="size-4" /> Nova Fatura Manual
+                </Button>
               </CardHeader>
               <CardContent>
                 {dossiersQuery.isLoading ? <Skeleton className="h-40" /> : (
@@ -905,30 +1098,67 @@ function ClientDetailPage() {
                           <TableHead className="whitespace-nowrap">Valor</TableHead>
                           <TableHead className="whitespace-nowrap">Vencimento</TableHead>
                           <TableHead className="hidden sm:table-cell whitespace-nowrap">Pago em</TableHead>
+                          <TableHead className="hidden md:table-cell">Método</TableHead>
                           <TableHead>Status</TableHead>
+                          <TableHead className="text-right">Ações</TableHead>
                         </TableRow>
                       </TableHeader>
                     <TableBody>
                       {dossiersQuery.data?.invoices.map((inv: any) => (
                         <TableRow key={inv.id}>
-                          <TableCell className="font-medium">#{inv.id.slice(0, 8)}</TableCell>
-                          <TableCell>R$ {inv.total_amount.toFixed(2)}</TableCell>
+                          <TableCell className="font-medium">
+                            <div className="flex flex-col">
+                              <span className="font-bold">#{inv.id.slice(0, 8)}</span>
+                              {inv.notes && (
+                                <span className="text-[10px] text-muted-foreground truncate max-w-[140px]" title={inv.notes}>
+                                  {inv.notes}
+                                </span>
+                              )}
+                            </div>
+                          </TableCell>
                           <TableCell>
+                            <span className="font-bold">R$ {Number(inv.total_amount).toFixed(2)}</span>
+                            {Number(inv.discount_amount) > 0 && (
+                              <span className="text-[10px] text-emerald-600 block">
+                                Desc: R$ {Number(inv.discount_amount).toFixed(2)}
+                              </span>
+                            )}
+                          </TableCell>
+                          <TableCell className="text-xs">
                             {format(new Date(inv.due_date), "dd/MM/yyyy", { locale: ptBR })}
                           </TableCell>
-                          <TableCell className="hidden sm:table-cell">
+                          <TableCell className="hidden sm:table-cell text-xs">
                             {inv.paid_at ? format(new Date(inv.paid_at), "dd/MM/yyyy HH:mm", { locale: ptBR }) : "—"}
                           </TableCell>
+                          <TableCell className="hidden md:table-cell text-xs capitalize text-muted-foreground">
+                            {inv.payment_method || "—"}
+                          </TableCell>
                           <TableCell>
-                            <Badge variant={inv.status === 'paid' ? 'default' : 'secondary'}>
-                              {inv.status}
+                            <Badge 
+                              variant={inv.status === 'paid' ? 'default' : inv.status === 'overdue' ? 'destructive' : 'secondary'}
+                              className="text-[10px] uppercase font-bold"
+                            >
+                              {inv.status === 'paid' ? 'Pago' : inv.status === 'pending' ? 'Pendente' : inv.status === 'overdue' ? 'Vencida' : inv.status === 'cancelled' ? 'Cancelada' : inv.status}
                             </Badge>
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="rounded-xl h-8 text-xs gap-1.5 border-brand/30 text-brand hover:bg-brand/10 font-semibold"
+                              onClick={() => {
+                                setManagingInvoice({ ...inv });
+                                setIsManageInvoiceModalOpen(true);
+                              }}
+                            >
+                              <FileEdit className="size-3.5" /> Gerenciar
+                            </Button>
                           </TableCell>
                         </TableRow>
                       ))}
                       {dossiersQuery.data?.invoices.length === 0 && (
                         <TableRow>
-                          <TableCell colSpan={5} className="text-center py-12 text-muted-foreground">Nenhuma fatura encontrada</TableCell>
+                          <TableCell colSpan={7} className="text-center py-12 text-muted-foreground">Nenhuma fatura encontrada</TableCell>
                         </TableRow>
                       )}
                     </TableBody>
@@ -1330,7 +1560,8 @@ function ClientDetailPage() {
                             const dom = e.target.value;
                             setNewServiceDomain(dom);
                             if (!newServiceUsername && dom.includes(".")) {
-                              const cleanUser = dom.split(".")[0].replace(/[^a-zA-Z0-9]/g, "").slice(0, 8).toLowerCase();
+                              const firstPart = dom.split(".")[0] || "";
+                              const cleanUser = firstPart.replace(/[^a-zA-Z0-9]/g, "").slice(0, 8).toLowerCase();
                               setNewServiceUsername(cleanUser);
                             }
                           }}
@@ -1439,7 +1670,7 @@ function ClientDetailPage() {
                             if (instId && instId !== 'manual') {
                               const match = availableVpsInstances.find((i: any) => i.id === instId);
                               if (match) {
-                                setNewVpsHostname(match.name || `VPS ${match.external_id}`);
+                                setNewVpsHostname(match.ip_address ? `vps-${match.ip_address.replace(/\./g, '-')}` : `vps-${match.external_id}`);
                                 setNewVpsIpAddress(match.ip_address || '');
                                 setNewVpsExternalId(match.external_id || '');
                                 if (match.region) setNewVpsRegion(match.region);
@@ -1455,7 +1686,7 @@ function ClientDetailPage() {
                             <SelectItem value="manual">Configurar Manualmente</SelectItem>
                             {availableVpsInstances.map((inst: any) => (
                               <SelectItem key={inst.id} value={inst.id}>
-                                {inst.name || 'VPS'} — IP: {inst.ip_address || 'Pendente'} (ID: {inst.external_id})
+                                {inst.ip_address ? `VPS ${inst.ip_address}` : 'Instância VPS'} (ID: {inst.external_id})
                               </SelectItem>
                             ))}
                           </SelectContent>
@@ -1666,6 +1897,571 @@ function ClientDetailPage() {
               </Button>
             </DialogFooter>
           </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* MODAL 1: GERENCIAMENTO DE FATURA (Editar, Baixa, Vencimento, Abono, Cancelamento, Comentários) */}
+      <Dialog open={isManageInvoiceModalOpen} onOpenChange={setIsManageInvoiceModalOpen}>
+        <DialogContent className="rounded-3xl max-w-xl max-h-[90vh] overflow-y-auto">
+          {managingInvoice && (
+            <div>
+              <DialogHeader>
+                <div className="flex items-center justify-between gap-2 pr-4">
+                  <DialogTitle className="flex items-center gap-2 text-lg">
+                    <FileEdit className="size-5 text-brand" /> 
+                    Fatura #{managingInvoice.id.slice(0, 8)}
+                  </DialogTitle>
+                  <Badge 
+                    variant={managingInvoice.status === 'paid' ? 'default' : managingInvoice.status === 'overdue' ? 'destructive' : 'secondary'}
+                    className="uppercase text-[10px]"
+                  >
+                    {managingInvoice.status}
+                  </Badge>
+                </div>
+                <DialogDescription>
+                  Edite vencimento, valores, observações, dê baixa manual ou abone a fatura.
+                </DialogDescription>
+              </DialogHeader>
+
+              {/* BARRA DE AÇÕES RÁPIDAS */}
+              <div className="p-3.5 mt-4 rounded-2xl bg-muted/40 border space-y-2">
+                <span className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider block">
+                  Ações Administrativas Rápidas
+                </span>
+                <div className="flex flex-wrap gap-2">
+                  {managingInvoice.status !== 'paid' && (
+                    <Button
+                      type="button"
+                      size="sm"
+                      onClick={() => {
+                        updateInvoiceMutation.mutate({
+                          id: managingInvoice.id,
+                          status: 'paid',
+                          payment_method: managingInvoice.payment_method || 'manual_admin',
+                          paid_at: new Date().toISOString(),
+                          notes: (managingInvoice.notes ? managingInvoice.notes + '\n' : '') + `[${format(new Date(), 'dd/MM/yyyy HH:mm')}] Baixa manual efetuada pelo administrador.`,
+                        });
+                      }}
+                      disabled={updateInvoiceMutation.isPending}
+                      className="rounded-xl h-8 text-xs gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold"
+                    >
+                      <Check className="size-3.5" /> Dar Baixa Manual (Ativar/Renovar)
+                    </Button>
+                  )}
+
+                  {managingInvoice.status !== 'paid' && (
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      onClick={() => {
+                        updateInvoiceMutation.mutate({
+                          id: managingInvoice.id,
+                          status: 'paid',
+                          payment_method: 'abono_cortesia',
+                          discount_amount: Number(managingInvoice.total_amount),
+                          paid_at: new Date().toISOString(),
+                          notes: (managingInvoice.notes ? managingInvoice.notes + '\n' : '') + `[${format(new Date(), 'dd/MM/yyyy HH:mm')}] Fatura abonada pela administração.`,
+                        });
+                      }}
+                      disabled={updateInvoiceMutation.isPending}
+                      className="rounded-xl h-8 text-xs gap-1.5 border-amber-500/40 text-amber-600 hover:bg-amber-500/10 font-semibold"
+                    >
+                      <Gift className="size-3.5" /> Abonar Fatura (Cortesia)
+                    </Button>
+                  )}
+
+                  {managingInvoice.status !== 'cancelled' && (
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      onClick={() => {
+                        updateInvoiceMutation.mutate({
+                          id: managingInvoice.id,
+                          status: 'cancelled',
+                          notes: (managingInvoice.notes ? managingInvoice.notes + '\n' : '') + `[${format(new Date(), 'dd/MM/yyyy HH:mm')}] Cancelada pelo administrador.`,
+                        });
+                      }}
+                      disabled={updateInvoiceMutation.isPending}
+                      className="rounded-xl h-8 text-xs gap-1.5 border-destructive/40 text-destructive hover:bg-destructive/10"
+                    >
+                      <XCircle className="size-3.5" /> Cancelar Fatura
+                    </Button>
+                  )}
+                </div>
+              </div>
+
+              {/* FORMULÁRIO DE EDIÇÃO DETALHADA */}
+              <form 
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  updateInvoiceMutation.mutate({
+                    id: managingInvoice.id,
+                    status: managingInvoice.status,
+                    due_date: managingInvoice.due_date,
+                    total_amount: Number(managingInvoice.total_amount),
+                    subtotal: Number(managingInvoice.subtotal ?? managingInvoice.total_amount),
+                    discount_amount: Number(managingInvoice.discount_amount ?? 0),
+                    payment_method: managingInvoice.payment_method,
+                    paid_at: managingInvoice.paid_at,
+                    notes: managingInvoice.notes,
+                  });
+                }}
+                className="space-y-4 pt-4"
+              >
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-semibold">Status da Fatura</Label>
+                    <Select 
+                      value={managingInvoice.status} 
+                      onValueChange={(val: any) => setManagingInvoice((prev: any) => ({ ...prev, status: val }))}
+                    >
+                      <SelectTrigger className="rounded-xl h-10 text-xs">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent className="rounded-xl">
+                        <SelectItem value="pending">Pendente</SelectItem>
+                        <SelectItem value="paid">Paga (Paid)</SelectItem>
+                        <SelectItem value="cancelled">Cancelada</SelectItem>
+                        <SelectItem value="overdue">Vencida</SelectItem>
+                        <SelectItem value="refunded">Reembolsada</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-semibold">Data de Vencimento</Label>
+                    <Input 
+                      type="date"
+                      value={managingInvoice.due_date ? managingInvoice.due_date.split('T')[0] : ''}
+                      onChange={(e) => setManagingInvoice((prev: any) => ({ ...prev, due_date: e.target.value }))}
+                      className="rounded-xl h-10 text-xs"
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-semibold">Valor Total (R$)</Label>
+                    <Input 
+                      type="number"
+                      step="0.01"
+                      value={managingInvoice.total_amount}
+                      onChange={(e) => setManagingInvoice((prev: any) => ({ ...prev, total_amount: e.target.value }))}
+                      className="rounded-xl h-10 font-bold"
+                      required
+                    />
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-semibold">Subtotal (R$)</Label>
+                    <Input 
+                      type="number"
+                      step="0.01"
+                      value={managingInvoice.subtotal ?? managingInvoice.total_amount}
+                      onChange={(e) => setManagingInvoice((prev: any) => ({ ...prev, subtotal: e.target.value }))}
+                      className="rounded-xl h-10 text-xs"
+                    />
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-semibold">Desconto (R$)</Label>
+                    <Input 
+                      type="number"
+                      step="0.01"
+                      value={managingInvoice.discount_amount ?? 0}
+                      onChange={(e) => setManagingInvoice((prev: any) => ({ ...prev, discount_amount: e.target.value }))}
+                      className="rounded-xl h-10 text-xs"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-semibold">Método de Pagamento</Label>
+                    <Select 
+                      value={managingInvoice.payment_method || 'manual'} 
+                      onValueChange={(val: any) => setManagingInvoice((prev: any) => ({ ...prev, payment_method: val }))}
+                    >
+                      <SelectTrigger className="rounded-xl h-10 text-xs">
+                        <SelectValue placeholder="Selecione o método" />
+                      </SelectTrigger>
+                      <SelectContent className="rounded-xl">
+                        <SelectItem value="pix">PIX</SelectItem>
+                        <SelectItem value="cartao">Cartão de Crédito</SelectItem>
+                        <SelectItem value="boleto">Boleto Bancário</SelectItem>
+                        <SelectItem value="ted">TED / Transferência</SelectItem>
+                        <SelectItem value="dinheiro">Dinheiro em Espécie</SelectItem>
+                        <SelectItem value="saldo">Saldo da Carteira</SelectItem>
+                        <SelectItem value="abono_cortesia">Abono / Cortesia</SelectItem>
+                        <SelectItem value="manual">Manual Admin</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-semibold">Data do Pagamento</Label>
+                    <Input 
+                      type="date"
+                      value={managingInvoice.paid_at ? managingInvoice.paid_at.split('T')[0] : ''}
+                      onChange={(e) => setManagingInvoice((prev: any) => ({ 
+                        ...prev, 
+                        paid_at: e.target.value ? new Date(e.target.value + 'T12:00:00Z').toISOString() : null 
+                      }))}
+                      className="rounded-xl h-10 text-xs"
+                    />
+                  </div>
+                </div>
+
+                {/* ITENS DA FATURA */}
+                {managingInvoice.invoice_items && managingInvoice.invoice_items.length > 0 && (
+                  <div className="space-y-2 p-3 rounded-2xl bg-muted/20 border">
+                    <Label className="text-xs font-semibold text-muted-foreground uppercase">Itens da Fatura</Label>
+                    <div className="space-y-1.5">
+                      {managingInvoice.invoice_items.map((item: any) => (
+                        <div key={item.id} className="flex items-center justify-between text-xs py-1 border-b border-border/40 last:border-none">
+                          <span className="font-medium text-foreground">{item.description} (x{item.quantity || 1})</span>
+                          <span className="font-mono font-bold">R$ {Number(item.amount).toFixed(2)}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-semibold">Comentários & Observações Administrativas</Label>
+                  <Textarea 
+                    rows={3}
+                    placeholder="Adicione anotações sobre negociações, acordos, baixa manual ou motivo de abono..."
+                    value={managingInvoice.notes || ''}
+                    onChange={(e) => setManagingInvoice((prev: any) => ({ ...prev, notes: e.target.value }))}
+                    className="rounded-xl text-xs resize-y"
+                  />
+                </div>
+
+                <DialogFooter className="gap-2 pt-2">
+                  <Button 
+                    type="button" 
+                    variant="outline" 
+                    onClick={() => setIsManageInvoiceModalOpen(false)}
+                    className="rounded-xl"
+                  >
+                    Fechar
+                  </Button>
+                  <Button 
+                    type="submit" 
+                    disabled={updateInvoiceMutation.isPending}
+                    className="rounded-xl bg-brand text-brand-foreground hover:bg-brand/90 font-semibold"
+                  >
+                    {updateInvoiceMutation.isPending ? "Salvando..." : "Salvar Alterações"}
+                  </Button>
+                </DialogFooter>
+              </form>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* MODAL 2: CRIAÇÃO DE FATURA MANUAL */}
+      <Dialog open={isNewInvoiceModalOpen} onOpenChange={setIsNewInvoiceModalOpen}>
+        <DialogContent className="rounded-3xl max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <PlusCircle className="size-5 text-brand" /> Nova Fatura Manual
+            </DialogTitle>
+            <DialogDescription>
+              Gere uma nova cobrança avulsa para este cliente com vencimento e valor personalizados.
+            </DialogDescription>
+          </DialogHeader>
+
+          <form 
+            onSubmit={(e) => {
+              e.preventDefault();
+              const amount = parseFloat(newInvoiceAmount);
+              if (isNaN(amount) || amount <= 0) {
+                toast.error("Informe um valor válido.");
+                return;
+              }
+              createManualInvoiceMutation.mutate({
+                userId: clientId,
+                description: newInvoiceDesc || "Serviço Avulso",
+                amount,
+                dueDate: newInvoiceDueDate,
+                serviceId: newInvoiceServiceId !== "none" ? newInvoiceServiceId : null,
+                status: newInvoiceStatus,
+                paymentMethod: newInvoiceStatus === "paid" ? newInvoicePaymentMethod : null,
+                notes: newInvoiceNotes || null,
+              });
+            }}
+            className="space-y-4 py-2"
+          >
+            <div className="space-y-1.5">
+              <Label className="text-xs font-semibold">Descrição do Item / Cobrança *</Label>
+              <Input 
+                placeholder="Ex: Configuração de Domínio e Hospedagem"
+                value={newInvoiceDesc}
+                onChange={(e) => setNewInvoiceDesc(e.target.value)}
+                className="rounded-xl text-xs"
+                required
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <Label className="text-xs font-semibold">Valor (R$) *</Label>
+                <Input 
+                  type="number"
+                  step="0.01"
+                  placeholder="0.00"
+                  value={newInvoiceAmount}
+                  onChange={(e) => setNewInvoiceAmount(e.target.value)}
+                  className="rounded-xl font-bold"
+                  required
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <Label className="text-xs font-semibold">Data de Vencimento *</Label>
+                <Input 
+                  type="date"
+                  value={newInvoiceDueDate}
+                  onChange={(e) => setNewInvoiceDueDate(e.target.value)}
+                  className="rounded-xl text-xs"
+                  required
+                />
+              </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label className="text-xs font-semibold">Vincular a um Serviço Existente (Opcional)</Label>
+              <Select value={newInvoiceServiceId} onValueChange={setNewInvoiceServiceId}>
+                <SelectTrigger className="rounded-xl text-xs">
+                  <SelectValue placeholder="Selecione um serviço (opcional)..." />
+                </SelectTrigger>
+                <SelectContent className="rounded-xl">
+                  <SelectItem value="none">Nenhum (Cobrança Avulsa)</SelectItem>
+                  {dossiersQuery.data?.services?.map((srv: any) => (
+                    <SelectItem key={srv.id} value={srv.id}>
+                      {srv.products?.name || "Serviço"} — {srv.domain || srv.username || srv.id.slice(0, 8)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <Label className="text-xs font-semibold">Status Inicial</Label>
+                <Select value={newInvoiceStatus} onValueChange={(val: any) => setNewInvoiceStatus(val)}>
+                  <SelectTrigger className="rounded-xl text-xs">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent className="rounded-xl">
+                    <SelectItem value="pending">Pendente</SelectItem>
+                    <SelectItem value="paid">Já Paga (Baixa)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {newInvoiceStatus === "paid" && (
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-semibold">Forma de Pagto</Label>
+                  <Select value={newInvoicePaymentMethod} onValueChange={setNewInvoicePaymentMethod}>
+                    <SelectTrigger className="rounded-xl text-xs">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent className="rounded-xl">
+                      <SelectItem value="pix">PIX</SelectItem>
+                      <SelectItem value="cartao">Cartão</SelectItem>
+                      <SelectItem value="boleto">Boleto</SelectItem>
+                      <SelectItem value="dinheiro">Dinheiro</SelectItem>
+                      <SelectItem value="saldo">Saldo / Carteira</SelectItem>
+                      <SelectItem value="manual_admin">Manual Admin</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+            </div>
+
+            <div className="space-y-1.5">
+              <Label className="text-xs font-semibold">Observações / Comentário Interno</Label>
+              <Textarea 
+                rows={2}
+                placeholder="Notas visíveis na administração..."
+                value={newInvoiceNotes}
+                onChange={(e) => setNewInvoiceNotes(e.target.value)}
+                className="rounded-xl text-xs resize-none"
+              />
+            </div>
+
+            <DialogFooter className="gap-2 pt-2">
+              <Button 
+                type="button" 
+                variant="outline" 
+                onClick={() => setIsNewInvoiceModalOpen(false)}
+                className="rounded-xl"
+              >
+                Cancelar
+              </Button>
+              <Button 
+                type="submit"
+                disabled={createManualInvoiceMutation.isPending}
+                className="rounded-xl bg-brand text-brand-foreground hover:bg-brand/90 font-semibold"
+              >
+                {createManualInvoiceMutation.isPending ? "Criando..." : "Gerar Fatura"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* MODAL 3: ALTERAÇÃO DE SENHA DO CLIENTE */}
+      <Dialog open={isChangePasswordModalOpen} onOpenChange={setIsChangePasswordModalOpen}>
+        <DialogContent className="rounded-3xl max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Key className="size-5 text-brand" /> Alterar Senha do Cliente
+            </DialogTitle>
+            <DialogDescription>
+              Defina uma nova senha para {client.full_name || client.email}. A alteração tem efeito imediato.
+            </DialogDescription>
+          </DialogHeader>
+
+          <form 
+            onSubmit={(e) => {
+              e.preventDefault();
+              if (!newPasswordValue || newPasswordValue.length < 6) {
+                toast.error("A senha deve ter no mínimo 6 caracteres.");
+                return;
+              }
+              changePasswordMutation.mutate(newPasswordValue);
+            }}
+            className="space-y-4 py-2"
+          >
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between">
+                <Label className="text-xs font-semibold">Nova Senha</Label>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const chars = "abcdefghjkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789!@#$%&*";
+                    let pass = "Eq#";
+                    for (let i = 0; i < 9; i++) {
+                      pass += chars.charAt(Math.floor(Math.random() * chars.length));
+                    }
+                    setNewPasswordValue(pass);
+                    setShowPasswordText(true);
+                  }}
+                  className="text-[10px] text-brand hover:underline font-semibold"
+                >
+                  Gerar Senha Forte
+                </button>
+              </div>
+
+              <div className="relative">
+                <Input 
+                  type={showPasswordText ? "text" : "password"}
+                  placeholder="Digite ou gere uma senha..."
+                  value={newPasswordValue}
+                  onChange={(e) => setNewPasswordValue(e.target.value)}
+                  className="rounded-xl font-mono text-sm pr-10"
+                  required
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPasswordText(!showPasswordText)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                >
+                  {showPasswordText ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+                </button>
+              </div>
+            </div>
+
+            <div className="p-3 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-[11px] text-amber-700 dark:text-amber-400 space-y-1">
+              <p className="font-bold flex items-center gap-1">
+                <AlertCircle className="size-3.5 shrink-0" /> Atenção:
+              </p>
+              <p>
+                O cliente precisará desta nova senha para efetuar login imediatamente. Certifique-se de salvá-la e repassá-la ao cliente.
+              </p>
+            </div>
+
+            <DialogFooter className="gap-2 pt-2">
+              <Button 
+                type="button" 
+                variant="outline" 
+                onClick={() => setIsChangePasswordModalOpen(false)}
+                className="rounded-xl"
+              >
+                Cancelar
+              </Button>
+              <Button 
+                type="submit"
+                disabled={changePasswordMutation.isPending || !newPasswordValue}
+                className="rounded-xl bg-brand text-brand-foreground hover:bg-brand/90 font-semibold"
+              >
+                {changePasswordMutation.isPending ? "Salvando..." : "Salvar Nova Senha"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* MODAL 4: LINK DE RECUPERAÇÃO DE SENHA */}
+      <Dialog open={!!resetLinkResult} onOpenChange={(open) => !open && setResetLinkResult(null)}>
+        <DialogContent className="rounded-3xl max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <CheckCircle2 className="size-5 text-emerald-500" /> Link de Recuperação Gerado
+            </DialogTitle>
+            <DialogDescription>
+              Copie o link abaixo para enviar ao cliente através do WhatsApp ou canal de suporte.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-2">
+            {resetLinkResult?.emailSent && (
+              <div className="p-3 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-xs text-emerald-700 dark:text-emerald-300 flex items-center gap-2">
+                <Check className="size-4 shrink-0 text-emerald-600" />
+                <span>E-mail com o link de recuperação enviado para <strong>{client.email}</strong>.</span>
+              </div>
+            )}
+
+            <div className="space-y-1.5">
+              <Label className="text-xs font-semibold">Link Seguro de Redefinição</Label>
+              <div className="flex gap-2">
+                <Input 
+                  readOnly
+                  value={resetLinkResult?.link || ""}
+                  className="rounded-xl font-mono text-xs bg-muted/30"
+                />
+                <Button 
+                  type="button"
+                  onClick={() => {
+                    if (resetLinkResult?.link) {
+                      navigator.clipboard.writeText(resetLinkResult.link);
+                      toast.success("Link copiado para a área de transferência!");
+                    }
+                  }}
+                  className="rounded-xl gap-1.5 bg-brand text-brand-foreground hover:bg-brand/90 shrink-0"
+                >
+                  <Copy className="size-4" /> Copiar
+                </Button>
+              </div>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button 
+              type="button" 
+              onClick={() => setResetLinkResult(null)}
+              className="rounded-xl w-full"
+            >
+              Fechar
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </AppShell>

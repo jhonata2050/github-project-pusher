@@ -1,11 +1,12 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Check, Receipt, Store, Ticket, ArrowRight, ArrowLeft, Wallet } from "lucide-react";
-import { useState, useMemo, useEffect } from "react";
+import { Check, Receipt, Store, Ticket, ArrowRight, ArrowLeft, Wallet, CheckCircle2, QrCode, CreditCard, Info, Clock, Sparkles, Globe, Server, ShieldCheck } from "lucide-react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { toast } from "sonner";
 
 import { AppShell } from "@/components/app/AppShell";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
@@ -37,6 +38,27 @@ export const Route = createFileRoute("/checkout/$productId")({
 });
 
 const brl = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" });
+
+function getCycleDetails(cycle?: string) {
+  switch (cycle) {
+    case "monthly":
+      return { name: "Mensal", period: "Cobrado a cada mês", badge: "Mensal" };
+    case "quarterly":
+      return { name: "Trimestral", period: "Cobrado a cada 3 meses", badge: "Trimestral" };
+    case "semiannually":
+      return { name: "Semestral", period: "Cobrado a cada 6 meses", badge: "Semestral" };
+    case "annually":
+      return { name: "Anual", period: "Cobrado anualmente (-15% desc.)", badge: "Anual" };
+    case "biennially":
+      return { name: "Bienal", period: "Cobrado a cada 2 anos", badge: "Bienal" };
+    case "triennially":
+      return { name: "Trienal", period: "Cobrado a cada 3 anos", badge: "Trienal" };
+    case "one_time":
+      return { name: "Pagamento Único", period: "Taxa única de ativação", badge: "Único" };
+    default:
+      return { name: cycle || "Mensal", period: "Cobrado periodicamente", badge: cycle || "Mensal" };
+  }
+}
 
 function CheckoutPage() {
   const { productId } = Route.useParams();
@@ -106,13 +128,64 @@ function CheckoutPage() {
     return product.data?.product_prices?.find((p: any) => p.cycle === billingCycle) || product.data?.product_prices?.[0];
   }, [product.data, billingCycle]);
 
-  // Se o cliente tiver saldo suficiente em conta, pré-seleciona a carteira como método preferencial
+  const pricingDetails = useMemo(() => {
+    const cycle = billingCycle || currentPrice?.cycle || "monthly";
+    const actualPrice = Number(currentPrice?.price ?? 0);
+    const monthlyPrice = Number(
+      product.data?.product_prices?.find((pr: any) => pr.cycle === "monthly")?.price || 0
+    );
+
+    const monthsMap: Record<string, number> = {
+      monthly: 1,
+      quarterly: 3,
+      semiannually: 6,
+      annually: 12,
+      biennially: 24,
+      triennially: 36,
+    };
+    const months = monthsMap[cycle] || 1;
+
+    // Desconto calculado por ciclo comparado ao mensal, ou preço promocional cadastrado
+    let originalPrice = 0;
+    if (months > 1 && monthlyPrice > 0) {
+      originalPrice = monthlyPrice * months;
+    } else if (Number((currentPrice as any)?.original_price || (currentPrice as any)?.compare_at_price || 0) > actualPrice) {
+      originalPrice = Number((currentPrice as any)?.original_price || (currentPrice as any)?.compare_at_price);
+    } else if (Number((product.data as any)?.compare_at_price || (product.data as any)?.original_price || 0) > actualPrice) {
+      originalPrice = Number((product.data as any)?.compare_at_price || (product.data as any)?.original_price);
+    }
+
+    const hasDiscount = originalPrice > actualPrice && actualPrice > 0;
+    const savingsAmount = hasDiscount ? originalPrice - actualPrice : 0;
+    const savingsPercent = hasDiscount && originalPrice > 0 ? Math.round((savingsAmount / originalPrice) * 100) : 0;
+
+    return {
+      cycle,
+      actualPrice,
+      originalPrice,
+      hasDiscount,
+      savingsAmount,
+      savingsPercent,
+    };
+  }, [product.data, billingCycle, currentPrice]);
+
+  const hasAutoSelectedWallet = useRef(false);
+  const userSelectedMethod = useRef(false);
+
+  const handleSelectPaymentMethod = (method: string) => {
+    userSelectedMethod.current = true;
+    setPaymentMethod(method);
+  };
+
+  // Se o cliente tiver saldo suficiente em conta, pré-seleciona a carteira apenas uma vez na inicialização se o usuário não tiver escolhido outro método
   useEffect(() => {
+    if (userSelectedMethod.current || hasAutoSelectedWallet.current) return;
     const priceVal = Number(currentPrice?.price ?? 0);
-    if (walletBalance >= priceVal && priceVal > 0 && paymentMethod === "pix" && !hasStartedAutoPix && !pixResult) {
+    if (walletBalance >= priceVal && priceVal > 0 && !hasStartedAutoPix && !pixResult) {
+      hasAutoSelectedWallet.current = true;
       setPaymentMethod("wallet");
     }
-  }, [walletBalance, currentPrice, paymentMethod, hasStartedAutoPix, pixResult]);
+  }, [walletBalance, currentPrice, hasStartedAutoPix, pixResult]);
   
   useEffect(() => {
     if (profile?.tax_id && !cpfCnpj) {
@@ -163,6 +236,15 @@ function CheckoutPage() {
           clientId: impersonatedClientId || undefined,
         }
       });
+
+      // Se o usuário não possuía documento no perfil e digitou para o PIX, salva para compras futuras
+      if (profile?.id && !profile?.tax_id && cpfCnpj) {
+        try {
+          await supabase.from("profiles").update({ tax_id: cpfCnpj.trim() }).eq("id", profile.id);
+        } catch (e) {
+          console.warn("[Checkout] Falha ao atualizar tax_id no perfil:", e);
+        }
+      }
 
       // 1. Pagamento com Saldo da Carteira (Instantâneo)
       if (paymentMethod === "wallet") {
@@ -359,13 +441,14 @@ function CheckoutPage() {
             domain={domain}
             vpsConfig={vpsConfig}
             brl={brl}
+            pricingDetails={pricingDetails}
           />
         );
       case "Pagamento":
         return (
           <StepPayment 
             paymentMethod={paymentMethod} 
-            setPaymentMethod={setPaymentMethod} 
+            setPaymentMethod={handleSelectPaymentMethod} 
             onPay={() => {
               setHasStartedAutoPix(true);
               orderMutation.mutate();
@@ -377,6 +460,7 @@ function CheckoutPage() {
             hasStartedAutoPix={hasStartedAutoPix}
             walletBalance={walletBalance}
             totalAmount={Number(currentPrice?.price ?? 0)}
+            profile={profile}
           />
         );
       default:
@@ -390,7 +474,8 @@ function CheckoutPage() {
     if (stepName === "Configuração" && (!vpsConfig.hostname || !vpsConfig.os || !vpsConfig.location)) return true;
     if (stepName === "Conta" && !user) return true;
     if (stepName === "Pagamento") {
-      if (paymentMethod === "pix" && !cpfCnpj) return true;
+      const hasTaxId = Boolean((cpfCnpj && cpfCnpj.trim().length > 0) || (profile?.tax_id && profile.tax_id.trim().length > 0));
+      if (paymentMethod === "pix" && !hasTaxId) return true;
       if (paymentMethod === "wallet" && walletBalance < Number(currentPrice?.price ?? 0)) return true;
     }
     return false;
@@ -399,43 +484,49 @@ function CheckoutPage() {
   return (
     <AppShell
       area="client"
+      containerClassName="py-2 lg:py-3 px-3 lg:px-6"
+      cardClassName="p-3.5 sm:p-5 rounded-2xl shadow-xs"
       breadcrumb={
         <>
-          <span className="flex items-center gap-2"><Store className="size-4" />Loja</span>
+          <span className="flex items-center gap-1.5"><Store className="size-3.5" />Loja</span>
           <span>/</span>
-          <span className="flex items-center gap-2 font-medium text-foreground"><Receipt className="size-4" />Checkout</span>
+          <span className="flex items-center gap-1.5 font-medium text-foreground"><Receipt className="size-3.5" />Checkout</span>
         </>
       }
     >
-      <div className="max-w-5xl mx-auto flex flex-col h-full lg:overflow-hidden">
-        {/* Progress Bar */}
-        <div className="flex items-center justify-between mb-4 px-4 shrink-0">
+      <div className="w-full max-w-[1360px] mx-auto flex flex-col h-full lg:overflow-hidden">
+        {/* Progress Bar Compact */}
+        <div className="flex items-center justify-center gap-2 sm:gap-6 mb-3 py-1.5 px-3 bg-muted/20 border border-border/40 rounded-xl shrink-0">
           {steps.map((name, i) => (
-            <div key={name} className="flex flex-col items-center gap-1.5">
+            <div key={name} className="flex items-center gap-2">
               <div className={cn(
-                "size-7 rounded-full flex items-center justify-center text-[10px] font-bold border transition-colors",
-                step > i + 1 ? "bg-brand border-brand text-white" : step === i + 1 ? "border-brand text-brand" : "text-muted-foreground"
+                "size-5.5 rounded-full flex items-center justify-center text-[10px] font-bold border transition-colors shrink-0",
+                step > i + 1 ? "bg-primary border-primary text-primary-foreground" : step === i + 1 ? "border-primary text-primary font-black bg-primary/10" : "text-muted-foreground border-border/70"
               )}>
-                {step > i + 1 ? <Check className="size-3.5" /> : i + 1}
+                {step > i + 1 ? <Check className="size-3" /> : i + 1}
               </div>
-              <span className={cn("text-[9px] font-medium uppercase hidden sm:block", step === i + 1 ? "text-foreground" : "text-muted-foreground")}>
+              <span className={cn("text-[11px] font-semibold uppercase tracking-wider hidden sm:inline", step === i + 1 ? "text-foreground font-bold" : "text-muted-foreground")}>
                 {name}
               </span>
+              {i < steps.length - 1 && (
+                <div className="w-6 sm:w-12 h-0.5 bg-border/60 mx-1 hidden sm:block" />
+              )}
             </div>
           ))}
         </div>
 
-        <div className="grid gap-4 lg:grid-cols-3 flex-1 min-h-0">
-          <div className="lg:col-span-2 flex flex-col min-h-0">
-            <div className="bg-card border rounded-3xl p-6 shadow-sm flex flex-col flex-1 min-h-0 overflow-hidden">
-              <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar">
+        <div className="grid gap-4 lg:grid-cols-12 flex-1 min-h-0">
+          {/* Coluna Esquerda: Conteúdo do Passo */}
+          <div className="lg:col-span-7 xl:col-span-7 flex flex-col min-h-0">
+            <div className="bg-card border rounded-2xl p-4 sm:p-5 shadow-xs flex flex-col flex-1 min-h-0 overflow-hidden">
+              <div className="flex-1 overflow-y-auto pr-1.5 custom-scrollbar">
                 {renderStep()}
               </div>
               
-              <div className="mt-6 flex justify-between items-center shrink-0 border-t pt-4">
-                {step > 1 && steps[step-1] !== "Pagamento" && (
-                  <Button variant="ghost" onClick={() => setStep(s => s - 1)} className="gap-2 h-10 px-4 rounded-xl text-sm">
-                    <ArrowLeft className="size-4" /> Voltar
+              <div className="mt-3 flex justify-between items-center shrink-0 border-t border-border/50 pt-3">
+                {step > 1 && (
+                  <Button variant="ghost" onClick={() => setStep(s => s - 1)} className="gap-1.5 h-9 px-3 rounded-xl text-xs font-medium cursor-pointer">
+                    <ArrowLeft className="size-3.5" /> Voltar
                   </Button>
                 )}
                 <div className="flex-1" />
@@ -443,36 +534,296 @@ function CheckoutPage() {
                   <Button 
                     onClick={() => setStep(s => s + 1)} 
                     disabled={isNextDisabled()}
-                    className="gap-2 h-11 px-6 rounded-xl text-sm font-semibold"
+                    className="gap-1.5 h-9 px-5 rounded-xl text-xs font-bold shadow-xs cursor-pointer"
                   >
-                    Próximo <ArrowRight className="size-4" />
+                    Próximo <ArrowRight className="size-3.5" />
+                  </Button>
+                )}
+                {step === steps.length && !pixResult && (
+                  <Button
+                    onClick={() => {
+                      setHasStartedAutoPix(true);
+                      orderMutation.mutate();
+                    }}
+                    disabled={isNextDisabled() || isProcessingPix}
+                    className={cn(
+                      "gap-2 h-9 px-5 rounded-xl text-xs font-bold shadow-md cursor-pointer transition-all",
+                      paymentMethod === "wallet" ? "bg-primary text-primary-foreground hover:bg-primary/90" : ""
+                    )}
+                  >
+                    {isProcessingPix ? (
+                      <span className="flex items-center gap-2">
+                        <span className="animate-spin size-3.5 border-2 border-background border-t-transparent rounded-full" />
+                        Processando...
+                      </span>
+                    ) : paymentMethod === "wallet" ? (
+                      <>
+                        <CheckCircle2 className="size-3.5" /> Confirmar e Pagar com Saldo
+                      </>
+                    ) : paymentMethod === "pix" ? (
+                      <>
+                        <QrCode className="size-3.5" /> Gerar PIX e Pagar ({brl.format(Number(currentPrice?.price ?? 0))})
+                      </>
+                    ) : (
+                      <>
+                        <CreditCard className="size-3.5" /> Pagar Agora ({brl.format(Number(currentPrice?.price ?? 0))})
+                      </>
+                    )}
                   </Button>
                 )}
               </div>
             </div>
           </div>
 
-          <div className="flex flex-col min-h-0">
-            <div className="rounded-3xl border bg-sidebar p-5 sticky top-6">
-              <h2 className="text-base font-semibold mb-4">Resumo rápido</h2>
-              <div className="space-y-3 text-sm">
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground text-xs">{product.data.name}</span>
-                  <span className="font-medium text-xs">{brl.format(Number(currentPrice?.price ?? 0))}</span>
+          {/* Coluna Direita: Resumo do Pedido Compacto e Rápido */}
+          <div className="lg:col-span-5 xl:col-span-5 flex flex-col min-h-0">
+            <div className="rounded-2xl border bg-sidebar/70 p-4 sticky top-4 space-y-3 shadow-xs">
+              <div className="flex items-center justify-between border-b border-sidebar-border pb-2">
+                <div className="flex items-center gap-2">
+                  <Receipt className="size-4 text-primary" />
+                  <h2 className="text-sm font-bold text-foreground">Resumo do Pedido</h2>
                 </div>
-                {domain && (
-                  <div className="flex justify-between border-t pt-2">
-                    <span className="text-muted-foreground text-[10px]">Domínio</span>
-                    <span className="font-mono text-[9px] truncate ml-2">{domain}</span>
+                <Badge variant="secondary" className="text-[10px] font-bold uppercase tracking-wider bg-primary/10 text-primary border-primary/20 py-0.5 px-2">
+                  {productType === "apps" || product.data?.name?.includes("PaaS") || product.data?.name?.includes("MB") || product.data?.name?.includes("GB") || product.data?.name?.includes("Bot")
+                    ? "Containers (PaaS)"
+                    : productType === "vps"
+                    ? "Cloud VPS"
+                    : "DirectAdmin"}
+                </Badge>
+              </div>
+
+              {/* Item Selecionado e Ciclo Compacto */}
+              {(() => {
+                const cycleInfo = getCycleDetails(billingCycle || currentPrice?.cycle);
+                return (
+                  <div className="p-2.5 rounded-xl bg-card border border-border/70 space-y-1 shadow-2xs">
+                    <div className="flex justify-between items-start gap-2">
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <span className="font-extrabold text-xs sm:text-sm text-foreground truncate">
+                            {product.data?.name}
+                          </span>
+                          <Badge variant="outline" className="text-[10px] font-bold border-primary/30 text-primary bg-primary/5 py-0 px-1.5 h-4.5">
+                            {cycleInfo.badge}
+                          </Badge>
+                          {pricingDetails.hasDiscount && (
+                            <span className="text-[10px] font-bold text-lime-600 dark:text-lime-400 bg-lime-500/10 border border-lime-500/20 px-1.5 py-0.5 rounded-md">
+                              -{pricingDetails.savingsPercent}% OFF
+                            </span>
+                          )}
+                        </div>
+                        <span className="text-[11px] text-muted-foreground flex items-center gap-1 mt-0.5">
+                          <Clock className="size-3 text-primary shrink-0" />
+                          <span className="truncate">{cycleInfo.period}</span>
+                        </span>
+                      </div>
+                      <div className="text-right shrink-0">
+                        {pricingDetails.hasDiscount && (
+                          <span className="text-[11px] text-muted-foreground line-through block font-semibold leading-none mb-0.5">
+                            {brl.format(pricingDetails.originalPrice)}
+                          </span>
+                        )}
+                        <span className="font-extrabold text-sm sm:text-base text-foreground block leading-tight">
+                          {brl.format(pricingDetails.actualPrice)}
+                        </span>
+                      </div>
+                    </div>
                   </div>
-                )}
-                <div className="border-t border-sidebar-border pt-4 flex justify-between items-end">
-                  <span className="font-bold text-sm">Total hoje</span>
-                  <span className="text-lg font-black text-brand leading-none">
-                    {brl.format(Number(currentPrice?.price ?? 0))}
-                  </span>
+                );
+              })()}
+
+              {/* O que o cliente está adquirindo (Especificações do Plano) */}
+              <div className="p-2.5 rounded-xl bg-muted/20 border border-border/50 space-y-1.5">
+                <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1">
+                  <Sparkles className="size-3 text-primary" />
+                  <span>Incluso no plano:</span>
+                </p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-2 gap-y-1 text-[11px] text-muted-foreground">
+                  {(productType === "apps" || product.data?.name?.includes("PaaS") || product.data?.name?.includes("MB") || product.data?.name?.includes("GB") || product.data?.name?.includes("Bot")) && (
+                    <>
+                      <div className="flex items-center gap-1.5">
+                        <Check className="size-3 text-primary shrink-0" />
+                        <span className="truncate">Cluster Docker Swarm HA</span>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <Check className="size-3 text-primary shrink-0" />
+                        <span className="truncate">Bots WhatsApp & APIs</span>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <Check className="size-3 text-primary shrink-0" />
+                        <span className="truncate">Deploy Git e SSL Grátis</span>
+                      </div>
+                    </>
+                  )}
+                  {productType === "hosting" && (
+                    <>
+                      <div className="flex items-center gap-1.5">
+                        <Check className="size-3 text-primary shrink-0" />
+                        <span className="truncate">Painel DirectAdmin PT-BR</span>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <Check className="size-3 text-primary shrink-0" />
+                        <span className="truncate">{product.data?.disk_quota_mb ? `${Math.round(product.data.disk_quota_mb / 1024)} GB NVMe` : "Disco NVMe"}</span>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <Check className="size-3 text-primary shrink-0" />
+                        <span className="truncate">PHP 8.x, MySQL & E-mails</span>
+                      </div>
+                    </>
+                  )}
+                  {productType === "vps" && (
+                    <>
+                      <div className="flex items-center gap-1.5">
+                        <Check className="size-3 text-primary shrink-0" />
+                        <span className="truncate">Root SSH Total</span>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <Check className="size-3 text-primary shrink-0" />
+                        <span className="truncate">IPv4 Dedicado Próprio</span>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <Check className="size-3 text-primary shrink-0" />
+                        <span className="truncate">Proteção Anti-DDoS 24/7</span>
+                      </div>
+                    </>
+                  )}
+                  {domain && (
+                    <div className="col-span-full flex items-center gap-1.5 pt-1 border-t border-border/40 font-mono text-[11px] text-foreground truncate">
+                      <Globe className="size-3 text-primary shrink-0" />
+                      <span className="truncate">{domain}</span>
+                    </div>
+                  )}
+                  {productType === "vps" && vpsConfig.hostname && (
+                    <div className="col-span-full flex items-center gap-1.5 pt-1 border-t border-border/40 font-mono text-[11px] text-foreground truncate">
+                      <Server className="size-3 text-primary shrink-0" />
+                      <span className="truncate">{vpsConfig.hostname} ({vpsConfig.os || 'Linux'})</span>
+                    </div>
+                  )}
                 </div>
               </div>
+
+              {/* Forma de Pagamento Selecionada (na etapa de pagamento) */}
+              {steps[step - 1] === "Pagamento" && (
+                <div className="flex items-center justify-between px-2.5 py-1.5 rounded-lg bg-card border border-border/70 text-xs shadow-2xs">
+                  <span className="text-muted-foreground flex items-center gap-1 text-[11px]">
+                    <CreditCard className="size-3 text-primary" /> Meio de Pagamento:
+                  </span>
+                  <span className="font-bold text-[11px] text-foreground">
+                    {paymentMethod === "pix"
+                      ? "PIX Instantâneo"
+                      : paymentMethod === "wallet"
+                      ? "Saldo da Carteira"
+                      : paymentMethod === "credit_card"
+                      ? "Cartão de Crédito"
+                      : "Boleto Bancário"}
+                  </span>
+                </div>
+              )}
+
+              {/* Discriminativo Financeiro Compacto */}
+              <div className="space-y-1 border-t border-sidebar-border pt-2 text-xs">
+                <div className="flex justify-between text-muted-foreground text-[11px]">
+                  <span>Subtotal do plano:</span>
+                  <span className="font-medium text-foreground">
+                    {pricingDetails.hasDiscount ? (
+                      <span className="space-x-1.5">
+                        <span className="line-through text-muted-foreground/70">{brl.format(pricingDetails.originalPrice)}</span>
+                        <span>{brl.format(pricingDetails.actualPrice)}</span>
+                      </span>
+                    ) : (
+                      brl.format(pricingDetails.actualPrice)
+                    )}
+                  </span>
+                </div>
+                {pricingDetails.hasDiscount && (
+                  <div className="flex justify-between text-lime-600 dark:text-lime-400 text-[11px] font-medium">
+                    <span>Desconto do ciclo ({pricingDetails.savingsPercent}% OFF):</span>
+                    <span className="font-bold">-{brl.format(pricingDetails.savingsAmount)}</span>
+                  </div>
+                )}
+                <div className="flex justify-between text-muted-foreground text-[11px]">
+                  <span>Taxa de instalação (Setup):</span>
+                  <span className="font-semibold text-lime-600 dark:text-lime-400">Grátis</span>
+                </div>
+                <div className="flex justify-between items-end pt-1 border-t border-sidebar-border">
+                  <div>
+                    <span className="font-bold text-xs text-foreground leading-none block">Total hoje:</span>
+                    <span className="text-[10px] text-muted-foreground">Ativação imediata</span>
+                  </div>
+                  <div className="text-right">
+                    {pricingDetails.hasDiscount && (
+                      <span className="text-xs text-muted-foreground line-through block font-semibold leading-none mb-1">
+                        {brl.format(pricingDetails.originalPrice)}
+                      </span>
+                    )}
+                    <span className="text-xl font-black text-primary leading-none block">
+                      {brl.format(pricingDetails.actualPrice)}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Se estiver na etapa de Pagamento, exibe os detalhes do saldo/método e o botão de pagar */}
+              {steps[step - 1] === "Pagamento" && (
+                <div className="pt-2 border-t border-sidebar-border space-y-2">
+                  {paymentMethod === "wallet" && (
+                    <div className="space-y-1 p-2 border rounded-xl bg-primary/5 border-primary/20 text-[11px]">
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Saldo Disponível:</span>
+                        <span className="font-bold text-foreground">{brl.format(walletBalance)}</span>
+                      </div>
+                      <div className="flex justify-between pt-0.5 border-t border-primary/20">
+                        <span className="text-muted-foreground">Saldo Restante:</span>
+                        <span
+                          className={cn(
+                            "font-bold",
+                            walletBalance >= Number(currentPrice?.price ?? 0)
+                              ? "text-lime-600 dark:text-lime-400"
+                              : "text-destructive"
+                          )}
+                        >
+                          {brl.format(walletBalance - Number(currentPrice?.price ?? 0))}
+                        </span>
+                      </div>
+                    </div>
+                  )}
+
+                  {!pixResult && (
+                    <Button
+                      onClick={() => {
+                        setHasStartedAutoPix(true);
+                        orderMutation.mutate();
+                      }}
+                      disabled={isNextDisabled() || isProcessingPix}
+                      className={cn(
+                        "w-full h-10 rounded-xl text-xs font-bold shadow-md gap-2 cursor-pointer transition-all",
+                        paymentMethod === "wallet"
+                          ? "bg-primary text-primary-foreground hover:bg-primary/90"
+                          : ""
+                      )}
+                    >
+                      {isProcessingPix ? (
+                        <span className="flex items-center gap-2">
+                          <span className="animate-spin size-3.5 border-2 border-background border-t-transparent rounded-full" />
+                          {paymentMethod === "wallet" ? "Liquidando..." : "Processando..."}
+                        </span>
+                      ) : paymentMethod === "wallet" ? (
+                        <>
+                          <CheckCircle2 className="size-3.5" /> Confirmar e Pagar com Saldo
+                        </>
+                      ) : paymentMethod === "pix" ? (
+                        <>
+                          <QrCode className="size-3.5" /> Gerar PIX e Pagar
+                        </>
+                      ) : (
+                        <>
+                          <CreditCard className="size-3.5" /> Pagar Agora
+                        </>
+                      )}
+                    </Button>
+                  )}
+                </div>
+              )}
             </div>
           </div>
         </div>

@@ -199,7 +199,7 @@ function TicketDetailsPage() {
             {isStaff ? (
               <div className="flex items-center gap-2">
                 <Select
-                  value={ticket.status}
+                  value={ticket.status || "open"}
                   onValueChange={(val: any) => statusMutation.mutate(val)}
                   disabled={statusMutation.isPending}
                 >

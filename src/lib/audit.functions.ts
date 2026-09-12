@@ -40,7 +40,7 @@ export const logSessionEvent = createServerFn({ method: "POST" })
       const forwarded = getRequestHeader("x-forwarded-for");
       const ipAddress = forwarded?.split(",")[0]?.trim() || getRequestHeader("cf-connecting-ip") || null;
       const userAgent = getRequestHeader("user-agent")?.slice(0, 500) || null;
-      const email = typeof context.claims.email === "string" ? context.claims.email : null;
+      const email = typeof (context.claims as any)['email'] === "string" ? (context.claims as any)['email'] : null;
       
       const { error } = await supabaseAdmin.from("audit_logs").insert({
         category: data.action.startsWith("impersonation") ? "security" : "auth",

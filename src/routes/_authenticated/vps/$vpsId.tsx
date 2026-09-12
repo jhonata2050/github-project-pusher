@@ -249,7 +249,7 @@ function VPSDetailsPage() {
         <div className="grid gap-6 md:grid-cols-2">
           {/* SSH Card */}
           <Card className="rounded-3xl border-2 overflow-hidden">
-            <CardHeader className="bg-slate-50/50 border-b pb-4">
+            <CardHeader className="bg-muted/20 border-b pb-4">
               <CardTitle className="flex items-center gap-2 text-base font-semibold">
                 <Terminal className="h-5 w-5 text-primary" /> Acesso SSH
               </CardTitle>
@@ -259,27 +259,27 @@ function VPSDetailsPage() {
               <div className="grid grid-cols-2 gap-x-6 gap-y-4">
                 <div className="space-y-1.5">
                   <span className="text-[10px] text-muted-foreground uppercase font-bold tracking-widest block opacity-70">Host / IP</span>
-                  <div className="font-mono text-sm bg-slate-50 p-3 rounded-xl border text-foreground">
+                  <div className="font-mono text-sm bg-muted/40 p-3 rounded-xl border border-border text-foreground">
                     {vps.ssh_host || ipAddress || 'N/A'}
                   </div>
                 </div>
                 <div className="space-y-1.5">
                   <span className="text-[10px] text-muted-foreground uppercase font-bold tracking-widest block opacity-70">Porta</span>
-                  <div className="font-mono text-sm bg-slate-50 p-3 rounded-xl border text-foreground">
+                  <div className="font-mono text-sm bg-muted/40 p-3 rounded-xl border border-border text-foreground">
                     {vps.ssh_port || 22}
                   </div>
                 </div>
                 <div className="space-y-1.5">
                   <span className="text-[10px] text-muted-foreground uppercase font-bold tracking-widest block opacity-70">Usuário</span>
-                  <div className="font-mono text-sm bg-slate-50 p-3 rounded-xl border text-foreground">
+                  <div className="font-mono text-sm bg-muted/40 p-3 rounded-xl border border-border text-foreground">
                     {vps.ssh_user || 'root'}
                   </div>
                 </div>
                 <div className="space-y-1.5">
                   <span className="text-[10px] text-muted-foreground uppercase font-bold tracking-widest block opacity-70">Senha</span>
-                  <div className="font-mono text-sm bg-slate-50 p-3 rounded-xl border text-foreground flex items-center justify-between">
+                  <div className="font-mono text-sm bg-muted/40 p-3 rounded-xl border border-border text-foreground flex items-center justify-between">
                     <span className="truncate">{showPassword ? (vps.ssh_password || '********') : '••••••••'}</span>
-                    <Button variant="ghost" size="icon" className="h-5 w-5 hover:bg-slate-200 text-muted-foreground hover:text-foreground" onClick={() => setShowPassword(!showPassword)}>
+                    <Button variant="ghost" size="icon" className="h-6 w-6 hover:bg-muted text-muted-foreground hover:text-foreground" onClick={() => setShowPassword(!showPassword)}>
                       {showPassword ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
                     </Button>
                   </div>
@@ -298,14 +298,14 @@ function VPSDetailsPage() {
                 <CardTitle className="flex items-center gap-2"><Calendar className="h-5 w-5 text-primary" /> Histórico</CardTitle>
                 <CardDescription className="text-xs">Métricas coletadas pelo agente</CardDescription>
               </div>
-              <div className="flex bg-muted p-1 rounded-xl">
+              <div className="flex bg-muted/50 p-1 rounded-xl border border-border/50">
                 {(['24h', '7d', '30d'] as const).map(p => (
                   <button 
                     key={p} 
                     onClick={() => setPeriod(p)}
                     className={cn(
                       "px-3 py-1 text-[10px] font-bold rounded-lg transition-all",
-                      period === p ? "bg-white text-primary shadow-sm" : "text-muted-foreground"
+                      period === p ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
                     )}
                   >
                     {p.toUpperCase()}
@@ -324,11 +324,17 @@ function VPSDetailsPage() {
                           <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
                         </linearGradient>
                       </defs>
-                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border) / 0.5)" />
                       <XAxis dataKey="time" hide />
                       <YAxis hide domain={[0, 100]} />
                       <Tooltip 
-                        contentStyle={{ borderRadius: '1rem', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
+                        contentStyle={{ 
+                          borderRadius: '1rem', 
+                          border: '1px solid hsl(var(--border))', 
+                          backgroundColor: 'hsl(var(--card))', 
+                          color: 'hsl(var(--foreground))', 
+                          boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.3)' 
+                        }}
                       />
                       <Area type="monotone" dataKey="cpu" name="CPU %" stroke="#3b82f6" fillOpacity={1} fill="url(#colorCpu)" strokeWidth={2} />
                       <Area type="monotone" dataKey="ram" name="RAM %" stroke="#84cc16" fill="transparent" strokeWidth={2} />
@@ -362,24 +368,24 @@ function VPSDetailsPage() {
             <CardContent className="flex gap-4">
               <Button 
                 variant="outline" 
-                className="flex-1 h-20 rounded-2xl flex-col gap-2 border-lime-200 hover:bg-lime-50"
+                className="flex-1 h-20 rounded-2xl flex-col gap-2 border-lime-500/20 hover:bg-lime-500/10 hover:border-lime-500/40"
                 onClick={() => actionMutation.mutate({ instanceId: vps.id, action: 'start' })}
               >
-                <Power className="h-5 w-5 text-lime-600" /> Ligar
+                <Power className="h-5 w-5 text-lime-500" /> Ligar
               </Button>
               <Button 
                 variant="outline" 
-                className="flex-1 h-20 rounded-2xl flex-col gap-2 border-blue-200 hover:bg-blue-50"
+                className="flex-1 h-20 rounded-2xl flex-col gap-2 border-blue-500/20 hover:bg-blue-500/10 hover:border-blue-500/40"
                 onClick={() => actionMutation.mutate({ instanceId: vps.id, action: 'restart' })}
               >
-                <RotateCcw className="h-5 w-5 text-blue-600" /> Reiniciar
+                <RotateCcw className="h-5 w-5 text-blue-500" /> Reiniciar
               </Button>
               <Button 
                 variant="outline" 
-                className="flex-1 h-20 rounded-2xl flex-col gap-2 border-red-200 hover:bg-red-50"
+                className="flex-1 h-20 rounded-2xl flex-col gap-2 border-red-500/20 hover:bg-red-500/10 hover:border-red-500/40"
                 onClick={() => actionMutation.mutate({ instanceId: vps.id, action: 'stop' })}
               >
-                <ShieldAlert className="h-5 w-5 text-red-600" /> Parar
+                <ShieldAlert className="h-5 w-5 text-red-500" /> Parar
               </Button>
             </CardContent>
           </Card>

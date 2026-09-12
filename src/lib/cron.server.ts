@@ -36,12 +36,25 @@ export async function executeDailyBillingCron(): Promise<CronExecutionResult> {
 
     const { data: servicesToInvoice } = await supabaseAdmin
       .from('services')
-      .select('*, products(*, product_prices(*)), profiles(id, full_name, phone, account_balance)')
+      .select('*, products(*, product_prices(*))')
       .eq('status', 'active')
       .lte('next_due_date', sevenDaysFromNow.toISOString());
 
     if (servicesToInvoice && servicesToInvoice.length > 0) {
+      const userIds = Array.from(new Set(servicesToInvoice.map((s: any) => s.user_id).filter(Boolean)));
+      let profileMap = new Map<string, any>();
+      if (userIds.length > 0) {
+        const { data: profiles } = await supabaseAdmin
+          .from('profiles')
+          .select('id, full_name, phone, account_balance')
+          .in('id', userIds);
+        if (profiles) {
+          profileMap = new Map(profiles.map((p: any) => [p.id, p]));
+        }
+      }
+
       for (const service of servicesToInvoice as any[]) {
+        service.profiles = profileMap.get(service.user_id);
         try {
           // Verificar se já existe uma fatura pendente para este serviço
           const { data: existingPendingInvoice } = await supabaseAdmin
@@ -145,12 +158,25 @@ export async function executeDailyBillingCron(): Promise<CronExecutionResult> {
 
     const { data: overdueInvoices } = await supabaseAdmin
       .from('invoices')
-      .select('*, invoice_items(service_id), profiles(full_name, phone)')
+      .select('*, invoice_items(service_id)')
       .eq('status', 'pending')
       .lt('due_date', threeDaysAgo.toISOString());
 
-    if (overdueInvoices) {
+    if (overdueInvoices && overdueInvoices.length > 0) {
+      const overdueUserIds = Array.from(new Set(overdueInvoices.map((inv: any) => inv.user_id).filter(Boolean)));
+      let overdueProfileMap = new Map<string, any>();
+      if (overdueUserIds.length > 0) {
+        const { data: profiles } = await supabaseAdmin
+          .from('profiles')
+          .select('id, full_name, phone')
+          .in('id', overdueUserIds);
+        if (profiles) {
+          overdueProfileMap = new Map(profiles.map((p: any) => [p.id, p]));
+        }
+      }
+
       for (const invoice of overdueInvoices as any[]) {
+        invoice.profiles = overdueProfileMap.get(invoice.user_id);
         for (const item of invoice.invoice_items || []) {
           if (item.service_id) {
             const { data: service } = await supabaseAdmin
@@ -160,10 +186,22 @@ export async function executeDailyBillingCron(): Promise<CronExecutionResult> {
               .maybeSingle();
 
             const s = service as any;
-            if (s && s.status === 'active' && s.username && s.server_id) {
+            if (s && s.status === 'active') {
               try {
-                // Suspender no DirectAdmin
-                await suspendDAAccount(s.server_id, s.username);
+                // 1. Suspender no DirectAdmin se for conta de hospedagem
+                if (s.server_id && s.username) {
+                  await suspendDAAccount(s.server_id, s.username);
+                }
+
+                // 2. Parar container se for aplicação Cloud / Bot
+                if (s.app_uuid || s.type === 'app' || s.type === 'bot') {
+                  try {
+                    const { stopCloudApplication } = await import('./cloud-apps.server');
+                    await stopCloudApplication(s.id, s.user_id);
+                  } catch (appErr: any) {
+                    console.warn(`[Billing Cron] Aviso ao pausar contêiner:`, appErr.message);
+                  }
+                }
                 
                 await supabaseAdmin
                   .from('services')
@@ -175,19 +213,19 @@ export async function executeDailyBillingCron(): Promise<CronExecutionResult> {
                   .eq('id', s.id);
 
                 results.suspensions++;
-                console.log(`[Billing Cron] Serviço ${s.domain} suspenso por inadimplência.`);
+                console.log(`[Billing Cron] Serviço ${s.domain || s.id} suspenso por inadimplência.`);
 
                 if (invoice.profiles?.phone) {
                   try {
                     await sendWhatsAppMessage({
                       to: invoice.profiles.phone,
-                      message: `⚠️ *Aviso de Suspensão de Serviço*\n\nOlá ${invoice.profiles.full_name},\nSeu serviço *${s.domain}* foi temporariamente suspenso devido à fatura *#${invoice.id.slice(0, 8)}* vencida.\n\nPara reativar instantaneamente seu serviço, efetue o pagamento no painel via Pix.`,
+                      message: `⚠️ *Aviso de Suspensão de Serviço*\n\nOlá ${invoice.profiles.full_name},\nSeu serviço *${s.domain || 'Contratado'}* foi temporariamente suspenso devido à fatura *#${invoice.id.slice(0, 8)}* vencida.\n\nPara reativar instantaneamente seu serviço, efetue o pagamento no painel via Pix.`,
                       category: 'service_suspended',
                     });
                   } catch (wErr) {}
                 }
               } catch (err: any) {
-                results.errors.push(`Erro ao suspender ${s.domain}: ${err.message}`);
+                results.errors.push(`Erro ao suspender ${s.domain || s.id}: ${err.message}`);
               }
             }
           }

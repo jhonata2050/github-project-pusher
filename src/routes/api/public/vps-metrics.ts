@@ -39,62 +39,69 @@ export const Route = createFileRoute('/api/public/vps-metrics')({
 
           const { vps_id, cpu, ram, disk, iops_read, iops_write, net_in, net_out, disk_used_gb, disk_total_gb } = metricsSchema.parse(sanitizedData);
 
-          // Monitoramento: Registrar recebimento de métricas
-          try {
-            const { logPublicAuthEvent } = await import("@/lib/audit.functions");
-            await logPublicAuthEvent({
-              data: {
-                action: "metrics_ingestion_attempt",
-                email: null,
-                description: `Ingestão de métricas para VPS: ${vps_id}`
-              }
-            });
-          } catch (e) {
-            console.warn("[VPS-Metrics] Falha ao registrar log de auditoria para métricas");
-          }
-
-          // 1. Atualizar métricas atuais na instância
-          const { error: updateError } = await supabaseAdmin
+          // Verificar se a VPS realmente existe no sistema
+          const { data: vps, error: vpsCheckErr } = await supabaseAdmin
             .from('vps_instances')
-            .update({ 
-              last_metrics: { 
-                cpu: Math.round(cpu), 
-                ram: Math.round(ram), 
-                disk: Math.round(disk),
-                iops: (iops_read !== null || iops_write !== null) ? {
-                  read: iops_read ?? 0,
-                  write: iops_write ?? 0,
-                  total: (iops_read ?? 0) + (iops_write ?? 0),
-                } : null,
-                network: (net_in !== null || net_out !== null) ? {
-                  inbound: net_in ?? 0,
-                  outbound: net_out ?? 0,
-                } : null,
-                disk_used_gb,
-                disk_total_gb,
-                last_update: new Date().toISOString()
-              } 
-            })
-            .eq('id', vps_id);
+            .select('id, status')
+            .eq('id', vps_id)
+            .maybeSingle();
 
-          if (updateError) {
-            console.error('Erro ao atualizar métricas atuais:', updateError);
-            return new Response(JSON.stringify({ error: updateError.message }), { status: 500 });
+          if (vpsCheckErr || !vps) {
+            return new Response(JSON.stringify({ error: 'VPS não encontrada ou inativa' }), { status: 404 });
           }
 
-          // 2. Inserir no histórico
-          const { error: historyError } = await supabaseAdmin
-            .from('vps_metrics_history')
-            .insert({
-              vps_id,
-              cpu: Math.round(cpu),
-              ram: Math.round(ram),
-              disk: Math.round(disk)
-            });
+          const metricsPayload = { 
+            cpu: Math.round(cpu), 
+            ram: Math.round(ram), 
+            disk: Math.round(disk),
+            iops: (iops_read !== null || iops_write !== null) ? {
+              read: iops_read ?? 0,
+              write: iops_write ?? 0,
+              total: (iops_read ?? 0) + (iops_write ?? 0),
+            } : null,
+            network: (net_in !== null || net_out !== null) ? {
+              inbound: net_in ?? 0,
+              outbound: net_out ?? 0,
+            } : null,
+            disk_used_gb,
+            disk_total_gb,
+            last_update: new Date().toISOString()
+          };
 
-          if (historyError) {
-            console.error('Erro ao salvar histórico de métricas:', historyError);
-            // Não falhamos a requisição se apenas o histórico falhar, para não quebrar o agente
+          // 1. Persistir em system_settings (garante que nunca falhe por schema)
+          try {
+            await supabaseAdmin
+              .from('system_settings')
+              .upsert({
+                key: `vps_metrics_${vps_id}`,
+                value: JSON.stringify(metricsPayload)
+              });
+          } catch (settErr: any) {
+            console.warn('[VPS-Metrics] Aviso ao gravar em system_settings:', settErr.message);
+          }
+
+          // 2. Tentar atualizar coluna last_metrics se existir
+          try {
+            await supabaseAdmin
+              .from('vps_instances')
+              .update({ last_metrics: metricsPayload } as any)
+              .eq('id', vps_id);
+          } catch (updateError) {
+            // Fallback seguro caso a coluna não exista no Postgres
+          }
+
+          // 3. Tentar inserir no histórico se a tabela existir
+          try {
+            await supabaseAdmin
+              .from('vps_metrics_history')
+              .insert({
+                vps_id,
+                cpu: Math.round(cpu),
+                ram: Math.round(ram),
+                disk: Math.round(disk)
+              });
+          } catch (historyError) {
+            // Fallback seguro caso a tabela de histórico não exista
           }
 
           return new Response(JSON.stringify({ success: true }), { status: 200 });

@@ -1,3 +1,13 @@
+export type DeploymentRuntime =
+  | "STATIC"
+  | "STATIC_SPA"
+  | "NODE"
+  | "NEXTJS"
+  | "PYTHON"
+  | "PHP"
+  | "DOCKER"
+  | "REVERSE_PROXY";
+
 export interface AppTemplate {
   id: string;
   name: string;
@@ -5,14 +15,47 @@ export interface AppTemplate {
   icon: string;
   description: string;
   build_pack: "nixpacks" | "dockerfile" | "dockercompose" | "static";
+  runtime?: DeploymentRuntime;
   git_repository: string;
   git_branch: string;
   recommended_ram: number; // MB
   recommended_cpu: number; // vCPU
+  recommended_disk: number; // MB (armazenamento base exigido para imagens e dados)
   default_port: number;
   tags: string[];
   default_envs: Array<{ key: string; value: string; is_build_time?: boolean }>;
 }
+
+export const DISK_SAFETY_MARGIN_PERCENT = 20;
+
+export function getRequiredDiskWithMargin(recommendedDiskMb?: number): number {
+  if (!recommendedDiskMb || recommendedDiskMb <= 0) return 512;
+  return Math.ceil(recommendedDiskMb * (1 + DISK_SAFETY_MARGIN_PERCENT / 100));
+}
+
+export function resolveDeploymentRuntime(
+  templateId?: string,
+  buildPack?: string,
+  category?: string
+): DeploymentRuntime {
+  const tid = (templateId || "").toLowerCase();
+  const bp = (buildPack || "").toLowerCase();
+  const cat = (category || "").toLowerCase();
+
+  if (tid.includes("openstatus")) return "DOCKER";
+  if (tid.includes("nextjs") || tid.includes("next")) return "NEXTJS";
+  if (tid.includes("react") || tid.includes("vue") || tid.includes("angular") || tid.includes("vite") || tid.includes("spa")) return "STATIC_SPA";
+  if (tid.includes("wordpress") || tid.includes("php") || tid.includes("laravel")) return "PHP";
+  if (tid.includes("python") || tid.includes("fastapi") || tid.includes("flask") || tid.includes("django")) return "PYTHON";
+  if (tid.includes("node") || tid.includes("express") || tid.includes("nest") || tid.includes("n8n") || tid.includes("typebot") || tid.includes("kuma")) return "NODE";
+  if (tid.includes("docker") || bp === "dockercompose") return "DOCKER";
+  if (tid.includes("proxy")) return "REVERSE_PROXY";
+  if (bp === "static" || tid.includes("static")) return "STATIC";
+
+  if (cat === "bots" || cat === "apis") return "NODE";
+  return "STATIC";
+}
+
 
 export const APP_TEMPLATES: AppTemplate[] = [
   // ==========================================
@@ -25,10 +68,11 @@ export const APP_TEMPLATES: AppTemplate[] = [
     icon: "https://cdn.simpleicons.org/caddy/00ADD8",
     description: "Servidor Caddy moderno em Go com suporte nativo a HTTP/3 (QUIC), compressão Zstandard/Gzip e velocidade máxima para Landing Pages HTML/CSS/JS.",
     build_pack: "static",
-    git_repository: "https://github.com/coollabsio/coolify-examples",
+    git_repository: "https://github.com/eqsam/static-html-starter",
     git_branch: "main",
     recommended_ram: 256,
     recommended_cpu: 0.2,
+    recommended_disk: 512,
     default_port: 80,
     tags: ["Caddy", "HTML", "CSS", "Landing Page", "HTTP/3", "Estático"],
     default_envs: [],
@@ -44,11 +88,12 @@ export const APP_TEMPLATES: AppTemplate[] = [
     git_branch: "master",
     recommended_ram: 1024,
     recommended_cpu: 1.0,
+    recommended_disk: 3072,
     default_port: 80,
     tags: ["WordPress", "CMS", "Sites", "PHP", "WooCommerce"],
     default_envs: [
       { key: "WORDPRESS_DB_USER", value: "wordpress" },
-      { key: "WORDPRESS_DB_PASSWORD", value: "eqsam_wp_pass_123" },
+      { key: "WORDPRESS_DB_PASSWORD", value: "" },
       { key: "WORDPRESS_DB_NAME", value: "wordpress" },
     ],
   },
@@ -63,6 +108,7 @@ export const APP_TEMPLATES: AppTemplate[] = [
     git_branch: "main",
     recommended_ram: 512,
     recommended_cpu: 0.5,
+    recommended_disk: 1536,
     default_port: 3000,
     tags: ["Next.js", "React", "TypeScript", "Frontend", "SSR"],
     default_envs: [
@@ -81,6 +127,7 @@ export const APP_TEMPLATES: AppTemplate[] = [
     git_branch: "main",
     recommended_ram: 1024,
     recommended_cpu: 1.0,
+    recommended_disk: 2048,
     default_port: 2368,
     tags: ["Ghost", "Blog", "Newsletters", "CMS", "Node.js"],
     default_envs: [
@@ -103,12 +150,13 @@ export const APP_TEMPLATES: AppTemplate[] = [
     git_branch: "11.x",
     recommended_ram: 512,
     recommended_cpu: 0.5,
+    recommended_disk: 1024,
     default_port: 8000,
     tags: ["PHP", "Laravel", "Composer", "Web App", "API"],
     default_envs: [
       { key: "APP_ENV", value: "production" },
       { key: "APP_DEBUG", value: "false" },
-      { key: "APP_KEY", value: "base64:eqsam_laravel_placeholder_key=" },
+      { key: "APP_KEY", value: "" },
     ],
   },
   {
@@ -122,6 +170,7 @@ export const APP_TEMPLATES: AppTemplate[] = [
     git_branch: "main",
     recommended_ram: 512,
     recommended_cpu: 0.5,
+    recommended_disk: 1024,
     default_port: 5000,
     tags: ["Python", "Django", "Flask", "Gunicorn", "Web App"],
     default_envs: [
@@ -140,6 +189,7 @@ export const APP_TEMPLATES: AppTemplate[] = [
     git_branch: "master",
     recommended_ram: 256,
     recommended_cpu: 0.5,
+    recommended_disk: 512,
     default_port: 3000,
     tags: ["Go", "Golang", "Fiber", "Gin", "Microsserviço"],
     default_envs: [
@@ -157,6 +207,7 @@ export const APP_TEMPLATES: AppTemplate[] = [
     git_branch: "main",
     recommended_ram: 1024,
     recommended_cpu: 1.0,
+    recommended_disk: 2048,
     default_port: 8080,
     tags: ["Java", "Spring Boot", "JVM", "Corporativo", "API"],
     default_envs: [
@@ -174,6 +225,7 @@ export const APP_TEMPLATES: AppTemplate[] = [
     git_branch: "master",
     recommended_ram: 256,
     recommended_cpu: 0.5,
+    recommended_disk: 512,
     default_port: 8080,
     tags: ["Rust", "Actix", "Axum", "Ultra-Rápido", "Backend"],
     default_envs: [
@@ -195,11 +247,12 @@ export const APP_TEMPLATES: AppTemplate[] = [
     git_branch: "main",
     recommended_ram: 1536,
     recommended_cpu: 1.0,
+    recommended_disk: 2048,
     default_port: 8080,
     tags: ["WhatsApp", "Evolution API", "Chatbot", "Node.js"],
     default_envs: [
       { key: "SERVER_PORT", value: "8080" },
-      { key: "AUTHENTICATION_API_KEY", value: "eqsam_api_secret_key_12345" },
+      { key: "AUTHENTICATION_API_KEY", value: "" },
       { key: "DATABASE_ENABLED", value: "false" },
     ],
   },
@@ -214,6 +267,7 @@ export const APP_TEMPLATES: AppTemplate[] = [
     git_branch: "main",
     recommended_ram: 512,
     recommended_cpu: 0.5,
+    recommended_disk: 512,
     default_port: 3000,
     tags: ["Discord", "Bot", "TypeScript", "Node.js"],
     default_envs: [
@@ -233,11 +287,14 @@ export const APP_TEMPLATES: AppTemplate[] = [
     git_branch: "main",
     recommended_ram: 2048,
     recommended_cpu: 1.5,
+    recommended_disk: 3584,
     default_port: 3000,
     tags: ["Typebot", "Chatbot", "Conversão", "WhatsApp"],
     default_envs: [
       { key: "PORT", value: "3000" },
       { key: "NODE_ENV", value: "production" },
+      { key: "POSTGRES_PASSWORD", value: "" },
+      { key: "ENCRYPTION_SECRET", value: "" },
     ],
   },
 
@@ -255,12 +312,15 @@ export const APP_TEMPLATES: AppTemplate[] = [
     git_branch: "master",
     recommended_ram: 2048,
     recommended_cpu: 1.5,
+    recommended_disk: 2560,
     default_port: 5678,
     tags: ["N8N", "No-Code", "Automação", "Webhooks"],
     default_envs: [
       { key: "N8N_PORT", value: "5678" },
       { key: "GENERIC_TIMEZONE", value: "America/Sao_Paulo" },
       { key: "N8N_METRICS", value: "true" },
+      { key: "DB_POSTGRESDB_PASSWORD", value: "" },
+      { key: "N8N_ENCRYPTION_KEY", value: "" },
     ],
   },
   {
@@ -274,10 +334,52 @@ export const APP_TEMPLATES: AppTemplate[] = [
     git_branch: "master",
     recommended_ram: 512,
     recommended_cpu: 0.5,
+    recommended_disk: 1024,
     default_port: 3001,
     tags: ["Monitor", "Uptime", "Ping", "Alertas"],
     default_envs: [
       { key: "PORT", value: "3001" },
+    ],
+  },
+  {
+    id: "openstatus-monitor",
+    name: "OpenStatus (Monitor & Status Page)",
+    category: "tools",
+    icon: "https://avatars.githubusercontent.com/u/132470761?s=200&v=4",
+    description: "Plataforma open-source moderna de monitoramento de disponibilidade, alertas em tempo real e páginas de status públicas para APIs e websites.",
+    build_pack: "dockerfile",
+    runtime: "DOCKER",
+    git_repository: "https://github.com/openstatusHQ/openstatus.git",
+    git_branch: "main",
+    recommended_ram: 1024,
+    recommended_cpu: 1.0,
+    recommended_disk: 7168,
+    default_port: 3000,
+    tags: ["OpenStatus", "Status Page", "Monitoramento", "Uptime", "Alertas", "Next.js"],
+    default_envs: [
+      { key: "RESEND_API_KEY", value: "re_insira_sua_chave_resend_aqui" },
+      { key: "ADMIN_EMAIL", value: "admin@eqsam.com" },
+      { key: "NEXTAUTH_SECRET", value: "" },
+      { key: "AUTH_SECRET", value: "" },
+      { key: "NEXTAUTH_URL", value: "https://admin-openstatus.dk1.eqsam.com" },
+      { key: "NEXT_PUBLIC_URL", value: "https://admin-openstatus.dk1.eqsam.com" },
+      { key: "DATABASE_URL", value: "http://db:8080" },
+      { key: "TURSO_DATABASE_URL", value: "http://db:8080" },
+      { key: "CRON_SECRET", value: "" },
+      { key: "PORT", value: "3000" },
+      { key: "HOSTNAME", value: "0.0.0.0" },
+      { key: "NODE_ENV", value: "production" },
+      { key: "SELF_HOST", value: "true" },
+      { key: "AUTH_TRUST_HOST", value: "true" },
+      { key: "SKIP_ENV_VALIDATION", value: "true" },
+      { key: "NODE_OPTIONS", value: "--max-old-space-size=512" },
+      { key: "PROJECT_ID_VERCEL", value: "dummy" },
+      { key: "TEAM_ID_VERCEL", value: "dummy" },
+      { key: "VERCEL_AUTH_BEARER_TOKEN", value: "dummy" },
+      { key: "STRIPE_SECRET_KEY", value: "dummy" },
+      { key: "TINY_BIRD_API_KEY", value: "dummy" },
+      { key: "UNKEY_API_ID", value: "dummy" },
+      { key: "UNKEY_TOKEN", value: "dummy" },
     ],
   },
 
@@ -295,6 +397,7 @@ export const APP_TEMPLATES: AppTemplate[] = [
     git_branch: "main",
     recommended_ram: 512,
     recommended_cpu: 0.5,
+    recommended_disk: 512,
     default_port: 3000,
     tags: ["Fastify", "Node.js", "REST API", "Backend"],
     default_envs: [
@@ -313,6 +416,7 @@ export const APP_TEMPLATES: AppTemplate[] = [
     git_branch: "master",
     recommended_ram: 512,
     recommended_cpu: 0.5,
+    recommended_disk: 512,
     default_port: 8000,
     tags: ["Python", "FastAPI", "Uvicorn", "Swagger"],
     default_envs: [
@@ -335,12 +439,13 @@ export const APP_TEMPLATES: AppTemplate[] = [
     git_branch: "master",
     recommended_ram: 512,
     recommended_cpu: 0.5,
+    recommended_disk: 1536,
     default_port: 5432,
     tags: ["PostgreSQL", "Postgres", "SQL", "Relacional", "Database"],
     default_envs: [
       { key: "POSTGRES_DB", value: "main" },
       { key: "POSTGRES_USER", value: "postgres" },
-      { key: "POSTGRES_PASSWORD", value: "eqsam_postgres_pass_123" },
+      { key: "POSTGRES_PASSWORD", value: "" },
     ],
   },
   {
@@ -354,13 +459,14 @@ export const APP_TEMPLATES: AppTemplate[] = [
     git_branch: "master",
     recommended_ram: 512,
     recommended_cpu: 0.5,
+    recommended_disk: 1536,
     default_port: 3306,
     tags: ["MySQL", "SQL", "Database", "Relacional", "Web"],
     default_envs: [
       { key: "MYSQL_DATABASE", value: "main" },
       { key: "MYSQL_USER", value: "dbuser" },
-      { key: "MYSQL_PASSWORD", value: "eqsam_mysql_pass_123" },
-      { key: "MYSQL_ROOT_PASSWORD", value: "eqsam_root_pass_123" },
+      { key: "MYSQL_PASSWORD", value: "" },
+      { key: "MYSQL_ROOT_PASSWORD", value: "" },
     ],
   },
   {
@@ -374,10 +480,12 @@ export const APP_TEMPLATES: AppTemplate[] = [
     git_branch: "7.2",
     recommended_ram: 512,
     recommended_cpu: 0.5,
+    recommended_disk: 512,
     default_port: 6379,
     tags: ["Redis", "Cache", "PubSub", "Filas"],
     default_envs: [
       { key: "REDIS_PORT", value: "6379" },
+      { key: "REDIS_PASSWORD", value: "" },
     ],
   },
   {
@@ -391,6 +499,7 @@ export const APP_TEMPLATES: AppTemplate[] = [
     git_branch: "master",
     recommended_ram: 512,
     recommended_cpu: 0.5,
+    recommended_disk: 512,
     default_port: 8090,
     tags: ["PocketBase", "SQLite", "Realtime", "Go"],
     default_envs: [

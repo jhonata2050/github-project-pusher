@@ -441,12 +441,11 @@ CREATE TABLE IF NOT EXISTS public.wallet_transactions (
     invoice_id UUID REFERENCES public.invoices(id) ON DELETE SET NULL,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
-GRANT SELECT, INSERT ON public.wallet_transactions TO authenticated;
+GRANT SELECT ON public.wallet_transactions TO authenticated;
 GRANT ALL ON public.wallet_transactions TO service_role;
 ALTER TABLE public.wallet_transactions ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "Users can view their own wallet transactions" ON public.wallet_transactions FOR SELECT TO authenticated USING (auth.uid() = user_id);
-CREATE POLICY "Users can insert their own wallet transactions" ON public.wallet_transactions FOR INSERT TO authenticated WITH CHECK (auth.uid() = user_id);
 CREATE POLICY "Staff can manage all wallet transactions" ON public.wallet_transactions FOR ALL TO authenticated USING (public.is_staff(auth.uid()));
 
 -- Domains
@@ -527,7 +526,8 @@ GRANT SELECT ON public.system_settings TO anon, authenticated;
 GRANT ALL ON public.system_settings TO service_role;
 ALTER TABLE public.system_settings ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY "Public read settings" ON public.system_settings FOR SELECT USING (true);
+CREATE POLICY "Public read branding settings only" ON public.system_settings FOR SELECT TO anon, authenticated
+USING (key IN ('branding', 'public_config', 'recaptcha_site_key'));
 CREATE POLICY "Staff manage settings" ON public.system_settings FOR ALL TO authenticated USING (public.is_staff(auth.uid()));
 
 -- Email Logs
@@ -749,4 +749,109 @@ CREATE POLICY "Users can view own withdrawals" ON public.affiliate_withdrawals F
     EXISTS (SELECT 1 FROM public.affiliates WHERE affiliates.id = affiliate_withdrawals.affiliate_id AND affiliates.user_id = auth.uid())
 );
 CREATE POLICY "Staff can manage all withdrawals" ON public.affiliate_withdrawals FOR ALL TO authenticated USING (public.is_staff(auth.uid()));
+
+-- ==============================================================================
+-- 4. FUNÇÃO ATÔMICA DE DÉBITO DE SALDO (PREVINE TOCTOU / DOUBLE SPENDING)
+-- ==============================================================================
+CREATE OR REPLACE FUNCTION public.debit_wallet_balance(
+  _user_id uuid,
+  _amount numeric,
+  _invoice_id uuid
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  _current numeric;
+  _new_balance numeric;
+BEGIN
+  SELECT account_balance INTO _current
+  FROM public.profiles
+  WHERE id = _user_id
+  FOR UPDATE;
+
+  IF _current IS NULL THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Perfil do cliente não encontrado');
+  END IF;
+
+  IF _current < _amount THEN
+    RETURN jsonb_build_object(
+      'success', false,
+      'error', 'Saldo insuficiente',
+      'current_balance', _current,
+      'required', _amount
+    );
+  END IF;
+
+  _new_balance := ROUND(_current - _amount, 2);
+
+  UPDATE public.profiles
+  SET account_balance = _new_balance,
+      updated_at = now()
+  WHERE id = _user_id;
+
+  UPDATE public.invoices
+  SET status = 'paid',
+      payment_method = 'wallet',
+      paid_at = now(),
+      updated_at = now()
+  WHERE id = _invoice_id;
+
+  INSERT INTO public.wallet_transactions (
+    user_id,
+    type,
+    amount,
+    balance_after,
+    description,
+    invoice_id
+  ) VALUES (
+    _user_id,
+    'payment',
+    -_amount,
+    _new_balance,
+    'Pagamento da Fatura #' || SUBSTRING(_invoice_id::text, 1, 8),
+    _invoice_id
+  );
+
+  RETURN jsonb_build_object(
+    'success', true,
+    'balance_after', _new_balance
+  );
+END;
+$$;
+
+GRANT EXECUTE ON FUNCTION public.debit_wallet_balance(uuid, numeric, uuid) TO service_role, authenticated;
+
+-- ==============================================================================
+-- 5. DEVELOPER API TOKENS (CLI & DISCLOUD COMPATIBILITY)
+-- ==============================================================================
+CREATE TABLE IF NOT EXISTS public.user_api_tokens (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  name text NOT NULL,
+  token_prefix text NOT NULL,
+  token_hash text NOT NULL UNIQUE,
+  last_used_at timestamptz,
+  expires_at timestamptz,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+
+ALTER TABLE public.user_api_tokens ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Users can view own api tokens" ON public.user_api_tokens
+FOR SELECT TO authenticated
+USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can delete own api tokens" ON public.user_api_tokens
+FOR DELETE TO authenticated
+USING (auth.uid() = user_id);
+
+GRANT SELECT, DELETE ON public.user_api_tokens TO authenticated;
+GRANT ALL ON public.user_api_tokens TO service_role;
+
+CREATE INDEX IF NOT EXISTS idx_user_api_tokens_hash ON public.user_api_tokens (token_hash);
+CREATE INDEX IF NOT EXISTS idx_user_api_tokens_user ON public.user_api_tokens (user_id);
+
 

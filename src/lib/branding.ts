@@ -7,9 +7,9 @@ export interface BrandingSettings {
 }
 
 export const DEFAULT_BRANDING: BrandingSettings = {
-  logo_url: null,
+  logo_url: "/images/logo-branco.webp",
   app_name: "Eqsam",
   primary_color: "oklch(0.88 0.19 128)",
   brand_color: "oklch(0.72 0.19 148)",
-  favicon_url: null,
+  favicon_url: "/images/logo.png",
 };

@@ -9,9 +9,14 @@ import { logSessionEvent } from "@/lib/audit.functions";
 import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/_authenticated/admin")({
+  ssr: false,
   beforeLoad: async ({ context }) => {
     // Redundant security check on navigation (Client-Side because ssr: false in parent)
-    const user = (context as any).user;
+    let user = (context as any).user;
+    if (!user) {
+      const { data } = await supabase.auth.getUser();
+      user = data?.user;
+    }
     if (!user) throw redirect({ to: '/auth' });
 
     const { data: isAdmin, error } = await supabase.rpc('has_role', {
@@ -28,6 +33,8 @@ export const Route = createFileRoute("/_authenticated/admin")({
         }
       });
     }
+
+    return { user };
   },
   component: AdminLayout,
 });

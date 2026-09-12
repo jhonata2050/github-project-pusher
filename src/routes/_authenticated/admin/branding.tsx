@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Palette, Save, Upload, Type, Paintbrush, Globe, CheckCircle2, AlertCircle } from "lucide-react";
+import { Palette, Save, Upload, Type, Paintbrush, Globe, CheckCircle2, AlertCircle, Pipette } from "lucide-react";
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
 
@@ -10,11 +10,22 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { getBranding, updateBranding, type BrandingSettings } from "@/lib/admin.functions";
+import { applyBrandingToDom } from "@/hooks/use-branding";
 import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/_authenticated/admin/branding")({
   component: BrandingSettingsPage,
 });
+
+const PRESETS = [
+  { label: "Verde Lima", color: "#a3e635", brand: "#10b981" },
+  { label: "Azul Safira", color: "#3B82F6", brand: "#2563EB" },
+  { label: "Roxo Real", color: "#8B5CF6", brand: "#7C3AED" },
+  { label: "Esmeralda", color: "#10B981", brand: "#059669" },
+  { label: "Laranja Âmbar", color: "#F59E0B", brand: "#D97706" },
+  { label: "Vermelho Rubi", color: "#EF4444", brand: "#DC2626" },
+  { label: "Rosa Terracota", color: "#b2646f", brand: "#c75931" },
+];
 
 function BrandingSettingsPage() {
   const queryClient = useQueryClient();
@@ -35,18 +46,21 @@ function BrandingSettingsPage() {
 
   useEffect(() => {
     if (branding) {
-      setForm({
+      const updated = {
         ...branding,
         logo_url: branding.logo_url || "",
         favicon_url: branding.favicon_url || "",
-      });
+      };
+      setForm(updated);
+      applyBrandingToDom(updated);
     }
   }, [branding]);
 
   const mutation = useMutation({
     mutationFn: (data: BrandingSettings) => updateBranding({ data: { data } }),
     onSuccess: () => {
-      toast.success("Configurações de branding atualizadas com sucesso!");
+      toast.success("Configurações e cores salvas com sucesso!");
+      applyBrandingToDom(form);
       queryClient.invalidateQueries({ queryKey: ["branding"] });
       queryClient.invalidateQueries({ queryKey: ["branding-admin"] });
     },
@@ -164,20 +178,28 @@ function BrandingSettingsPage() {
                         <span className="text-xs">PNG ou SVG recomendado</span>
                       </div>
                     )}
-                    <div className="w-full">
-                      <Label htmlFor="logo-upload" className="w-full">
-                        <div className="flex items-center justify-center w-full px-4 py-2 border border-input bg-background hover:bg-accent rounded-xl cursor-pointer transition-colors text-sm font-medium">
-                          {uploading === 'logo' ? "Enviando..." : "Selecionar Logo"}
-                        </div>
-                      </Label>
-                      <Input 
-                        id="logo-upload" 
-                        type="file" 
-                        accept="image/*" 
-                        className="hidden" 
-                        onChange={e => handleFileUpload(e, 'logo')}
-                        disabled={!!uploading}
-                      />
+                    <div className="w-full space-y-2">
+                      <div className="flex gap-2">
+                        <Input
+                          placeholder="URL da imagem ou use o botão ao lado"
+                          value={form.logo_url || ""}
+                          onChange={e => setForm(v => ({ ...v, logo_url: e.target.value }))}
+                          className="rounded-xl text-xs h-9"
+                        />
+                        <Label htmlFor="logo-upload" className="shrink-0 cursor-pointer">
+                          <div className="flex items-center justify-center px-3 h-9 border border-input bg-background hover:bg-accent rounded-xl transition-colors text-xs font-medium">
+                            {uploading === 'logo' ? "Enviando..." : "Upload"}
+                          </div>
+                        </Label>
+                        <Input 
+                          id="logo-upload" 
+                          type="file" 
+                          accept="image/*" 
+                          className="hidden" 
+                          onChange={e => handleFileUpload(e, 'logo')}
+                          disabled={!!uploading}
+                        />
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -202,20 +224,28 @@ function BrandingSettingsPage() {
                         <span className="text-xs">ICO ou PNG (32x32)</span>
                       </div>
                     )}
-                    <div className="w-full">
-                      <Label htmlFor="favicon-upload" className="w-full">
-                        <div className="flex items-center justify-center w-full px-4 py-2 border border-input bg-background hover:bg-accent rounded-xl cursor-pointer transition-colors text-sm font-medium">
-                          {uploading === 'favicon' ? "Enviando..." : "Selecionar Favicon"}
-                        </div>
-                      </Label>
-                      <Input 
-                        id="favicon-upload" 
-                        type="file" 
-                        accept="image/*" 
-                        className="hidden" 
-                        onChange={e => handleFileUpload(e, 'favicon')}
-                        disabled={!!uploading}
-                      />
+                    <div className="w-full space-y-2">
+                      <div className="flex gap-2">
+                        <Input
+                          placeholder="URL do Favicon ou use o botão ao lado"
+                          value={form.favicon_url || ""}
+                          onChange={e => setForm(v => ({ ...v, favicon_url: e.target.value }))}
+                          className="rounded-xl text-xs h-9"
+                        />
+                        <Label htmlFor="favicon-upload" className="shrink-0 cursor-pointer">
+                          <div className="flex items-center justify-center px-3 h-9 border border-input bg-background hover:bg-accent rounded-xl transition-colors text-xs font-medium">
+                            {uploading === 'favicon' ? "Enviando..." : "Upload"}
+                          </div>
+                        </Label>
+                        <Input 
+                          id="favicon-upload" 
+                          type="file" 
+                          accept="image/*" 
+                          className="hidden" 
+                          onChange={e => handleFileUpload(e, 'favicon')}
+                          disabled={!!uploading}
+                        />
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -223,46 +253,138 @@ function BrandingSettingsPage() {
             </CardContent>
           </Card>
 
-          <Card className="rounded-3xl border-border/50 shadow-sm">
+          <Card className="rounded-3xl border-border/50 shadow-sm overflow-hidden">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Paintbrush className="size-5 text-primary" /> Paleta de Cores
               </CardTitle>
-              <CardDescription>Defina as cores predominantes para os clientes.</CardDescription>
+              <CardDescription>Defina as cores predominantes do sistema e dos clientes com visualização em tempo real.</CardDescription>
             </CardHeader>
-            <CardContent className="grid md:grid-cols-2 gap-8">
-              <div className="space-y-4">
-                <Label htmlFor="primary_color">Cor Primária (OKLCH ou Hex)</Label>
-                <div className="flex gap-3">
-                  <div 
-                    className="size-10 rounded-xl border border-border shrink-0" 
-                    style={{ backgroundColor: form.primary_color.includes('oklch') ? `var(--primary)` : form.primary_color }}
-                  />
-                  <Input
-                    id="primary_color"
-                    value={form.primary_color}
-                    onChange={e => setForm(v => ({ ...v, primary_color: e.target.value }))}
-                    className="rounded-xl"
-                  />
+            <CardContent className="space-y-6">
+              <div className="grid md:grid-cols-2 gap-8">
+                <div className="space-y-3">
+                  <Label htmlFor="primary_color" className="text-sm font-semibold">
+                    Cor Primária (OKLCH ou Hex)
+                  </Label>
+                  <div className="flex items-center gap-3">
+                    <div className="relative size-11 shrink-0 rounded-2xl overflow-hidden border border-border shadow-sm cursor-pointer group">
+                      <div 
+                        className="size-full transition-colors flex items-center justify-center"
+                        style={{ backgroundColor: form.primary_color }}
+                      >
+                        <Pipette className="size-4 text-white drop-shadow opacity-70 group-hover:opacity-100 transition-opacity" />
+                      </div>
+                      <input
+                        type="color"
+                        value={form.primary_color.startsWith('#') && form.primary_color.length === 7 ? form.primary_color : '#3b82f6'}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          setForm(v => ({ ...v, primary_color: val }));
+                          applyBrandingToDom({ ...form, primary_color: val });
+                        }}
+                        className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
+                        title="Clique para abrir seletor de cores"
+                      />
+                    </div>
+                    <Input
+                      id="primary_color"
+                      value={form.primary_color}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setForm(v => ({ ...v, primary_color: val }));
+                        applyBrandingToDom({ ...form, primary_color: val });
+                      }}
+                      className="rounded-xl font-mono text-sm h-11"
+                      placeholder="Ex: #3B82F6 ou oklch(0.88 0.19 128)"
+                    />
+                  </div>
+                  <p className="text-xs text-muted-foreground">Utilizada em botões principais, destaques e estados ativos.</p>
                 </div>
-                <p className="text-[10px] text-muted-foreground">Utilizada em botões e estados ativos.</p>
+
+                <div className="space-y-3">
+                  <Label htmlFor="brand_color" className="text-sm font-semibold">
+                    Cor da Marca (OKLCH ou Hex)
+                  </Label>
+                  <div className="flex items-center gap-3">
+                    <div className="relative size-11 shrink-0 rounded-2xl overflow-hidden border border-border shadow-sm cursor-pointer group">
+                      <div 
+                        className="size-full transition-colors flex items-center justify-center"
+                        style={{ backgroundColor: form.brand_color }}
+                      >
+                        <Pipette className="size-4 text-white drop-shadow opacity-70 group-hover:opacity-100 transition-opacity" />
+                      </div>
+                      <input
+                        type="color"
+                        value={form.brand_color.startsWith('#') && form.brand_color.length === 7 ? form.brand_color : '#10b981'}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          setForm(v => ({ ...v, brand_color: val }));
+                          applyBrandingToDom({ ...form, brand_color: val });
+                        }}
+                        className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
+                        title="Clique para abrir seletor de cores"
+                      />
+                    </div>
+                    <Input
+                      id="brand_color"
+                      value={form.brand_color}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setForm(v => ({ ...v, brand_color: val }));
+                        applyBrandingToDom({ ...form, brand_color: val });
+                      }}
+                      className="rounded-xl font-mono text-sm h-11"
+                      placeholder="Ex: #10B981 ou oklch(0.72 0.19 148)"
+                    />
+                  </div>
+                  <p className="text-xs text-muted-foreground">Utilizada em elementos secundários, badges e contrastes.</p>
+                </div>
               </div>
 
-              <div className="space-y-4">
-                <Label htmlFor="brand_color">Cor da Marca (OKLCH ou Hex)</Label>
-                <div className="flex gap-3">
-                  <div 
-                    className="size-10 rounded-xl border border-border shrink-0" 
-                    style={{ backgroundColor: form.brand_color.includes('oklch') ? `var(--brand)` : form.brand_color }}
-                  />
-                  <Input
-                    id="brand_color"
-                    value={form.brand_color}
-                    onChange={e => setForm(v => ({ ...v, brand_color: e.target.value }))}
-                    className="rounded-xl"
-                  />
+              {/* Presets */}
+              <div className="pt-3 border-t border-border/50">
+                <p className="text-xs font-medium text-muted-foreground mb-3">Paletas Prontas (Clique para aplicar):</p>
+                <div className="flex flex-wrap gap-2">
+                  {PRESETS.map((p) => (
+                    <button
+                      key={p.label}
+                      type="button"
+                      onClick={() => {
+                        const updated = { ...form, primary_color: p.color, brand_color: p.brand };
+                        setForm(updated);
+                        applyBrandingToDom(updated);
+                      }}
+                      className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl border border-border bg-card hover:bg-accent text-xs font-medium transition-colors cursor-pointer"
+                    >
+                      <span className="size-3.5 rounded-full border border-black/10" style={{ backgroundColor: p.color }} />
+                      <span>{p.label}</span>
+                    </button>
+                  ))}
                 </div>
-                <p className="text-[10px] text-muted-foreground">Utilizada em elementos de branding secundários.</p>
+              </div>
+
+              {/* Live Demonstration */}
+              <div className="pt-4 border-t border-border/50 bg-muted/20 p-4 rounded-2xl">
+                <p className="text-xs font-semibold text-muted-foreground mb-3 flex items-center gap-1.5">
+                  <CheckCircle2 className="size-4 text-primary" /> Demonstração em Tempo Real:
+                </p>
+                <div className="flex flex-wrap items-center gap-3">
+                  <Button type="button" size="sm" className="rounded-xl shadow-sm">
+                    Botão Primário
+                  </Button>
+                  <Button type="button" size="sm" variant="outline" className="rounded-xl border-primary text-primary hover:bg-primary/10">
+                    Botão Outline
+                  </Button>
+                  <div
+                    className="px-3.5 py-1.5 rounded-xl text-xs font-semibold shadow-sm"
+                    style={{ backgroundColor: form.brand_color, color: "#ffffff" }}
+                  >
+                    Badge da Marca
+                  </div>
+                  <div className="px-3 py-1 rounded-lg border border-primary/40 bg-primary/10 text-xs font-medium text-foreground">
+                    Foco / Seleção Ativa
+                  </div>
+                </div>
               </div>
             </CardContent>
           </Card>

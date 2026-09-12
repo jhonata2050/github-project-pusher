@@ -124,7 +124,8 @@ async function buildFileInfo(clientRoot: string, fullPath: string): Promise<IFil
 export async function listRealDirectory(
   clientRoot: string,
   relativePath: string = "",
-  showHidden: boolean = true
+  showHidden: boolean = true,
+  documentRoot: string = "/var/www/html"
 ): Promise<IFileListResult> {
   const targetDir = await validateSafePath(clientRoot, relativePath);
   const entries = await fs.readdir(targetDir, { withFileTypes: true });
@@ -170,7 +171,7 @@ export async function listRealDirectory(
     totalDirectories,
     totalSizeBytes,
     isWritable: true,
-    documentRoot: "/var/www/html",
+    documentRoot,
   };
 }
 
@@ -186,6 +187,20 @@ export async function readRealFileContent(
 
   if (stats.isDirectory()) {
     throw new Error("O caminho especificado é um diretório, não um arquivo.");
+  }
+
+  const ext = path.extname(fullPath).toLowerCase().replace(/^\./, "");
+  const isArchive = ["zip", "tar", "gz", "tgz", "rar", "7z", "bz2", "xz"].includes(ext);
+  if (isArchive) {
+    throw new Error(
+      `O arquivo '${path.basename(fullPath)}' é um pacote compactado (${ext.toUpperCase()}). Utilize a opção 'Descompactar / Extrair' no gerenciador de arquivos.`
+    );
+  }
+
+  if (stats.size > 5 * 1024 * 1024) {
+    throw new Error(
+      `O arquivo '${path.basename(fullPath)}' possui ${(stats.size / (1024 * 1024)).toFixed(1)} MB e excede o limite de 5 MB para edição no navegador. Faça o download para editar localmente.`
+    );
   }
 
   const rawBuffer = await fs.readFile(fullPath);
@@ -233,7 +248,7 @@ export async function writeRealFileContent(
   }
 
   // Salvamento atômico via arquivo temporário para evitar corrupção
-  const tempPath = `${fullPath}.colify_tmp_${Date.now()}`;
+  const tempPath = `${fullPath}.eqsam_tmp_${Date.now()}`;
   await fs.writeFile(tempPath, content, "utf-8");
   await fs.rename(tempPath, fullPath);
 
@@ -564,12 +579,15 @@ export async function extractRealArchive(
       continue;
     }
 
-    const safeDestPath = path.join(targetDir, entryName);
-    // Verificação de zip slip (path traversal dentro do zip)
-    if (!safeDestPath.startsWith(targetDir)) {
+    const resolvedDest = path.resolve(targetDir, entryName);
+    const relCheck = path.relative(targetDir, resolvedDest);
+    // Verificação rigorosa contra Zip Slip (path traversal dentro do zip)
+    if (relCheck.startsWith("..") || path.isAbsolute(relCheck)) {
       console.warn(`[Zip Slip Attack Bloqueado]: ${entryName}`);
       continue;
     }
+
+    const safeDestPath = resolvedDest;
 
     const parent = path.dirname(safeDestPath);
     if (!fsSync.existsSync(parent)) {
@@ -646,3 +664,31 @@ export async function auditLogOperation(
     console.warn("[Audit Log Warning]:", err);
   }
 }
+
+/**
+ * Calcula recursivamente o tamanho total (em bytes) de um diretório no filesystem.
+ */
+export async function calculateDirectorySize(dirPath: string): Promise<number> {
+  let totalBytes = 0;
+  try {
+    if (!fsSync.existsSync(dirPath)) return 0;
+    const entries = await fs.readdir(dirPath, { withFileTypes: true });
+    for (const entry of entries) {
+      const fullPath = path.join(dirPath, entry.name);
+      if (entry.isDirectory()) {
+        totalBytes += await calculateDirectorySize(fullPath);
+      } else if (entry.isFile()) {
+        try {
+          const stats = await fs.stat(fullPath);
+          totalBytes += stats.size;
+        } catch {
+          // Arquivo pode ter sido removido concorrentemente
+        }
+      }
+    }
+  } catch (err) {
+    console.warn(`[Disk Usage Warning] Falha ao calcular diretório ${dirPath}:`, err);
+  }
+  return totalBytes;
+}
+

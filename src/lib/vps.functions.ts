@@ -140,16 +140,53 @@ export const getVPSDetails = createServerFn({ method: "GET" })
         stats = await getContaboInstanceStats(vps.external_id);
       } catch (e) {}
 
+      let lastMetrics = (vps as any).last_metrics || null;
+      if (!lastMetrics) {
+        try {
+          const { data: metricsSetting } = await supabaseAdmin
+            .from('system_settings')
+            .select('value')
+            .eq('key', `vps_metrics_${vps.id}`)
+            .maybeSingle();
+
+          if (metricsSetting?.value) {
+            lastMetrics = typeof metricsSetting.value === 'string'
+              ? JSON.parse(metricsSetting.value)
+              : metricsSetting.value;
+          }
+        } catch {}
+      }
+
       return {
         ...vps,
+        last_metrics: lastMetrics,
         service,
         externalDetails,
         stats
       };
     } catch (err: any) {
       console.error("Erro ao buscar detalhes na Contabo:", err.message);
+
+      let lastMetrics = (vps as any).last_metrics || null;
+      if (!lastMetrics) {
+        try {
+          const { data: metricsSetting } = await supabaseAdmin
+            .from('system_settings')
+            .select('value')
+            .eq('key', `vps_metrics_${vps.id}`)
+            .maybeSingle();
+
+          if (metricsSetting?.value) {
+            lastMetrics = typeof metricsSetting.value === 'string'
+              ? JSON.parse(metricsSetting.value)
+              : metricsSetting.value;
+          }
+        } catch {}
+      }
+
       return {
         ...vps,
+        last_metrics: lastMetrics,
         service,
         apiError: err.message
       };
@@ -199,6 +236,27 @@ export const getVPSMetricsHistory = createServerFn({ method: "GET" })
       if (!page || page.length === 0) break;
       rows.push(...page);
       if (page.length < PAGE) break;
+    }
+
+    if (rows.length === 0) {
+      try {
+        const { data: metricsSetting } = await supabaseAdmin
+          .from('system_settings')
+          .select('value')
+          .eq('key', `vps_metrics_${data.instanceId}`)
+          .maybeSingle();
+        if (metricsSetting?.value) {
+          const m = typeof metricsSetting.value === 'string' ? JSON.parse(metricsSetting.value) : metricsSetting.value;
+          if (m && m.last_update) {
+            rows.push({
+              cpu: m.cpu ?? 0,
+              ram: m.ram ?? 0,
+              disk: m.disk ?? 0,
+              created_at: m.last_update,
+            });
+          }
+        }
+      } catch {}
     }
 
     rows.reverse();

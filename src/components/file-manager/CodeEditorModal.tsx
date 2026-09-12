@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from "react";
+import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import {
   Dialog,
   DialogContent,
@@ -18,6 +18,8 @@ import {
   Minimize2,
   FileCode,
   X,
+  FolderArchive,
+  Download,
 } from "lucide-react";
 import { toast } from "sonner";
 import type { IFileReadResult } from "@/lib/file-manager/types";
@@ -26,6 +28,7 @@ interface CodeEditorModalProps {
   isOpen: boolean;
   onClose: () => void;
   fileData: IFileReadResult | null;
+  documentRoot?: string;
   onSave: (path: string, content: string, expectedSha256?: string, force?: boolean) => Promise<{ sha256: string; mtime: string }>;
   onReload: (path: string) => Promise<IFileReadResult>;
 }
@@ -34,6 +37,7 @@ export function CodeEditorModal({
   isOpen,
   onClose,
   fileData,
+  documentRoot,
   onSave,
   onReload,
 }: CodeEditorModalProps) {
@@ -128,9 +132,24 @@ export function CodeEditorModal({
     toast.success(`${count} ocorrência(s) substituída(s).`);
   };
 
-  // Cálculo de linhas para o gutter
-  const lineCount = content.split("\n").length;
-  const lineNumbers = Array.from({ length: Math.max(lineCount, 1) }, (_, i) => i + 1);
+  // Detecção de arquivo binário ou compactado
+  const ext = fileData?.name.split(".").pop()?.toLowerCase() || "";
+  const isArchiveFile = ["zip", "tar", "gz", "tgz", "rar", "7z", "bz2", "xz"].includes(ext);
+  const isBinaryFile =
+    isArchiveFile ||
+    fileData?.encoding === "base64" ||
+    [
+      "png", "jpg", "jpeg", "gif", "webp", "svg", "ico", "bmp", "tiff",
+      "mp4", "webm", "mp3", "wav", "ogg", "flac", "aac",
+      "pdf", "exe", "bin", "iso", "dmg", "apk", "jar", "wasm", "db", "sqlite",
+    ].includes(ext);
+
+  // Cálculo de linhas para o gutter (limitado a 2000 para prevenir travamentos com arquivos gigantes)
+  const lineCount = isBinaryFile ? 0 : content.split("\n").length;
+  const lineNumbers = useMemo(
+    () => (isBinaryFile ? [] : Array.from({ length: Math.min(Math.max(lineCount, 1), 2000) }, (_, i) => i + 1)),
+    [lineCount, isBinaryFile]
+  );
 
   if (!fileData) return null;
 
@@ -169,7 +188,7 @@ export function CodeEditorModal({
                   </Badge>
                 </div>
                 <p className="text-[11px] text-zinc-400 font-mono truncate">
-                  /var/www/html/{fileData.path} • {fileData.sizeFormatted} • {lineCount} linhas
+                  {(documentRoot || "/app").replace(/\/+$/, "")}/{fileData.path} • {fileData.sizeFormatted} • {lineCount} linhas
                 </p>
               </div>
             </div>
@@ -196,16 +215,18 @@ export function CodeEditorModal({
                 {isFullscreen ? <Minimize2 className="h-3.5 w-3.5" /> : <Maximize2 className="h-3.5 w-3.5" />}
               </Button>
 
-              <Button
-                size="sm"
-                onClick={() => handleSave(false)}
-                disabled={isSaving || !isDirty}
-                className="rounded-xl font-bold text-xs h-8 px-3.5 gap-1.5 bg-primary hover:bg-primary/90 text-primary-foreground shadow-sm"
-                title="Salvar alterações no servidor (Ctrl+S)"
-              >
-                {isSaving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
-                <span>Salvar (Ctrl+S)</span>
-              </Button>
+              {!isBinaryFile && (
+                <Button
+                  size="sm"
+                  onClick={() => handleSave(false)}
+                  disabled={isSaving || !isDirty}
+                  className="rounded-xl font-bold text-xs h-8 px-3.5 gap-1.5 bg-primary hover:bg-primary/90 text-primary-foreground shadow-sm"
+                  title="Salvar alterações no servidor (Ctrl+S)"
+                >
+                  {isSaving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
+                  <span>Salvar (Ctrl+S)</span>
+                </Button>
+              )}
 
               <Button
                 size="sm"
@@ -220,7 +241,7 @@ export function CodeEditorModal({
           </DialogHeader>
 
           {/* Barra de Busca e Substituição */}
-          {searchOpen && (
+          {!isBinaryFile && searchOpen && (
             <div className="p-3 bg-[#2d2d2d] border-b border-zinc-800 flex flex-wrap items-center gap-2 text-xs">
               <div className="flex items-center gap-1.5 flex-1 min-w-[200px]">
                 <span className="text-zinc-400 font-mono">Buscar:</span>
@@ -253,26 +274,55 @@ export function CodeEditorModal({
             </div>
           )}
 
-          {/* Área de Edição com Gutter de Numeração de Linhas */}
-          <div className="flex-1 flex overflow-hidden bg-[#1e1e1e]">
-            {/* Numeração de Linhas */}
-            <div className="w-12 bg-[#1e1e1e] border-r border-zinc-800 py-3 select-none text-right pr-2 text-[12px] font-mono text-zinc-600 overflow-hidden leading-[1.5rem]">
-              {lineNumbers.map((num) => (
-                <div key={num}>{num}</div>
-              ))}
+          {/* Área de Edição com Gutter de Numeração de Linhas OU Alerta de Arquivo Binário */}
+          {isBinaryFile ? (
+            <div className="flex-1 flex flex-col items-center justify-center p-8 text-center bg-[#1e1e1e] text-zinc-400 gap-3 select-none">
+              <div className="h-16 w-16 rounded-2xl bg-amber-500/10 flex items-center justify-center text-amber-500">
+                <FolderArchive className="h-8 w-8" />
+              </div>
+              <h3 className="text-base font-bold text-white">
+                {isArchiveFile ? "Arquivo Compactado (ZIP)" : "Arquivo Binário"}
+              </h3>
+              <p className="text-xs max-w-md text-zinc-400 leading-relaxed">
+                O arquivo <strong className="text-zinc-200">{fileData.name}</strong> ({fileData.sizeFormatted}) não pode ser aberto como texto para evitar travamentos no navegador e corrupção de dados.
+              </p>
+              {isArchiveFile && (
+                <p className="text-xs text-amber-400/90 font-medium">
+                  💡 Utilize o botão <strong>"Extrair ZIP"</strong> no gerenciador de arquivos para descompactar o conteúdo.
+                </p>
+              )}
+              <div className="flex gap-2 pt-2">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={handleSafeClose}
+                  className="rounded-xl border-zinc-700 hover:bg-zinc-800 text-xs text-zinc-300"
+                >
+                  Fechar
+                </Button>
+              </div>
             </div>
+          ) : (
+            <div className="flex-1 flex overflow-hidden bg-[#1e1e1e]">
+              {/* Numeração de Linhas */}
+              <div className="w-12 bg-[#1e1e1e] border-r border-zinc-800 py-3 select-none text-right pr-2 text-[12px] font-mono text-zinc-600 overflow-hidden leading-[1.5rem]">
+                {lineNumbers.map((num) => (
+                  <div key={num}>{num}</div>
+                ))}
+              </div>
 
-            {/* Textarea de Código */}
-            <textarea
-              ref={textareaRef}
-              value={content}
-              onChange={(e) => handleContentChange(e.target.value)}
-              spellCheck={false}
-              className="flex-1 p-3 bg-transparent text-zinc-100 font-mono text-[13px] leading-[1.5rem] resize-none outline-none border-none overflow-y-auto whitespace-pre tab-[2]"
-              style={{ tabSize: 2 }}
-              placeholder="// Digite ou cole o código aqui..."
-            />
-          </div>
+              {/* Textarea de Código */}
+              <textarea
+                ref={textareaRef}
+                value={content}
+                onChange={(e) => handleContentChange(e.target.value)}
+                spellCheck={false}
+                className="flex-1 p-3 bg-transparent text-zinc-100 font-mono text-[13px] leading-[1.5rem] resize-none outline-none border-none overflow-y-auto whitespace-pre tab-[2]"
+                style={{ tabSize: 2 }}
+                placeholder="// Digite ou cole o código aqui..."
+              />
+            </div>
+          )}
 
           {/* Barra de Status Inferior */}
           <div className="p-2 px-4 bg-[#007acc] text-white text-[11px] font-mono flex items-center justify-between select-none">
