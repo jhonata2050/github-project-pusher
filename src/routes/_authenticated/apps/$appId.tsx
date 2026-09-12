@@ -2,78 +2,35 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState, useEffect, useRef } from "react";
 import { 
-  Cpu, 
   Play, 
   Square, 
   RotateCcw, 
   ExternalLink, 
   Terminal, 
-  Settings, 
-  KeyRound, 
   GitBranch, 
   Globe, 
-  HardDrive, 
   ArrowLeft, 
   Activity, 
-  Upload, 
-  Save, 
-  Plus, 
   Trash2, 
-  Eye, 
-  EyeOff, 
   Copy, 
-  Check, 
   RefreshCw,
   Zap,
-  ShieldCheck,
   CheckCircle2,
   AlertCircle,
   Sparkles,
-  Search,
-  AlertTriangle,
-  FolderArchive,
-  FileCode,
-  Layers,
   Loader2,
-  XCircle,
-  FileText,
-  FolderOpen,
-  FolderPlus,
-  FilePlus,
   Code2,
-  Download,
-  Share2,
-  CheckSquare,
-  MinusSquare,
-  Folder,
-  Lock,
-  Server,
-  Database,
-  Info,
-  HelpCircle,
-  ArrowRight,
-  Wifi,
-  CheckCircle,
+  KeyRound,
   Pencil,
-  X
+  Check,
+  X,
+  AlertTriangle,
 } from "lucide-react";
 import { AppShell } from "@/components/app/AppShell";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Skeleton } from "@/components/ui/skeleton";
-import { Progress } from "@/components/ui/progress";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from "@/components/ui/dialog";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -84,11 +41,9 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Textarea } from "@/components/ui/textarea";
 import { 
   getApplicationDetails, 
   executeAppAction,
-  triggerApplicationAction,
   getApplicationLogs, 
   getApplicationEnvs, 
   saveApplicationEnvs,
@@ -97,22 +52,12 @@ import {
   verifyApplicationDomainDns,
   applyTemplateToApp,
   getDeploymentStatus,
-  getApplicationFiles,
-  saveApplicationFile,
-  saveApplicationFilesBatch,
-  deleteApplicationFile,
-  uploadApplicationZip,
-  extractApplicationZip,
-  bulkDeleteApplicationFiles,
-  createApplicationFolder,
-  moveApplicationFiles,
-  copyApplicationFiles,
   updateApplicationName,
   deployApplicationFromGit,
   resetCloudApp
 } from "@/lib/cloud-apps.functions";
 import { getMyDomains } from "@/lib/domains.functions";
-import { APP_TEMPLATES, type AppTemplate, getRequiredDiskWithMargin } from "@/lib/templates.data";
+import { type AppTemplate, getRequiredDiskWithMargin } from "@/lib/templates.data";
 import { toast } from "sonner";
 import { FileManagerView } from "@/components/file-manager/FileManagerView";
 import { ContainerLogsViewer } from "@/components/apps/ContainerLogsViewer";
@@ -121,6 +66,8 @@ import { AppOverviewTab } from "@/components/apps/tabs/AppOverviewTab";
 import { AppDeployTab } from "@/components/apps/tabs/AppDeployTab";
 import { AppEnvsTab } from "@/components/apps/tabs/AppEnvsTab";
 import { AppDomainsTab } from "@/components/apps/tabs/AppDomainsTab";
+import { AppTemplateCatalogModal } from "@/components/apps/modals/AppTemplateCatalogModal";
+import { AppLiveDeployModal } from "@/components/apps/modals/AppLiveDeployModal";
 
 export const Route = createFileRoute("/_authenticated/apps/$appId")({
   head: () => ({
@@ -167,33 +114,9 @@ function AppDetailsPage() {
   const [gitBranchInput, setGitBranchInput] = useState("main");
   const [customDomainInput, setCustomDomainInput] = useState("");
   const [envsList, setEnvsList] = useState<Array<{ key: string; value: string; is_build_time?: boolean | undefined }>>([]);
-  const [logSearchQuery, setLogSearchQuery] = useState("");
-
-  // Estados para o Editor de Código Web
-  const [selectedFilePath, setSelectedFilePath] = useState<string>("index.html");
-  const [fileEditorContent, setFileEditorContent] = useState<string>("");
-  const [isEditorModalOpen, setIsEditorModalOpen] = useState(false);
-  const [fileSearchQuery, setFileSearchQuery] = useState("");
-  const [isCreatingFileModal, setIsCreatingFileModal] = useState(false);
-  const [newFileNameInput, setNewFileNameInput] = useState("");
-  const [isCreatingFolderModal, setIsCreatingFolderModal] = useState(false);
-  const [newFolderNameInput, setNewFolderNameInput] = useState("");
-  const [selectedFilePaths, setSelectedFilePaths] = useState<string[]>([]);
-  const [isMoveCopyModalOpen, setIsMoveCopyModalOpen] = useState(false);
-  const [moveCopyAction, setMoveCopyAction] = useState<"move" | "copy">("move");
-  const [targetFolderInput, setTargetFolderInput] = useState("");
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const [isUploadingFiles, setIsUploadingFiles] = useState(false);
-  const [isDraggingOver, setIsDraggingOver] = useState(false);
-  const [uploadProgress, setUploadProgress] = useState(0);
-  const [uploadStatusText, setUploadStatusText] = useState("");
-  const [fileCurrentPage, setFileCurrentPage] = useState(1);
-  const FILES_PER_PAGE = 25;
 
   // Estados para o Catálogo de Templates 1-Clique
   const [isTemplateModalOpen, setIsTemplateModalOpen] = useState(false);
-  const [templateSearch, setTemplateSearch] = useState("");
-  const [templateCategory, setTemplateCategory] = useState("all");
 
   // Estados para o Modal de Deploy ao Vivo (Live Terminal & Status)
   const [isDeployModalOpen, setIsDeployModalOpen] = useState(false);
@@ -221,8 +144,6 @@ function AppDetailsPage() {
     }
   }, [app?.name, isEditingName]);
 
-  const appRoot = (app?.container_root || "/var/www/html").replace(/\/+$/, "");
-
   // Consulta de logs em tempo real (atualização apenas quando a aba de logs ou terminal estiver ativa)
   const { data: logsData, isFetching: isFetchingLogs, refetch: refetchLogs } = useQuery({
     queryKey: ["applicationLogs", appId],
@@ -236,13 +157,6 @@ function AppDetailsPage() {
     queryKey: ["applicationEnvs", appId],
     queryFn: () => getApplicationEnvs({ data: { appId } }),
     enabled: Boolean(appId) && (activeTab === "envs" || activeTab === "settings"),
-  });
-
-  // Consulta de arquivos do container para o Editor Web (carregamento sob demanda)
-  const { data: filesData, refetch: refetchFiles } = useQuery({
-    queryKey: ["applicationFiles", appId],
-    queryFn: () => getApplicationFiles({ data: { appId } }),
-    enabled: Boolean(appId) && activeTab === "files",
   });
 
   // Consulta de domínios registrados na conta do cliente
@@ -324,17 +238,6 @@ function AppDetailsPage() {
   const pendingEnvs = detectPendingRequiredEnvs(currentEnvs);
   const isEnvPending = (env: { key: string; value: string }) => detectPendingRequiredEnvs([env]).length > 0;
 
-  // Sincronizar arquivo selecionado no Editor de Código
-  useEffect(() => {
-    if (filesData && filesData.length > 0) {
-      const activeFile = filesData.find((f: any) => f.path === selectedFilePath) || filesData[0];
-      if (activeFile) {
-        setSelectedFilePath(activeFile.path);
-        setFileEditorContent(activeFile.content || "");
-      }
-    }
-  }, [filesData]);
-
   // Auto-scroll do terminal de deploy ao vivo
   useEffect(() => {
     if (isDeployModalOpen && terminalLogsEndRef.current) {
@@ -350,39 +253,35 @@ function AppDetailsPage() {
 
     const interval = setInterval(async () => {
       try {
-        const res = await getDeploymentStatus({ data: { deploymentUuid: activeDeploymentUuid } });
+        const res = await getDeploymentStatus({ data: { appId, deploymentUuid: activeDeploymentUuid } });
         if (res) {
-          setDeploymentStatus(res.status as any);
-          if (res.logs && Array.isArray(res.logs) && res.logs.length > 0) {
-            setDeploymentLogs(res.logs);
-          }
-
-          if ((res as any).step) {
-            setDeployStep((res as any).step);
-          } else if (res.status === "in_progress") {
-            setDeployStep(3);
-          }
-
           if (res.status === "finished") {
+            setDeploymentStatus("finished");
             setDeployStep(4);
-            toast.success("Aplicação compilada e online 24/7!");
+            toast.success("🚀 Aplicação implantada e online com sucesso!");
             queryClient.invalidateQueries({ queryKey: ["applicationDetails", appId] });
-            queryClient.invalidateQueries({ queryKey: ["applicationFiles", appId] });
-            queryClient.invalidateQueries({ queryKey: ["myApplications"] });
+            queryClient.invalidateQueries({ queryKey: ["realFileManagerFiles", appId] });
             refetch();
             refetchLogs();
-            refetchFiles();
           } else if (res.status === "failed") {
-            toast.error("Falha no build. Verifique os logs no terminal.");
+            setDeploymentStatus("failed");
+            toast.error("❌ Falha na implantação da aplicação. Verifique os logs.");
+          } else {
+            setDeploymentStatus("in_progress");
+            if (res.step) setDeployStep(res.step);
+          }
+
+          if (res.logs && Array.isArray(res.logs)) {
+            setDeploymentLogs(res.logs);
           }
         }
       } catch (e) {
-        console.warn("Erro ao consultar status de deployment:", e);
+        console.error("Erro ao consultar status do deploy:", e);
       }
-    }, 1500);
+    }, 2000);
 
     return () => clearInterval(interval);
-  }, [isDeployModalOpen, activeDeploymentUuid, deploymentStatus, appId, queryClient, refetch, refetchLogs, refetchFiles]);
+  }, [isDeployModalOpen, activeDeploymentUuid, deploymentStatus, appId, queryClient, refetch, refetchLogs]);
 
   // Ações de Ciclo de Vida do Container (Start, Stop, Restart, Deploy)
   const actionMutation = useMutation({
@@ -421,6 +320,7 @@ function AppDetailsPage() {
             setDeploymentStatus("finished");
             setDeployStep(4);
             queryClient.invalidateQueries({ queryKey: ["applicationDetails", appId] });
+            queryClient.invalidateQueries({ queryKey: ["realFileManagerFiles", appId] });
             refetch();
           }, 2500);
         }
@@ -444,10 +344,9 @@ function AppDetailsPage() {
       toast.success("Container resetado e retornado ao estado inicial com sucesso!");
       setIsStopAppConfirmOpen(false);
       queryClient.invalidateQueries({ queryKey: ["applicationDetails", appId] });
-      queryClient.invalidateQueries({ queryKey: ["applicationFiles", appId] });
+      queryClient.invalidateQueries({ queryKey: ["realFileManagerFiles", appId] });
       queryClient.invalidateQueries({ queryKey: ["myApplications"] });
       refetch();
-      refetchFiles();
     },
     onError: (err: any) => {
       toast.error(err.message || "Erro ao resetar container.");
@@ -494,18 +393,16 @@ function AppDetailsPage() {
           setDeploymentStatus("finished");
           setDeployStep(4);
           queryClient.invalidateQueries({ queryKey: ["applicationDetails", appId] });
-          queryClient.invalidateQueries({ queryKey: ["applicationFiles", appId] });
+          queryClient.invalidateQueries({ queryKey: ["realFileManagerFiles", appId] });
           queryClient.invalidateQueries({ queryKey: ["myApplications"] });
           refetch();
-          refetchFiles();
         }, 3000);
       }
       toast.success("Deploy do repositório Git realizado com sucesso!");
       queryClient.invalidateQueries({ queryKey: ["applicationDetails", appId] });
-      queryClient.invalidateQueries({ queryKey: ["applicationFiles", appId] });
+      queryClient.invalidateQueries({ queryKey: ["realFileManagerFiles", appId] });
       queryClient.invalidateQueries({ queryKey: ["myApplications"] });
       refetch();
-      refetchFiles();
     },
     onError: (err: any) => {
       setDeploymentStatus("failed");
@@ -534,266 +431,6 @@ function AppDetailsPage() {
       toast.error(err.message || "Erro ao atualizar nome da aplicação.");
     },
   });
-
-  const saveFileMutation = useMutation({
-    mutationFn: async ({ shouldRestart }: { shouldRestart?: boolean }) => {
-      await saveApplicationFile({ data: { appId, filePath: selectedFilePath, content: fileEditorContent } });
-      if (shouldRestart) {
-        await executeAppAction({ data: { appId, action: "restart" } });
-      }
-    },
-    onSuccess: (_, vars) => {
-      toast.success(vars.shouldRestart ? "Arquivo salvo e container reiniciado!" : "Arquivo salvo com sucesso!");
-      queryClient.invalidateQueries({ queryKey: ["applicationFiles", appId] });
-      refetchFiles();
-    },
-    onError: (err: any) => {
-      toast.error(err.message || "Erro ao salvar arquivo.");
-    },
-  });
-
-  const deleteFileMutation = useMutation({
-    mutationFn: async (filePath: string) => {
-      return deleteApplicationFile({ data: { appId, filePath } });
-    },
-    onSuccess: () => {
-      toast.success("Arquivo excluído!");
-      queryClient.invalidateQueries({ queryKey: ["applicationFiles", appId] });
-      refetchFiles();
-    },
-  });
-
-  const createFileMutation = useMutation({
-    mutationFn: async () => {
-      if (!newFileNameInput.trim()) throw new Error("Nome do arquivo é obrigatório");
-      const clean = newFileNameInput.trim();
-      return saveApplicationFile({ data: { appId, filePath: clean, content: `// Arquivo ${clean} criado no cluster\n` } });
-    },
-    onSuccess: () => {
-      toast.success("Arquivo criado com sucesso!");
-      setIsCreatingFileModal(false);
-      setSelectedFilePath(newFileNameInput.trim());
-      setFileEditorContent(`// Arquivo ${newFileNameInput.trim()} criado no cluster\n`);
-      setNewFileNameInput("");
-      queryClient.invalidateQueries({ queryKey: ["applicationFiles", appId] });
-      refetchFiles();
-    },
-    onError: (err: any) => {
-      toast.error(err.message || "Erro ao criar arquivo.");
-    },
-  });
-
-  const extractZipMutation = useMutation({
-    mutationFn: async (filePath: string) => {
-      return extractApplicationZip({ data: { appId, filePath } });
-    },
-    onSuccess: (updated) => {
-      toast.success("🎉 Arquivo .ZIP descompactado com sucesso no servidor!");
-      if (updated && Array.isArray(updated)) {
-        queryClient.setQueryData(["applicationFiles", appId], updated);
-      }
-      queryClient.invalidateQueries({ queryKey: ["applicationFiles", appId] });
-      refetchFiles();
-    },
-    onError: (err: any) => {
-      toast.error(err.message || "Erro ao descompactar arquivo .ZIP.");
-    },
-  });
-
-  const bulkDeleteMutation = useMutation({
-    mutationFn: async (paths: string[]) => {
-      return bulkDeleteApplicationFiles({ data: { appId, filePaths: paths } });
-    },
-    onSuccess: (updated) => {
-      toast.success(`🗑️ ${selectedFilePaths.length} arquivo(s) excluído(s) com sucesso!`);
-      setSelectedFilePaths([]);
-      if (updated && Array.isArray(updated)) {
-        queryClient.setQueryData(["applicationFiles", appId], updated);
-      }
-      queryClient.invalidateQueries({ queryKey: ["applicationFiles", appId] });
-      refetchFiles();
-    },
-    onError: (err: any) => {
-      toast.error(err.message || "Erro ao excluir arquivos em lote.");
-    },
-  });
-
-  const createFolderMutation = useMutation({
-    mutationFn: async () => {
-      if (!newFolderNameInput.trim()) throw new Error("Nome da pasta é obrigatório.");
-      return createApplicationFolder({ data: { appId, folderPath: newFolderNameInput.trim() } });
-    },
-    onSuccess: (updated) => {
-      toast.success(`📁 Pasta ${newFolderNameInput.trim()} criada com sucesso!`);
-      setIsCreatingFolderModal(false);
-      setNewFolderNameInput("");
-      if (updated && Array.isArray(updated)) {
-        queryClient.setQueryData(["applicationFiles", appId], updated);
-      }
-      queryClient.invalidateQueries({ queryKey: ["applicationFiles", appId] });
-      refetchFiles();
-    },
-    onError: (err: any) => {
-      toast.error(err.message || "Erro ao criar pasta.");
-    },
-  });
-
-  const moveFilesMutation = useMutation({
-    mutationFn: async () => {
-      return moveApplicationFiles({ 
-        data: { 
-          appId, 
-          filePaths: selectedFilePaths, 
-          targetFolder: targetFolderInput.trim() 
-        } 
-      });
-    },
-    onSuccess: (updated) => {
-      toast.success(`🚚 ${selectedFilePaths.length} arquivo(s) movido(s) para "${targetFolderInput.trim() || "raiz"}"!`);
-      setIsMoveCopyModalOpen(false);
-      setSelectedFilePaths([]);
-      setTargetFolderInput("");
-      if (updated && Array.isArray(updated)) {
-        queryClient.setQueryData(["applicationFiles", appId], updated);
-      }
-      queryClient.invalidateQueries({ queryKey: ["applicationFiles", appId] });
-      refetchFiles();
-    },
-    onError: (err: any) => {
-      toast.error(err.message || "Erro ao mover arquivos.");
-    },
-  });
-
-  const copyFilesMutation = useMutation({
-    mutationFn: async () => {
-      return copyApplicationFiles({ 
-        data: { 
-          appId, 
-          filePaths: selectedFilePaths, 
-          targetFolder: targetFolderInput.trim() 
-        } 
-      });
-    },
-    onSuccess: (updated) => {
-      toast.success(`📋 ${selectedFilePaths.length} arquivo(s) copiado(s) com sucesso!`);
-      setIsMoveCopyModalOpen(false);
-      setSelectedFilePaths([]);
-      setTargetFolderInput("");
-      if (updated && Array.isArray(updated)) {
-        queryClient.setQueryData(["applicationFiles", appId], updated);
-      }
-      queryClient.invalidateQueries({ queryKey: ["applicationFiles", appId] });
-      refetchFiles();
-    },
-    onError: (err: any) => {
-      toast.error(err.message || "Erro ao copiar arquivos.");
-    },
-  });
-
-  const handleFilesSelected = async (fileList: FileList | null) => {
-    if (!fileList || fileList.length === 0) return;
-    setIsUploadingFiles(true);
-    setUploadProgress(15);
-    setUploadStatusText("Lendo arquivos selecionados...");
-
-    try {
-      // 1. Se o usuário selecionou um arquivo .ZIP, faz o upload do arquivo para o servidor sem descompactar automaticamente
-      const zipFile = Array.from(fileList).find((f) => f.name.toLowerCase().endsWith(".zip"));
-      
-      if (zipFile) {
-        setUploadProgress(40);
-        setUploadStatusText(`Enviando pacote ${zipFile.name} para o servidor...`);
-
-        const reader = new FileReader();
-        const base64Promise = new Promise<string>((resolve, reject) => {
-          reader.onload = () => resolve(reader.result as string);
-          reader.onerror = reject;
-          reader.readAsDataURL(zipFile);
-        });
-
-        const zipBase64 = await base64Promise;
-        setUploadProgress(85);
-        setUploadStatusText(`Salvando arquivo ZIP no diretório ${appRoot}...`);
-
-        const result = await uploadApplicationZip({
-          data: {
-            appId,
-            fileName: zipFile.name,
-            zipBase64,
-            autoExtract: false,
-          },
-        });
-
-        setUploadProgress(100);
-        setUploadStatusText("Concluído!");
-        toast.success(`📦 Pacote ${zipFile.name} enviado com sucesso! Clique em "Extrair ZIP" no arquivo para descompactar.`);
-
-        if (fileInputRef.current) {
-          fileInputRef.current.value = "";
-        }
-
-        if (result?.files && Array.isArray(result.files)) {
-          queryClient.setQueryData(["applicationFiles", appId], result.files);
-        }
-        queryClient.invalidateQueries({ queryKey: ["applicationFiles", appId] });
-        await refetchFiles();
-
-        setTimeout(() => {
-          setIsUploadingFiles(false);
-          setUploadProgress(0);
-          setUploadStatusText("");
-        }, 1000);
-        return;
-      }
-
-      // 2. Se forem múltiplos arquivos avulsos (.html, .css, etc.)
-      const filesToSave: Array<{ path: string; content: string }> = [];
-      for (let i = 0; i < fileList.length; i++) {
-        const file = fileList[i];
-        if (!file) continue;
-        setUploadProgress(Math.min(70, Math.round(15 + ((i + 1) / fileList.length) * 55)));
-        setUploadStatusText(`Lendo (${i + 1}/${fileList.length}): ${file.name}...`);
-        const content = await file.text();
-        filesToSave.push({ path: file.name, content });
-      }
-
-      if (filesToSave.length === 0) {
-        toast.error("Nenhum arquivo válido encontrado.");
-        setIsUploadingFiles(false);
-        setUploadProgress(0);
-        return;
-      }
-
-      setUploadProgress(80);
-      setUploadStatusText(`Gravando ${filesToSave.length} arquivo(s) em ${appRoot}...`);
-      const updated = await saveApplicationFilesBatch({ data: { appId, files: filesToSave } });
-
-      setUploadProgress(100);
-      setUploadStatusText("Concluído!");
-      toast.success(`🎉 ${filesToSave.length} arquivo(s) salvos com sucesso em ${appRoot}!`);
-
-      if (fileInputRef.current) {
-        fileInputRef.current.value = "";
-      }
-
-      if (updated && Array.isArray(updated)) {
-        queryClient.setQueryData(["applicationFiles", appId], updated);
-      }
-      queryClient.invalidateQueries({ queryKey: ["applicationFiles", appId] });
-      await refetchFiles();
-
-      setTimeout(() => {
-        setIsUploadingFiles(false);
-        setUploadProgress(0);
-        setUploadStatusText("");
-      }, 1000);
-    } catch (err: any) {
-      toast.error("Erro ao enviar arquivos: " + err.message);
-      setIsUploadingFiles(false);
-      setUploadProgress(0);
-      setUploadStatusText("");
-    }
-  };
 
   const saveEnvsMutation = useMutation({
     mutationFn: async ({ shouldRestart }: { shouldRestart?: boolean } = {}) => {
@@ -1057,14 +694,6 @@ function AppDetailsPage() {
         );
     }
   };
-
-  // Filtragem de logs
-  const filteredLogs = logsData
-    ? logsData
-        .split("\n")
-        .filter((line: string) => !logSearchQuery || line.toLowerCase().includes(logSearchQuery.toLowerCase()))
-        .join("\n")
-    : "Carregando logs do container...";
 
   return (
     <AppShell breadcrumb={app.name || "Gerenciar Aplicação"}>
@@ -1381,482 +1010,27 @@ function AppDetailsPage() {
           </TabsContent>
         </Tabs>
 
-        {/* Modal Fullscreen de Edição de Código */}
-        <Dialog open={isEditorModalOpen} onOpenChange={setIsEditorModalOpen}>
-          <DialogContent className="rounded-3xl max-w-5xl h-[88vh] flex flex-col p-0 overflow-hidden bg-zinc-950 text-white border-zinc-800">
-            <DialogHeader className="p-4 sm:p-5 border-b border-zinc-800 bg-zinc-900/60 shrink-0">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                <div className="flex items-center gap-3">
-                  <div className="h-10 w-10 rounded-xl bg-zinc-800 flex items-center justify-center text-emerald-400 shrink-0">
-                    <Code2 className="h-5 w-5" />
-                  </div>
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <DialogTitle className="text-base font-bold text-white font-mono flex items-center gap-1.5">
-                        {appRoot}/{selectedFilePath}
-                      </DialogTitle>
-                      <Badge variant="outline" className="text-[10px] uppercase font-mono border-zinc-700 text-zinc-300">
-                        {selectedFilePath.split(".").pop() || "CODE"}
-                      </Badge>
-                    </div>
-                    <DialogDescription className="text-xs text-zinc-400 mt-0.5">
-                      Diretório raiz seguro ({appRoot}). Salve para atualizar seu arquivo no servidor.
-                    </DialogDescription>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-2 shrink-0">
-                  <Button 
-                    size="sm" 
-                    variant="outline"
-                    onClick={() => saveFileMutation.mutate({ shouldRestart: false })}
-                    disabled={saveFileMutation.isPending}
-                    className="rounded-xl text-xs font-semibold border-zinc-700 text-zinc-200 hover:bg-zinc-800 gap-1.5"
-                  >
-                    <Save className="h-3.5 w-3.5" /> Salvar Arquivo
-                  </Button>
-                  <Button 
-                    size="sm" 
-                    onClick={() => {
-                      saveFileMutation.mutate({ shouldRestart: true });
-                    }}
-                    disabled={saveFileMutation.isPending}
-                    className="rounded-xl text-xs font-bold gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm"
-                  >
-                    <Zap className="h-3.5 w-3.5" /> Salvar & Publicar no Ar
-                  </Button>
-                </div>
-              </div>
-            </DialogHeader>
-
-            {/* Canvas do Editor de Código com Números de Linha */}
-            <div className="flex-1 flex bg-zinc-950 font-mono text-xs overflow-hidden">
-              {/* Números de Linha */}
-              <div className="py-4 px-3 bg-zinc-900/40 select-none text-right text-zinc-600 font-mono text-xs border-r border-zinc-800/80 shrink-0 overflow-hidden">
-                {fileEditorContent.split("\n").map((_, i) => (
-                  <div key={i} className="leading-6">
-                    {i + 1}
-                  </div>
-                ))}
-              </div>
-
-              {/* Textarea do Editor */}
-              <textarea
-                value={fileEditorContent}
-                onChange={(e) => setFileEditorContent(e.target.value)}
-                placeholder="// Insira seu código aqui..."
-                className="w-full flex-1 bg-transparent p-4 text-emerald-400 font-mono resize-none focus:outline-none leading-6 selection:bg-emerald-900 selection:text-white"
-                spellCheck={false}
-              />
-            </div>
-
-            {/* Barra de Status Inferior */}
-            <div className="p-3 px-5 border-t border-zinc-800 bg-zinc-900/60 flex items-center justify-between text-xs text-zinc-400 shrink-0">
-              <div className="flex items-center gap-4">
-                <span>Linhas: <strong className="text-zinc-200">{fileEditorContent.split("\n").length}</strong></span>
-                <span>Caracteres: <strong className="text-zinc-200">{fileEditorContent.length}</strong></span>
-                <span>Codificação: <strong className="text-zinc-200">UTF-8</strong></span>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
-                <span className="text-emerald-400 font-semibold">Caddy Server HTTP/3 Ativo</span>
-              </div>
-            </div>
-          </DialogContent>
-        </Dialog>
-
-        {/* Modal de Criação de Novo Arquivo */}
-        <Dialog open={isCreatingFileModal} onOpenChange={setIsCreatingFileModal}>
-          <DialogContent className="rounded-3xl max-w-md">
-            <DialogHeader>
-              <DialogTitle className="text-lg font-bold flex items-center gap-2">
-                <FilePlus className="h-5 w-5 text-primary" /> Criar Novo Arquivo
-              </DialogTitle>
-              <DialogDescription className="text-xs">
-                Informe o nome e extensão do arquivo (ex: <code>index.js</code>, <code>config.json</code>, <code>styles.css</code>).
-              </DialogDescription>
-            </DialogHeader>
-            <div className="space-y-4 pt-2">
-              <div className="space-y-2">
-                <Label>Nome do Arquivo</Label>
-                <Input
-                  value={newFileNameInput}
-                  onChange={(e) => setNewFileNameInput(e.target.value)}
-                  placeholder="src/app.js ou config.json"
-                  className="rounded-xl font-mono text-xs"
-                />
-              </div>
-              <div className="flex justify-end gap-2">
-                <Button variant="outline" onClick={() => setIsCreatingFileModal(false)} className="rounded-xl">
-                  Cancelar
-                </Button>
-                <Button 
-                  onClick={() => createFileMutation.mutate()} 
-                  disabled={createFileMutation.isPending}
-                  className="rounded-xl font-bold bg-primary"
-                >
-                  Criar Arquivo
-                </Button>
-              </div>
-            </div>
-          </DialogContent>
-        </Dialog>
-
-        {/* Modal de Criação de Pasta */}
-        <Dialog open={isCreatingFolderModal} onOpenChange={setIsCreatingFolderModal}>
-          <DialogContent className="rounded-3xl max-w-md">
-            <DialogHeader>
-              <DialogTitle className="text-lg font-bold flex items-center gap-2">
-                <FolderPlus className="h-5 w-5 text-primary" /> Criar Nova Pasta
-              </DialogTitle>
-              <DialogDescription className="text-xs">
-                Informe o nome do novo diretório (ex: <code>assets</code>, <code>images</code>, <code>css</code>, <code>js</code>).
-              </DialogDescription>
-            </DialogHeader>
-            <div className="space-y-4 pt-2">
-              <div className="space-y-2">
-                <Label>Nome da Pasta</Label>
-                <Input
-                  value={newFolderNameInput}
-                  onChange={(e) => setNewFolderNameInput(e.target.value)}
-                  placeholder="assets ou images/icons"
-                  className="rounded-xl font-mono text-xs"
-                />
-              </div>
-              <div className="flex justify-end gap-2">
-                <Button variant="outline" onClick={() => setIsCreatingFolderModal(false)} className="rounded-xl">
-                  Cancelar
-                </Button>
-                <Button 
-                  onClick={() => createFolderMutation.mutate()} 
-                  disabled={createFolderMutation.isPending}
-                  className="rounded-xl font-bold bg-primary"
-                >
-                  Criar Pasta
-                </Button>
-              </div>
-            </div>
-          </DialogContent>
-        </Dialog>
-
-        {/* Modal de Mover / Copiar Arquivos em Massa */}
-        <Dialog open={isMoveCopyModalOpen} onOpenChange={setIsMoveCopyModalOpen}>
-          <DialogContent className="rounded-3xl max-w-md">
-            <DialogHeader>
-              <DialogTitle className="text-lg font-bold flex items-center gap-2">
-                {moveCopyAction === "move" ? <Folder className="h-5 w-5 text-primary" /> : <Copy className="h-5 w-5 text-primary" />}
-                {moveCopyAction === "move" ? "Mover Arquivos Selecionados" : "Copiar Arquivos Selecionados"}
-              </DialogTitle>
-              <DialogDescription className="text-xs">
-                {moveCopyAction === "move" ? "Mover" : "Copiar"} {selectedFilePaths.length} arquivo(s) selecionado(s) para um diretório de destino.
-              </DialogDescription>
-            </DialogHeader>
-            <div className="space-y-4 pt-2">
-              <div className="space-y-2">
-                <Label>Pasta de Destino (deixe em branco para raiz {appRoot})</Label>
-                <Input
-                  value={targetFolderInput}
-                  onChange={(e) => setTargetFolderInput(e.target.value)}
-                  placeholder="ex: assets ou js/vendor (ou vazio para raiz)"
-                  className="rounded-xl font-mono text-xs"
-                />
-              </div>
-              <div className="max-h-32 overflow-y-auto p-2 bg-muted/40 rounded-xl text-[11px] font-mono space-y-1">
-                <p className="font-bold text-muted-foreground">Arquivos a serem processados:</p>
-                {selectedFilePaths.map((p) => (
-                  <p key={p} className="truncate text-foreground">&bull; {p}</p>
-                ))}
-              </div>
-              <div className="flex justify-end gap-2">
-                <Button variant="outline" onClick={() => setIsMoveCopyModalOpen(false)} className="rounded-xl">
-                  Cancelar
-                </Button>
-                <Button 
-                  onClick={() => {
-                    if (moveCopyAction === "move") {
-                      moveFilesMutation.mutate();
-                    } else {
-                      copyFilesMutation.mutate();
-                    }
-                  }} 
-                  disabled={moveFilesMutation.isPending || copyFilesMutation.isPending}
-                  className="rounded-xl font-bold bg-primary"
-                >
-                  {moveCopyAction === "move" ? "Mover Arquivos" : "Copiar Arquivos"}
-                </Button>
-              </div>
-            </div>
-          </DialogContent>
-        </Dialog>
-
         {/* Modal de Catálogo de Templates 1-Clique */}
-        <Dialog open={isTemplateModalOpen} onOpenChange={setIsTemplateModalOpen}>
-          <DialogContent className="rounded-3xl max-w-5xl sm:max-w-6xl max-h-[92vh] flex flex-col p-0 overflow-hidden">
-            <DialogHeader className="p-6 pb-4 border-b border-border bg-muted/20">
-              <div className="flex items-center justify-between">
-                <div>
-                  <DialogTitle className="text-xl font-bold flex items-center gap-2">
-                    <Sparkles className="size-5 text-amber-500" /> Catálogo de Modelos 1-Clique
-                  </DialogTitle>
-                  <DialogDescription className="text-xs mt-1">
-                    Escolha um modelo pronto para ser instalado instantaneamente neste container ({app.name} • {app.memory_limit}MB RAM).
-                  </DialogDescription>
-                </div>
-              </div>
-
-              {/* Barra de Pesquisa e Filtro de Categorias */}
-              <div className="mt-4 space-y-3">
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
-                  <Input 
-                    placeholder="Buscar bot, site, linguagem ou ferramenta (ex: WordPress, WhatsApp, Python, N8N)..."
-                    value={templateSearch}
-                    onChange={(e) => setTemplateSearch(e.target.value)}
-                    className="rounded-2xl pl-9 bg-background"
-                  />
-                </div>
-
-                <div className="flex flex-wrap gap-1.5 overflow-x-auto pb-1">
-                  {[
-                    { id: "all", label: "Todos" },
-                    { id: "websites", label: "Sites & WordPress" },
-                    { id: "languages", label: "Linguagens" },
-                    { id: "bots", label: "Bots & Comunicação" },
-                    { id: "automations", label: "Automação & No-Code" },
-                    { id: "apis", label: "APIs & Backend" },
-                    { id: "databases", label: "Bancos de Dados" },
-                  ].map((cat) => (
-                    <Button
-                      key={cat.id}
-                      type="button"
-                      variant={templateCategory === cat.id ? "default" : "outline"}
-                      size="sm"
-                      onClick={() => setTemplateCategory(cat.id)}
-                      className="rounded-xl text-xs h-7 px-3 font-semibold"
-                    >
-                      {cat.label}
-                    </Button>
-                  ))}
-                </div>
-              </div>
-            </DialogHeader>
-
-            {/* Grid de Modelos */}
-            <div className="flex-1 overflow-y-auto p-6 grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
-              {APP_TEMPLATES
-                .filter((tpl) => {
-                  const matchCat = templateCategory === "all" || tpl.category === templateCategory;
-                  const matchSearch = !templateSearch || 
-                    tpl.name.toLowerCase().includes(templateSearch.toLowerCase()) || 
-                    tpl.description.toLowerCase().includes(templateSearch.toLowerCase()) ||
-                    tpl.tags?.some((t) => t.toLowerCase().includes(templateSearch.toLowerCase()));
-                  return matchCat && matchSearch;
-                })
-                .map((tpl) => {
-                  const appDisk = (app as any)?.service?.products?.disk_quota_mb || app.disk_limit_mb || 1536;
-                  const requiredDiskWithMargin = getRequiredDiskWithMargin(tpl.recommended_disk);
-                  const isRamOk = (app.memory_limit || 512) >= (tpl.recommended_ram || 256);
-                  const isDiskOk = appDisk >= requiredDiskWithMargin;
-                  const isCpuOk = !tpl.recommended_cpu || (app.cpu_limit || 0.5) >= tpl.recommended_cpu;
-                  const isUnderpowered = !isRamOk || !isDiskOk || !isCpuOk;
-
-                  let warningReason = "";
-                  if (!isDiskOk) {
-                    warningReason = `Requer ${requiredDiskWithMargin}MB Disco (+20%) (Seu plano: ${appDisk}MB)`;
-                  } else if (!isRamOk) {
-                    warningReason = `Requer ${tpl.recommended_ram}MB RAM (Seu plano: ${app.memory_limit}MB)`;
-                  } else {
-                    warningReason = `Requer ${tpl.recommended_cpu} vCPU (Seu plano: ${app.cpu_limit || 0.5} vCPU)`;
-                  }
-
-                  return (
-                    <Card 
-                      key={tpl.id}
-                      className="rounded-2xl border p-4 flex flex-col justify-between hover:border-primary/50 transition-all hover:shadow-sm group bg-card"
-                    >
-                      <div>
-                        <div className="flex items-start justify-between gap-3 mb-2.5">
-                          <div className="h-10 w-10 rounded-xl bg-muted/60 p-2 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
-                            {tpl.icon.startsWith("http") ? (
-                              <img src={tpl.icon} alt={tpl.name} className="h-6 w-6 object-contain" />
-                            ) : (
-                              <span className="text-xl">{tpl.icon}</span>
-                            )}
-                          </div>
-                          <div className="flex flex-col items-end gap-1 shrink-0">
-                            <Badge variant="outline" className="text-[10px] font-mono shrink-0">
-                              Min {tpl.recommended_ram || 256}MB RAM
-                            </Badge>
-                            <Badge variant="secondary" className="text-[9px] font-mono shrink-0 text-muted-foreground">
-                              {requiredDiskWithMargin}MB HD (+20%)
-                            </Badge>
-                          </div>
-                        </div>
-                        <h4 className="font-bold text-sm text-foreground">{tpl.name}</h4>
-                        <p className="text-xs text-muted-foreground mt-1 line-clamp-2 leading-relaxed">
-                          {tpl.description}
-                        </p>
-                      </div>
-
-                      <div className="mt-4 pt-3 border-t border-border flex flex-col gap-2">
-                        {!isUnderpowered ? (
-                          <p className="text-[10px] text-emerald-600 dark:text-emerald-400 flex items-center gap-1 font-medium">
-                            <CheckCircle2 className="size-3 shrink-0" />
-                            100% Compatível com seu container
-                          </p>
-                        ) : (
-                          <p className="text-[10px] text-amber-600 dark:text-amber-400 flex items-center gap-1 font-medium">
-                            <AlertTriangle className="size-3 shrink-0" />
-                            {warningReason}
-                          </p>
-                        )}
-                        {isUnderpowered ? (
-                          <Link to="/plans" search={{ tab: "paas" }} className="w-full">
-                            <Button
-                              size="sm"
-                              className="w-full rounded-xl text-xs font-bold gap-1.5 bg-amber-600 hover:bg-amber-700 text-white"
-                            >
-                              <Sparkles className="size-3.5" />
-                              Fazer Upgrade do Plano
-                            </Button>
-                          </Link>
-                        ) : (
-                          <Button
-                            size="sm"
-                            disabled={applyTemplateMutation.isPending}
-                            onClick={() => applyTemplateMutation.mutate(tpl)}
-                            className="w-full rounded-xl text-xs font-bold gap-1.5 bg-primary hover:bg-primary/90"
-                          >
-                            <Zap className="size-3.5" />
-                            {applyTemplateMutation.isPending ? "Iniciando..." : "Instalar Neste App"}
-                          </Button>
-                        )}
-                      </div>
-                    </Card>
-                  );
-                })}
-            </div>
-          </DialogContent>
-        </Dialog>
+        <AppTemplateCatalogModal
+          open={isTemplateModalOpen}
+          onOpenChange={setIsTemplateModalOpen}
+          app={app}
+          applyTemplateMutation={applyTemplateMutation}
+        />
 
         {/* Modal de Deploy em Tempo Real & Live Terminal */}
-        <Dialog open={isDeployModalOpen} onOpenChange={setIsDeployModalOpen}>
-          <DialogContent className="rounded-3xl max-w-3xl max-h-[90vh] flex flex-col p-0 overflow-hidden bg-zinc-950 text-white border-zinc-800">
-            <DialogHeader className="p-6 pb-4 border-b border-zinc-800 bg-zinc-900/50">
-              <div className="flex items-center justify-between">
-                <div className="space-y-1">
-                  <div className="flex items-center gap-2">
-                    <DialogTitle className="text-lg font-bold text-white flex items-center gap-2">
-                      {deploymentStatus === "finished" ? (
-                        <CheckCircle2 className="h-5 w-5 text-emerald-500" />
-                      ) : deploymentStatus === "failed" ? (
-                        <XCircle className="h-5 w-5 text-rose-500" />
-                      ) : (
-                        <Loader2 className="h-5 w-5 text-amber-500 animate-spin" />
-                      )}
-                      Deploy em Andamento: {deployAppTitle || app.name}
-                    </DialogTitle>
-                  </div>
-                  <DialogDescription className="text-xs text-zinc-400">
-                    Acompanhe o build e a publicação do seu container em tempo real no cluster DK1.
-                  </DialogDescription>
-                </div>
-                <div>
-                  {deploymentStatus === "finished" ? (
-                    <Badge className="bg-emerald-500/20 text-emerald-400 border-emerald-500/40">Online 24/7</Badge>
-                  ) : deploymentStatus === "failed" ? (
-                    <Badge className="bg-rose-500/20 text-rose-400 border-rose-500/40">Falha no Build</Badge>
-                  ) : (
-                    <Badge className="bg-amber-500/20 text-amber-400 border-amber-500/40 animate-pulse">Compilando...</Badge>
-                  )}
-                </div>
-              </div>
-
-              {/* Stepper de Fases do Deploy */}
-              <div className="grid grid-cols-4 gap-2 mt-4 pt-3 border-t border-zinc-800 text-[11px]">
-                <div className={`p-2 rounded-xl border flex flex-col gap-1 ${deployStep >= 1 ? "border-emerald-500/50 bg-emerald-500/10 text-emerald-400" : "border-zinc-800 text-zinc-500"}`}>
-                  <span className="font-bold flex items-center gap-1">
-                    {deployStep > 1 ? <Check className="h-3 w-3" /> : "1."} Recursos
-                  </span>
-                  <span className="text-[10px] opacity-80">{app.memory_limit}MB RAM</span>
-                </div>
-                <div className={`p-2 rounded-xl border flex flex-col gap-1 ${deployStep >= 2 ? "border-emerald-500/50 bg-emerald-500/10 text-emerald-400" : "border-zinc-800 text-zinc-500"}`}>
-                  <span className="font-bold flex items-center gap-1">
-                    {deployStep > 2 ? <Check className="h-3 w-3" /> : "2."} Repositório
-                  </span>
-                  <span className="text-[10px] opacity-80">Git / ZIP</span>
-                </div>
-                <div className={`p-2 rounded-xl border flex flex-col gap-1 ${deployStep >= 3 ? "border-emerald-500/50 bg-emerald-500/10 text-emerald-400" : "border-zinc-800 text-zinc-500"}`}>
-                  <span className="font-bold flex items-center gap-1">
-                    {deployStep > 3 ? <Check className="h-3 w-3" /> : "3."} Build Docker
-                  </span>
-                  <span className="text-[10px] opacity-80">Compilação</span>
-                </div>
-                <div className={`p-2 rounded-xl border flex flex-col gap-1 ${deployStep >= 4 ? "border-emerald-500/50 bg-emerald-500/10 text-emerald-400" : "border-zinc-800 text-zinc-500"}`}>
-                  <span className="font-bold flex items-center gap-1">
-                    {deployStep >= 4 ? <Check className="h-3 w-3" /> : "4."} SSL / Online
-                  </span>
-                  <span className="text-[10px] opacity-80">Let's Encrypt</span>
-                </div>
-              </div>
-            </DialogHeader>
-
-            {/* Terminal de Logs do Deploy */}
-            <div className="flex-1 bg-black p-4 font-mono text-xs overflow-y-auto max-h-[360px] space-y-1">
-              {deploymentLogs.length === 0 && (
-                <div className="text-zinc-500 flex items-center gap-2">
-                  <Loader2 className="h-3.5 w-3.5 animate-spin" /> Conectando ao daemon de build do cluster...
-                </div>
-              )}
-              {deploymentLogs.map((log, index) => (
-                <div 
-                  key={index} 
-                  className={`leading-relaxed whitespace-pre-wrap ${log.type === "stderr" ? "text-rose-400" : "text-emerald-400"}`}
-                >
-                  {log.output}
-                </div>
-              ))}
-              <div ref={terminalLogsEndRef} />
-            </div>
-
-            {/* Footer com Ações */}
-            <div className="p-4 border-t border-zinc-800 bg-zinc-900/50 flex items-center justify-between">
-              <div className="text-xs text-zinc-400">
-                {deploymentStatus === "finished" ? (
-                  <span className="text-emerald-400 font-semibold flex items-center gap-1.5">
-                    <CheckCircle2 className="h-4 w-4" /> Container pronto e respondendo requisições!
-                  </span>
-                ) : deploymentStatus === "failed" ? (
-                  <span className="text-rose-400 font-semibold flex items-center gap-1.5">
-                    <XCircle className="h-4 w-4" /> Build interrompido com erros.
-                  </span>
-                ) : (
-                  <span className="text-zinc-400 flex items-center gap-1.5">
-                    <Loader2 className="h-3.5 w-3.5 animate-spin text-amber-500" /> Compilando dependências e iniciando processo...
-                  </span>
-                )}
-              </div>
-
-              <div className="flex gap-2">
-                {deploymentStatus === "finished" && safeOnlineUrl && (
-                  <Button asChild size="sm" className="rounded-xl font-bold bg-emerald-600 hover:bg-emerald-700 text-white gap-1.5">
-                    <a href={safeOnlineUrl} target="_blank" rel="noreferrer">
-                      <ExternalLink className="h-3.5 w-3.5" /> Acessar Aplicação Online
-                    </a>
-                  </Button>
-                )}
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  onClick={() => setIsDeployModalOpen(false)}
-                  className="rounded-xl border-zinc-700 text-zinc-300 hover:bg-zinc-800"
-                >
-                  {deploymentStatus === "finished" ? "Concluir" : "Fechar Modal (Manter em 2º plano)"}
-                </Button>
-              </div>
-            </div>
-          </DialogContent>
-        </Dialog>
+        <AppLiveDeployModal
+          open={isDeployModalOpen}
+          onOpenChange={setIsDeployModalOpen}
+          deployAppTitle={deployAppTitle}
+          appName={app.name}
+          deploymentStatus={deploymentStatus || "idle"}
+          deployStep={deployStep}
+          memoryLimit={app.memory_limit}
+          deploymentLogs={deploymentLogs as any}
+          terminalLogsEndRef={terminalLogsEndRef}
+          safeOnlineUrl={safeOnlineUrl}
+        />
 
         {/* Modal de Confirmação para Reset Total / Exclusão do Serviço e Limpeza do Container */}
         <AlertDialog open={isStopAppConfirmOpen} onOpenChange={setIsStopAppConfirmOpen}>
