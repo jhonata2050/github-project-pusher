@@ -190,6 +190,96 @@ describe("Lei da Preservação de Fachadas (Facade Integrity Tests)", () => {
     expect(typeof overview.AppConnectionEndpointsCard).toBe("function");
     expect(typeof overview.AppInfrastructureInfoCard).toBe("function");
   });
+
+  it("UptimeMonitoringSection e submódulos de uptime devem calcular métricas e eventos sem regressão", async () => {
+    const {
+      UptimeMonitoringSection,
+      buildRealResourceTimeline,
+    } = await import("../../src/components/apps/UptimeMonitoringSection");
+    expect(typeof UptimeMonitoringSection).toBe("function");
+    expect(typeof buildRealResourceTimeline).toBe("function");
+
+    const uptime = await import("../../src/components/apps/uptime");
+    expect(typeof uptime.buildRealResourceTimeline).toBe("function");
+    expect(typeof uptime.computeResourceSummary).toBe("function");
+    expect(typeof uptime.extractContainerEvents).toBe("function");
+    expect(typeof uptime.UptimeChart).toBe("function");
+    expect(typeof uptime.UptimeEventList).toBe("function");
+
+    // Teste de buildRealResourceTimeline para período de 1h
+    const points1h = uptime.buildRealResourceTimeline(
+      "1h",
+      15, // currentCpu
+      1024, // totalRam
+      256, // currentRamMb
+      10, // totalDisk
+      2.5, // currentDiskGb
+      "2.5 GB", // usedDiskFormatted
+      true, // isRunning
+      3600, // uptimeSeconds (1h)
+      new Date(Date.now() - 3600 * 1000).toISOString(),
+      [
+        {
+          timestamp: new Date(Date.now() - 10 * 60 * 1000).toISOString(),
+          cpuPercent: 45,
+          ramMb: 300,
+          ramPercent: 29,
+          diskGb: 2.5,
+          diskPercent: 25,
+          isOnline: true,
+        },
+      ]
+    );
+
+    expect(points1h.length).toBe(30);
+    const lastPoint = points1h[points1h.length - 1];
+    expect(lastPoint.isOnline).toBe(true);
+    expect(lastPoint.cpuPercent).toBe(15);
+    expect(lastPoint.ramMb).toBe(256);
+
+    // Teste de computeResourceSummary
+    const summary = uptime.computeResourceSummary(
+      points1h,
+      2.5,
+      1024,
+      10,
+      true,
+      25,
+      [{ timestamp: new Date().toISOString(), cpuPercent: 88, ramMb: 300, ramPercent: 29, diskGb: 2.5, diskPercent: 25 }]
+    );
+    expect(summary.maxCpu).toBeGreaterThanOrEqual(88);
+    expect(summary.avgCpu).toBeGreaterThan(0);
+    expect(summary.diskGb).toBe(2.5);
+
+    // Teste de extractContainerEvents
+    const events = uptime.extractContainerEvents({
+      createdAt: new Date(Date.now() - 7200 * 1000).toISOString(),
+      updatedAt: new Date(Date.now() - 3600 * 1000).toISOString(),
+      isRunning: true,
+      uptimeSeconds: 3600,
+      uptimeFormatted: "1 hora",
+      telemetryHistory: [
+        {
+          timestamp: new Date(Date.now() - 15 * 60 * 1000).toISOString(),
+          cpuPercent: 95,
+          ramMb: 850,
+          ramPercent: 83,
+          diskGb: 2.5,
+          diskBytes: 250 * 1024 * 1024,
+          diskPercent: 25,
+          isOnline: true,
+        },
+      ],
+    });
+
+    expect(events.length).toBeGreaterThanOrEqual(3);
+    const eventTitles = events.map(e => e.title);
+    expect(eventTitles.some(t => t.includes("Provisionamento"))).toBe(true);
+    expect(eventTitles.some(t => t.includes("Inicialização"))).toBe(true);
+    expect(eventTitles.some(t => t.includes("Pico de Processamento"))).toBe(true);
+    expect(eventTitles.some(t => t.includes("Consumo Elevado de Memória"))).toBe(true);
+    expect(eventTitles.some(t => t.includes("Container Ativo"))).toBe(true);
+  });
 });
 
 describe("Motor Caddy & Hardening de Segurança OWASP", () => {
