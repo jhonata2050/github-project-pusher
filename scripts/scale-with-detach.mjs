@@ -1,0 +1,73 @@
+process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
+import fs from "fs";
+import path from "path";
+import { fileURLToPath } from "url";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const rootDir = path.resolve(__dirname, '..');
+
+function loadEnv() {
+  const envPath = path.join(rootDir, '.env');
+  if (fs.existsSync(envPath)) {
+    const content = fs.readFileSync(envPath, 'utf-8');
+    for (const line of content.split('\n')) {
+      const trimmed = line.trim();
+      if (trimmed && !trimmed.startsWith('#')) {
+        const eqIdx = trimmed.indexOf('=');
+        if (eqIdx !== -1) {
+          const key = trimmed.slice(0, eqIdx).trim();
+          let val = trimmed.slice(eqIdx + 1).trim();
+          if ((val.startsWith('"') && val.endsWith('"')) || (val.startsWith("'") && val.endsWith("'"))) {
+            val = val.slice(1, -1);
+          }
+          if (!process.env[key]) process.env[key] = val;
+        }
+      }
+    }
+  }
+}
+loadEnv();
+
+if (!process.env.SUPABASE_URL && process.env.VITE_SUPABASE_URL) {
+  process.env.SUPABASE_URL = process.env.VITE_SUPABASE_URL;
+}
+if (!process.env.SUPABASE_SERVICE_ROLE_KEY && process.env.SUPABASE_SECRET_KEY) {
+  process.env.SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SECRET_KEY;
+}
+
+const { getActiveClusterServer } = await import("../src/lib/cloud-apps.server.ts");
+const { SshConnectionManager } = await import("../src/lib/ssh-connection-manager.server.ts");
+
+async function scaleWithDetach() {
+  const server = await getActiveClusterServer();
+
+  console.log("=== 1. ESCALANDO SERVIÇOS COM --DETACH ===");
+  const svcs = ["app_1faab31027e9_app", "app_1faab31027e9_dashboard", "app_1faab31027e9_db"];
+  for (const s of svcs) {
+    const res = await SshConnectionManager.execCommand(server, `docker service scale --detach ${s}=0`, { timeoutMs: 10000 });
+    console.log(`Scale ${s}=0:`, res.out?.trim() || "", res.code);
+  }
+
+  console.log("\n=== 2. PRUNE DE CONTAINERS E INGEST ===");
+  await SshConnectionManager.execCommand(server, "docker container prune -f", { timeoutMs: 20000 });
+  await SshConnectionManager.execCommand(server, "rm -rf /var/lib/containerd/io.containerd.content.v1.content/ingest/*", { timeoutMs: 15000 });
+
+  console.log("\n=== 3. ESPAÇO DISPONÍVEL (df -h /) ===");
+  const df = await SshConnectionManager.execCommand(server, "df -h /", { timeoutMs: 10000 });
+  console.log(df.out.trim());
+
+  console.log("\n=== 4. FORÇAR START DO POSTGRES (app_48f9566be7a07925_db) ===");
+  await SshConnectionManager.execCommand(server, "docker service update --detach --force app_48f9566be7a07925_db", { timeoutMs: 10000 });
+
+  console.log("\nAguardando 8 segundos...");
+  await new Promise(r => setTimeout(r, 8000));
+
+  console.log("\n=== 5. STATUS GERAL DOS SERVIÇOS (docker service ls) ===");
+  const svcList = await SshConnectionManager.execCommand(server, "docker service ls", { timeoutMs: 15000 });
+  console.log(svcList.out.trim());
+
+  await SshConnectionManager.closeAll();
+}
+
+scaleWithDetach().catch(console.error);

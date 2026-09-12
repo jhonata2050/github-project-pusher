@@ -34,6 +34,8 @@ import {
   Search,
   Share2,
   Box,
+  Sun,
+  Moon,
 } from "lucide-react";
 
 import { useState, useEffect, type ReactNode } from "react";
@@ -49,6 +51,8 @@ import {
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { useAuth, useIsStaff, useProfile } from "@/hooks/use-auth";
 import { useBranding } from "@/hooks/use-branding";
+import { useTheme } from "@/hooks/use-theme";
+import { ThemeToggle } from "@/components/app/ThemeToggle";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 import { logSessionEvent } from "@/lib/audit.functions";
@@ -92,7 +96,6 @@ const ADMIN_SECTIONS: NavSection[] = [
     icon: Cog,
     links: [
       { label: "Servidores DirectAdmin", to: "/admin/servers", icon: Server },
-      { label: "Servidores Coolify (PaaS)", to: "/admin/coolify", icon: Box },
       { label: "Financeiro e Gateways", to: "/admin/finance", icon: Wallet },
       { label: "Gestão de Afiliados", to: "/admin/affiliates", icon: Share2 },
       { label: "E-mails e SMTP", to: "/admin/emails", icon: Mail },
@@ -111,9 +114,9 @@ const CLIENT_SECTIONS: NavSection[] = [
     label: "Meus serviços",
     icon: Server,
     links: [
-      { label: "Serviços", to: "/services", icon: LayoutPanelLeft },
-      { label: "Servidores VPS", to: "/vps", icon: Server },
-      { label: "Aplicações & Bots", to: "/apps", icon: Box },
+      { label: "DirectAdmin", to: "/services", icon: Globe },
+      { label: "Containers", to: "/apps", icon: Box },
+      { label: "VPS", to: "/vps", icon: Monitor },
       { label: "Meus domínios", to: "/domains", icon: Globe },
       { label: "Registrar domínio", to: "/domains/search", icon: Search },
     ],
@@ -182,18 +185,153 @@ function SidebarSection({ section, pathname }: { section: NavSection; pathname: 
   );
 }
 
+function NotificationMenu({
+  notifications,
+  unreadCount,
+  hasOverdue,
+  markAsRead,
+  align = "end",
+  side = "bottom",
+}: {
+  notifications: any[] | undefined;
+  unreadCount: number;
+  hasOverdue: boolean;
+  markAsRead: (id: string) => Promise<void>;
+  align?: "start" | "end" | "center";
+  side?: "bottom" | "right" | "top" | "left";
+}) {
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button
+          variant="ghost"
+          size="icon"
+          className="size-9 rounded-full text-muted-foreground relative hover:bg-brand/10 hover:text-brand transition-all flex items-center justify-center shrink-0"
+          title="Notificações"
+        >
+          <Bell className="size-5 text-sidebar-foreground" />
+          {(hasOverdue || unreadCount > 0) && (
+            <span
+              className="absolute top-1.5 right-1.5 size-2.5 bg-destructive rounded-full border-2 border-background animate-bounce"
+              style={{ boxShadow: "0 0 8px oklch(0.6 0.2 25 / 0.6)" }}
+            />
+          )}
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align={align} side={side} sideOffset={8} className="w-80 p-0 overflow-hidden rounded-2xl z-50">
+        <div className="p-4 border-b border-border bg-muted/30 flex items-center justify-between">
+          <h3 className="font-semibold text-sm">Notificações</h3>
+          {unreadCount > 0 && (
+            <span className="text-[10px] font-bold bg-brand/20 text-brand px-2 py-0.5 rounded-full">
+              {unreadCount} nova{unreadCount > 1 ? "s" : ""}
+            </span>
+          )}
+        </div>
+        <div className="max-h-80 overflow-y-auto">
+          {notifications && notifications.length > 0 ? (
+            notifications.map((n) => (
+              <DropdownMenuItem
+                key={n.id as string}
+                asChild
+                className={cn(
+                  "p-4 border-b border-border last:border-0 cursor-pointer focus:bg-accent",
+                  !n.read && "bg-brand/5",
+                )}
+                onClick={() => markAsRead(n.id as string)}
+              >
+                {n.link ? (
+                  <Link to={n.link} className="block w-full">
+                    <div className="flex justify-between items-start gap-2">
+                      <p
+                        className={cn(
+                          "text-sm",
+                          !n.read ? "font-bold text-foreground" : "text-muted-foreground",
+                        )}
+                      >
+                        {n.title}
+                      </p>
+                      {!n.read && <div className="size-2 bg-brand rounded-full shrink-0 mt-1" />}
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{n.message}</p>
+                    <p className="text-[10px] text-muted-foreground mt-2">
+                      {new Date(n.created_at || "").toLocaleString("pt-BR")}
+                    </p>
+                  </Link>
+                ) : (
+                  <div className="w-full">
+                    <div className="flex justify-between items-start gap-2">
+                      <p
+                        className={cn(
+                          "text-sm",
+                          !n.read ? "font-bold text-foreground" : "text-muted-foreground",
+                        )}
+                      >
+                        {n.title}
+                      </p>
+                      {!n.read && <div className="size-2 bg-brand rounded-full shrink-0 mt-1" />}
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-1">{n.message}</p>
+                    <p className="text-[10px] text-muted-foreground mt-2">
+                      {new Date(n.created_at || "").toLocaleString("pt-BR")}
+                    </p>
+                  </div>
+                )}
+              </DropdownMenuItem>
+            ))
+          ) : (
+            <div className="p-8 text-center">
+              <Bell className="size-8 text-muted-foreground/20 mx-auto mb-2" />
+              <p className="text-sm text-muted-foreground">Nenhuma notificação por aqui.</p>
+            </div>
+          )}
+        </div>
+        {hasOverdue && (
+          <div className="p-3 bg-destructive/10 border-t border-destructive/20">
+            <p className="text-[11px] text-destructive font-medium text-center">
+              Você possui faturas pendentes!
+            </p>
+          </div>
+        )}
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
+
 export function AppShell({
   breadcrumb,
+  breadcrumbs,
   children,
   area,
+  containerClassName,
+  cardClassName,
 }: {
-  breadcrumb: ReactNode;
+  breadcrumb?: ReactNode;
+  breadcrumbs?: Array<{ label: string; href?: string }>;
   children: ReactNode;
   /** Força a área do layout. Por padrão é inferido pelo papel do usuário. */
   area?: "admin" | "client";
+  containerClassName?: string;
+  cardClassName?: string;
 }) {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const navigate = useNavigate();
+
+  const renderedBreadcrumb = breadcrumb || (breadcrumbs ? (
+    <div className="flex items-center gap-2">
+      {breadcrumbs.map((b, idx) => (
+        <span key={idx} className="flex items-center gap-2">
+          {idx > 0 && <span className="opacity-40">/</span>}
+          {b.href ? (
+            <Link to={b.href} className="hover:text-foreground transition-colors">
+              {b.label}
+            </Link>
+          ) : (
+            <span className="font-medium text-foreground">{b.label}</span>
+          )}
+        </span>
+      ))}
+    </div>
+  ) : null);
   const { isStaff, isLoading: isStaffLoading } = useIsStaff();
   const { user, impersonatedClientId, setImpersonatedClientId } = useAuth();
   const { data: profile, isLoading: isProfileLoading } = useProfile();
@@ -210,24 +348,17 @@ export function AppShell({
   }, [user, profile, pathname, navigate, isStaff, isProfileLoading, isStaffLoading]);
 
   const brandingData = useBranding();
+  const { resolvedTheme, toggleTheme } = useTheme();
   const isAdminArea = area ? area === "admin" : (user ? (isStaff && pathname.startsWith("/admin")) : false);
   
-  // Use default branding for admin area, otherwise use dynamic branding
-  const branding = (isAdminArea && !pathname.startsWith('/admin/branding')) ? {
-    ...brandingData,
-    logo_url: brandingData.logo_url || null,
-    app_name: brandingData.app_name || "Eqsam",
-    primary_color: "oklch(0.88 0.19 128)",
-    brand_color: "oklch(0.72 0.19 148)",
-    favicon_url: brandingData.favicon_url || null,
-  } : brandingData;
+  const branding = brandingData;
 
   const queryClient = useQueryClient();
 
   const [hideBanner, setHideBanner] = useState(false);
 
 
-  const isCheckout = pathname.startsWith("/checkout/");
+  const isCheckout = pathname.startsWith("/checkout");
   const isGuest = !user;
   const hideSidebar = isCheckout && isGuest;
 
@@ -236,39 +367,37 @@ export function AppShell({
 
   const homeTo = isAdminArea ? "/admin" : "/dashboard";
 
-  const effectiveUserId = impersonatedClientId || user?.id;
-
   const { data: overdueInvoices } = useQuery({
-    queryKey: ["overdue-invoices", effectiveUserId],
+    queryKey: ["overdue-invoices", user?.id],
     queryFn: async () => {
-      if (!effectiveUserId) return [];
+      if (!user) return [];
       const { data } = await supabase
         .from("invoices")
         .select("id")
-        .eq("user_id", effectiveUserId)
+        .eq("user_id", user.id)
         .eq("status", "pending")
         .lt("due_date", new Date().toISOString());
       return data || [];
     },
-    enabled: !!effectiveUserId && !isAdminArea,
+    enabled: !!user && !isAdminArea,
   });
 
   const hasOverdue = overdueInvoices && overdueInvoices.length > 0;
 
   const { data: notifications, refetch: refetchNotifications } = useQuery({
-    queryKey: ["notifications", effectiveUserId],
+    queryKey: ["notifications", user?.id],
     queryFn: async () => {
-      if (!effectiveUserId) return [];
+      if (!user) return [];
       const { data, error } = await supabase
         .from("notifications")
         .select("*")
-        .eq("user_id", effectiveUserId)
+        .eq("user_id", user.id)
         .order("created_at", { ascending: false })
         .limit(10);
       if (error) throw error;
       return data || [];
     },
-    enabled: !!effectiveUserId,
+    enabled: !!user,
   });
 
   const unreadCount = notifications?.filter(n => !n.read).length || 0;
@@ -356,191 +485,151 @@ export function AppShell({
       )}
       {/* Mobile Header */}
       <header className="sticky top-0 z-50 flex h-16 w-full shrink-0 items-center justify-between border-b border-border bg-card px-4 lg:hidden pointer-events-auto">
-
-          <div className="flex items-center gap-2">
-            <Sheet>
-              <SheetTrigger asChild>
-                <Button variant="ghost" size="icon" className="rounded-xl">
-                  <Menu className="size-6" />
-                </Button>
-              </SheetTrigger>
-              <SheetContent side="left" className="w-72 p-0 border-none rounded-r-3xl overflow-hidden">
-                <div className="flex h-full flex-col bg-sidebar px-3 py-4">
-                  <div className="flex items-center justify-between px-2 pb-4">
-                    <Link
-                      to="/"
+        <div className="flex items-center gap-2">
+          <Sheet>
+            <SheetTrigger asChild>
+              <Button variant="ghost" size="icon" className="rounded-xl">
+                <Menu className="size-6" />
+              </Button>
+            </SheetTrigger>
+            <SheetContent side="left" className="w-72 p-0 border-none rounded-r-3xl overflow-hidden">
+              <div className="flex h-full flex-col bg-sidebar px-3 py-4">
+                <div className="flex items-center justify-between px-2 pb-4">
+                  <Link
+                    to={homeTo}
+                    className="flex min-w-0 items-center group transition-opacity hover:opacity-90 py-1"
+                  >
+                    <img
+                      src={branding.logo_url || "/images/logo-branco.webp"}
+                      alt={branding.app_name}
                       className={cn(
-                        "flex items-center h-12",
-                        branding.logo_url
-                          ? "w-full justify-start rounded-2xl px-2"
-                          : "size-8 justify-center rounded-full bg-brand",
+                        "h-8 w-auto max-w-[150px] object-contain",
+                        (!branding.logo_url || branding.logo_url.includes("logo-branco") || branding.logo_url === "/images/logo.webp") && "invert dark:invert-0"
                       )}
-                    >
-                      {branding.logo_url ? (
-                        <img
-                          src={branding.logo_url}
-                          alt={branding.app_name}
-                          className="h-full w-auto max-w-full object-contain"
-                        />
-                      ) : (
-                        <span className="text-sm font-bold text-brand-foreground">{branding.app_name.charAt(0)}</span>
-                      )}
-                    </Link>
+                    />
+                  </Link>
+                  <div className="flex items-center gap-1">
+                    <ThemeToggle />
+                    <NotificationMenu
+                      notifications={notifications}
+                      unreadCount={unreadCount}
+                      hasOverdue={Boolean(hasOverdue)}
+                      markAsRead={markAsRead}
+                      align="start"
+                      side="bottom"
+                    />
                   </div>
-                  <nav className="flex-1 space-y-1 overflow-y-auto">
+                </div>
+
+                {!isAdminArea && profile && (
+                  <div className="border-y border-sidebar-border py-2.5 my-2">
+                    <div className="px-2">
+                      <p className="text-xs font-semibold text-sidebar-foreground truncate">
+                        {profile?.company_name ?? profile?.full_name ?? "Minha conta"}
+                      </p>
+                      <p className="text-[11px] text-muted-foreground truncate">{profile?.email}</p>
+                      <Link to="/wallet" className="mt-2 flex items-center justify-between bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/20 px-2.5 py-1.5 rounded-xl transition-colors">
+                        <div className="flex items-center gap-1.5">
+                          <Wallet className="size-3.5 text-emerald-600" />
+                          <span className="text-[11px] font-semibold text-muted-foreground">Saldo em conta:</span>
+                        </div>
+                        <span className="text-xs font-extrabold text-emerald-600">R$ {Number(profile?.account_balance || 0).toFixed(2)}</span>
+                      </Link>
+                    </div>
+                  </div>
+                )}
+
+                <nav className="flex-1 space-y-1 overflow-y-auto">
+                  <Link
+                    to={homeTo}
+                    className={cn(
+                      "flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition-colors",
+                      pathname === homeTo
+                        ? "bg-primary font-medium text-primary-foreground"
+                        : "text-sidebar-foreground hover:bg-sidebar-accent",
+                    )}
+                  >
+                    <Gauge className="size-4" />
+                    {isAdminArea ? "Painel administrativo" : "Painel"}
+                  </Link>
+                  {!isAdminArea && (
                     <Link
-                      to={homeTo}
+                      to="/checkout"
                       className={cn(
                         "flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition-colors",
-                        pathname === homeTo
+                        pathname === "/checkout" || pathname === "/plans"
                           ? "bg-primary font-medium text-primary-foreground"
                           : "text-sidebar-foreground hover:bg-sidebar-accent",
                       )}
                     >
-                      <Gauge className="size-4" />
-                      {isAdminArea ? "Painel administrativo" : "Painel"}
+                      <Store className="size-4" />
+                      Contratar planos
                     </Link>
-                    {!isAdminArea && (
-                      <Link
-                        to="/plans"
-                        className={cn(
-                          "flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition-colors",
-                          pathname === "/plans"
-                            ? "bg-primary font-medium text-primary-foreground"
-                            : "text-sidebar-foreground hover:bg-sidebar-accent",
-                        )}
-                      >
-                        <Store className="size-4" />
-                        Contratar planos
-                      </Link>
-                    )}
-                    {sections.map((section) => (
-                      <SidebarSection key={section.label} section={section} pathname={pathname} />
-                    ))}
-                  </nav>
-                  <div className="mt-auto space-y-1 border-t border-sidebar-border pt-3">
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <button
-                          type="button"
-                          className="flex w-full items-center gap-3 rounded-xl px-3 py-2 text-sm text-sidebar-foreground hover:bg-sidebar-accent"
-                        >
-                          <Avatar className="size-7">
-                            <AvatarFallback className="bg-accent text-xs text-accent-foreground">{initials}</AvatarFallback>
-                          </Avatar>
-                          <span className="flex-1 truncate text-left">{name}</span>
-                          <MoreVertical className="size-4 text-muted-foreground" />
-                        </button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="start" className="w-52">
-                        <DropdownMenuItem asChild>
-                          <Link to="/profile">
-                            <UserIcon className="mr-2 size-4" />
-                            Meus dados
-                          </Link>
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={signOut}>
-                          <LogOut className="mr-2 size-4" />
-                          Sair
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </div>
-                </div>
-              </SheetContent>
-            </Sheet>
-            {branding.logo_url ? (
-              <img
-                src={branding.logo_url}
-                alt={branding.app_name}
-                className="h-8 w-auto max-w-[120px] object-contain"
-              />
-            ) : (
-              <span className="text-lg font-semibold">{branding.app_name}</span>
-            )}
-          </div>
-          <div className="flex items-center gap-2">
-            {!isAdminArea && (
-              <Link to="/wallet">
-                <Button variant="outline" size="sm" className="rounded-xl h-8 px-2.5 gap-1.5 border-emerald-500/30 bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500/20 font-bold text-xs">
-                  <Wallet className="size-3.5 text-emerald-600" />
-                  <span>R$ {Number(profile?.account_balance || 0).toFixed(2)}</span>
-                </Button>
-              </Link>
-            )}
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" className="size-11 rounded-full text-muted-foreground relative hover:bg-brand/10 hover:text-brand transition-all flex items-center justify-center">
-                  <Bell className="size-6 text-brand" style={{ filter: 'drop-shadow(0 0 8px oklch(0.72 0.19 148 / 0.5))' }} />
-                  {(hasOverdue || unreadCount > 0) && (
-                    <span 
-                      className="absolute top-2 right-2 size-3 bg-destructive rounded-full border-2 border-background animate-bounce"
-                      style={{ boxShadow: '0 0 10px oklch(0.6 0.2 25 / 0.6)' }}
-                    />
                   )}
-                </Button>
-              </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-80 p-0 overflow-hidden rounded-2xl">
-              <div className="p-4 border-b border-border bg-muted/30">
-                <h3 className="font-semibold text-sm">Notificações</h3>
-              </div>
-              <div className="max-h-80 overflow-y-auto">
-                {notifications && notifications.length > 0 ? (
-                  notifications.map((n) => (
-                    <DropdownMenuItem 
-                      key={n.id as string} 
-                      asChild
-                      className={cn(
-                        "p-4 border-b border-border last:border-0 cursor-pointer focus:bg-accent",
-                        !n.read && "bg-brand/5"
-                      )}
-                      onClick={() => markAsRead(n.id as string)}
-                    >
-                      {n.link ? (
-                        <Link to={n.link} className="block w-full">
-                          <div className="flex justify-between items-start gap-2">
-                            <p className={cn("text-sm", !n.read ? "font-bold text-foreground" : "text-muted-foreground")}>
-                              {n.title}
-                            </p>
-                            {!n.read && <div className="size-2 bg-brand rounded-full shrink-0 mt-1" />}
-                          </div>
-                          <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{n.message}</p>
-                          <p className="text-[10px] text-muted-foreground mt-2">
-                            {new Date(n.created_at || "").toLocaleString("pt-BR")}
-                          </p>
+                  {sections.map((section) => (
+                    <SidebarSection key={section.label} section={section} pathname={pathname} />
+                  ))}
+                </nav>
+                <div className="mt-auto space-y-1 border-t border-sidebar-border pt-3">
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <button
+                        type="button"
+                        className="flex w-full items-center gap-3 rounded-xl px-3 py-2 text-sm text-sidebar-foreground hover:bg-sidebar-accent"
+                      >
+                        <Avatar className="size-7">
+                          <AvatarFallback className="bg-accent text-xs text-accent-foreground">{initials}</AvatarFallback>
+                        </Avatar>
+                        <span className="flex-1 truncate text-left">{name}</span>
+                        <MoreVertical className="size-4 text-muted-foreground" />
+                      </button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="start" className="w-52">
+                      <DropdownMenuItem asChild>
+                        <Link to="/profile">
+                          <UserIcon className="mr-2 size-4" />
+                          Meus dados
                         </Link>
-                      ) : (
-                        <div className="w-full">
-                          <div className="flex justify-between items-start gap-2">
-                            <p className={cn("text-sm", !n.read ? "font-bold text-foreground" : "text-muted-foreground")}>
-                              {n.title}
-                            </p>
-                            {!n.read && <div className="size-2 bg-brand rounded-full shrink-0 mt-1" />}
-                          </div>
-                          <p className="text-xs text-muted-foreground mt-1">{n.message}</p>
-                          <p className="text-[10px] text-muted-foreground mt-2">
-                            {new Date(n.created_at || "").toLocaleString("pt-BR")}
-                          </p>
-                        </div>
-                      )}
-                    </DropdownMenuItem>
-                  ))
-                ) : (
-                  <div className="p-8 text-center">
-                    <Bell className="size-8 text-muted-foreground/20 mx-auto mb-2" />
-                    <p className="text-sm text-muted-foreground">Nenhuma notificação por aqui.</p>
-                  </div>
-                )}
-              </div>
-              {hasOverdue && (
-                <div className="p-3 bg-destructive/10 border-t border-destructive/20">
-                  <p className="text-[11px] text-destructive font-medium text-center">
-                    Você possui faturas pendentes!
-                  </p>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={toggleTheme} className="cursor-pointer">
+                        {resolvedTheme === "dark" ? (
+                          <Sun className="mr-2 size-4 text-amber-400" />
+                        ) : (
+                          <Moon className="mr-2 size-4 text-muted-foreground" />
+                        )}
+                        <span>Tema {resolvedTheme === "dark" ? "Claro" : "Escuro"}</span>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={signOut}>
+                        <LogOut className="mr-2 size-4" />
+                        Sair
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 </div>
+              </div>
+            </SheetContent>
+          </Sheet>
+          <Link to={homeTo} className="flex items-center">
+            <img
+              src={branding.logo_url || "/images/logo-branco.webp"}
+              alt={branding.app_name}
+              className={cn(
+                "h-7 w-auto max-w-[130px] object-contain",
+                (!branding.logo_url || branding.logo_url.includes("logo-branco") || branding.logo_url === "/images/logo.webp") && "invert dark:invert-0"
               )}
-            </DropdownMenuContent>
-          </DropdownMenu>
+            />
+          </Link>
+        </div>
+        <div className="flex items-center gap-1">
+          <ThemeToggle />
+          <NotificationMenu
+            notifications={notifications}
+            unreadCount={unreadCount}
+            hasOverdue={Boolean(hasOverdue)}
+            markAsRead={markAsRead}
+            align="end"
+            side="bottom"
+          />
         </div>
       </header>
 
@@ -550,24 +639,28 @@ export function AppShell({
           <div className="flex items-center justify-between px-2 pb-4">
             <Link
               to={homeTo}
-              className={cn(
-                "flex min-w-0 items-center h-12 w-full",
-                branding.logo_url
-                  ? "justify-start rounded-2xl px-2"
-                  : "size-8 justify-center overflow-hidden rounded-full bg-brand",
-              )}
+              className="flex min-w-0 items-center group transition-opacity hover:opacity-90 py-1"
             >
-              {branding.logo_url ? (
-                <img
-                  src={branding.logo_url}
-                  alt={branding.app_name}
-                  className="h-full w-auto max-w-full object-contain"
-                />
-              ) : (
-                <span className="text-sm font-bold text-brand-foreground">{branding.app_name.charAt(0)}</span>
-              )}
+              <img
+                src={branding.logo_url || "/images/logo-branco.webp"}
+                alt={branding.app_name}
+                className={cn(
+                  "h-8 w-auto max-w-[150px] object-contain",
+                  (!branding.logo_url || branding.logo_url.includes("logo-branco") || branding.logo_url === "/images/logo.webp") && "invert dark:invert-0"
+                )}
+              />
             </Link>
-            <PanelsTopLeft className="size-4 text-muted-foreground shrink-0" />
+            <div className="flex items-center gap-1">
+              <ThemeToggle />
+              <NotificationMenu
+                notifications={notifications}
+                unreadCount={unreadCount}
+                hasOverdue={Boolean(hasOverdue)}
+                markAsRead={markAsRead}
+                align="start"
+                side="right"
+              />
+            </div>
           </div>
 
           <div className="border-y border-sidebar-border py-3">
@@ -610,10 +703,10 @@ export function AppShell({
             </Link>
             {!isAdminArea && (
               <Link
-                to="/plans"
+                to="/checkout"
                 className={cn(
                   "flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition-colors",
-                  pathname === "/plans"
+                  pathname === "/checkout" || pathname === "/plans"
                     ? "bg-primary font-medium text-primary-foreground"
                     : "text-sidebar-foreground hover:bg-sidebar-accent",
                 )}
@@ -668,18 +761,36 @@ export function AppShell({
                         Meus dados
                       </Link>
                     </DropdownMenuItem>
+                    <DropdownMenuItem onClick={toggleTheme} className="cursor-pointer">
+                      {resolvedTheme === "dark" ? (
+                        <Sun className="mr-2 size-4 text-amber-400" />
+                      ) : (
+                        <Moon className="mr-2 size-4 text-muted-foreground" />
+                      )}
+                      <span>Tema {resolvedTheme === "dark" ? "Claro" : "Escuro"}</span>
+                    </DropdownMenuItem>
                     <DropdownMenuItem onClick={signOut}>
                       <LogOutIcon className="mr-2 size-4" />
                       Sair
                     </DropdownMenuItem>
                   </>
                 ) : (
-                  <DropdownMenuItem asChild>
-                    <Link to="/auth">
-                      <UserIcon className="mr-2 size-4" />
-                      Acessar Conta
-                    </Link>
-                  </DropdownMenuItem>
+                  <>
+                    <DropdownMenuItem asChild>
+                      <Link to="/auth">
+                        <UserIcon className="mr-2 size-4" />
+                        Acessar Conta
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={toggleTheme} className="cursor-pointer">
+                      {resolvedTheme === "dark" ? (
+                        <Sun className="mr-2 size-4 text-amber-400" />
+                      ) : (
+                        <Moon className="mr-2 size-4 text-muted-foreground" />
+                      )}
+                      <span>Tema {resolvedTheme === "dark" ? "Claro" : "Escuro"}</span>
+                    </DropdownMenuItem>
+                  </>
                 )}
               </DropdownMenuContent>
             </DropdownMenu>
@@ -687,95 +798,24 @@ export function AppShell({
           </aside>
         )}
 
-        <main className="min-w-0 flex-1 px-3 py-4 lg:px-6 lg:py-6 overflow-y-auto">
-          <header className="hidden items-center justify-between gap-4 pb-4 lg:flex">
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">{breadcrumb}</div>
-            <div className="flex items-center gap-3">
-              {!isAdminArea && (
-                <Link to="/wallet">
-                  <Button variant="outline" size="sm" className="rounded-xl h-9 px-3 gap-2 border-emerald-500/30 bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500/20 font-bold text-xs transition-all shadow-xs">
-                    <Wallet className="size-4 text-emerald-600" />
-                    <span>Saldo: R$ {Number(profile?.account_balance || 0).toFixed(2)}</span>
-                    <span className="text-[10px] text-emerald-600/70 font-normal ml-0.5">• Recarregar</span>
-                  </Button>
-                </Link>
-              )}
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="icon" className="size-11 rounded-full text-muted-foreground relative hover:bg-brand/10 hover:text-brand transition-all flex items-center justify-center">
-                    <Bell className="size-6 text-brand" style={{ filter: 'drop-shadow(0 0 8px oklch(0.72 0.19 148 / 0.5))' }} />
-                    {(hasOverdue || unreadCount > 0) && (
-                      <span 
-                        className="absolute top-2 right-2 size-3 bg-destructive rounded-full border-2 border-background animate-bounce"
-                        style={{ boxShadow: '0 0 10px oklch(0.6 0.2 25 / 0.6)' }}
-                      />
-                    )}
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-80 p-0 overflow-hidden rounded-2xl">
-                  <div className="p-4 border-b border-border bg-muted/30">
-                    <h3 className="font-semibold text-sm">Notificações</h3>
-                  </div>
-                  <div className="max-h-80 overflow-y-auto">
-                    {notifications && notifications.length > 0 ? (
-                      notifications.map((n) => (
-                        <DropdownMenuItem 
-                          key={n.id as string} 
-                          asChild
-                          className={cn(
-                            "p-4 border-b border-border last:border-0 cursor-pointer focus:bg-accent",
-                            !n.read && "bg-brand/5"
-                          )}
-                          onClick={() => markAsRead(n.id as string)}
-                        >
-                          {n.link ? (
-                            <Link to={n.link} className="block w-full">
-                              <div className="flex justify-between items-start gap-2">
-                                <p className={cn("text-sm", !n.read ? "font-bold text-foreground" : "text-muted-foreground")}>
-                                  {n.title}
-                                </p>
-                                {!n.read && <div className="size-2 bg-brand rounded-full shrink-0 mt-1" />}
-                              </div>
-                              <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{n.message}</p>
-                              <p className="text-[10px] text-muted-foreground mt-2">
-                                {new Date(n.created_at || "").toLocaleString("pt-BR")}
-                              </p>
-                            </Link>
-                          ) : (
-                            <div className="w-full">
-                              <div className="flex justify-between items-start gap-2">
-                                <p className={cn("text-sm", !n.read ? "font-bold text-foreground" : "text-muted-foreground")}>
-                                  {n.title}
-                                </p>
-                                {!n.read && <div className="size-2 bg-brand rounded-full shrink-0 mt-1" />}
-                              </div>
-                              <p className="text-xs text-muted-foreground mt-1">{n.message}</p>
-                              <p className="text-[10px] text-muted-foreground mt-2">
-                                {new Date(n.created_at || "").toLocaleString("pt-BR")}
-                              </p>
-                            </div>
-                          )}
-                        </DropdownMenuItem>
-                      ))
-                    ) : (
-                      <div className="p-8 text-center">
-                        <Bell className="size-8 text-muted-foreground/20 mx-auto mb-2" />
-                        <p className="text-sm text-muted-foreground">Nenhuma notificação por aqui.</p>
-                      </div>
-                    )}
-                  </div>
-                  {hasOverdue && (
-                    <div className="p-3 bg-destructive/10 border-t border-destructive/20">
-                      <p className="text-[11px] text-destructive font-medium text-center">
-                        Você possui faturas pendentes!
-                      </p>
-                    </div>
-                  )}
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </div>
-          </header>
-          <div className="rounded-3xl border border-border bg-card p-4 shadow-[var(--shadow-card)] lg:p-6">
+        <main className={cn("min-w-0 flex-1 px-3 py-4 lg:px-6 lg:py-6 overflow-y-auto", containerClassName)}>
+          <div className={cn("rounded-3xl border border-border bg-card p-4 shadow-[var(--shadow-card)] lg:p-6", cardClassName)}>
+            {renderedBreadcrumb && (
+              <header className="flex items-center justify-between gap-4 pb-3 mb-4 border-b border-border/50 text-xs">
+                <div className="flex items-center gap-2 text-muted-foreground">{renderedBreadcrumb}</div>
+                <div className="flex items-center gap-2">
+                  <ThemeToggle />
+                  <NotificationMenu
+                    notifications={notifications}
+                    unreadCount={unreadCount}
+                    hasOverdue={Boolean(hasOverdue)}
+                    markAsRead={markAsRead}
+                    align="end"
+                    side="bottom"
+                  />
+                </div>
+              </header>
+            )}
             {children}
           </div>
         </main>

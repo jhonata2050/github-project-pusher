@@ -86,10 +86,7 @@ export const getTickets = createServerFn({ method: "GET" })
 
     let query = context.supabase
       .from("tickets")
-      .select(`
-        *,
-        profile:profiles(full_name, email)
-      `, { count: 'exact' });
+      .select(`*`, { count: 'exact' });
 
     if (!isAdmin) {
       query = query.eq("user_id", context.userId);
@@ -104,6 +101,21 @@ export const getTickets = createServerFn({ method: "GET" })
       .range(data.offset, data.offset + data.limit - 1);
 
     if (error) throw new Error(error.message);
+
+    if (tickets && tickets.length > 0) {
+      const userIds = Array.from(new Set(tickets.map((t: any) => t.user_id).filter(Boolean)));
+      if (userIds.length > 0) {
+        const { data: profiles } = await context.supabase
+          .from("profiles")
+          .select("id, full_name, email")
+          .in("id", userIds);
+        const pMap = new Map((profiles || []).map((p: any) => [p.id, p]));
+        tickets.forEach((t: any) => {
+          t.profile = pMap.get(t.user_id) || null;
+        });
+      }
+    }
+
     return { tickets: tickets || [], count: count || 0 };
   });
 
@@ -119,10 +131,7 @@ export const getTicketDetails = createServerFn({ method: "GET" })
 
     const { data: ticket, error: ticketError } = await context.supabase
       .from("tickets")
-      .select(`
-        *,
-        profile:profiles(full_name, email)
-      `)
+      .select("*")
       .eq("id", ticketId)
       .single();
 
@@ -133,16 +142,36 @@ export const getTicketDetails = createServerFn({ method: "GET" })
       throw new Error("Acesso negado: Você não possui permissão para acessar este ticket.");
     }
 
+    if (ticket && ticket.user_id) {
+      const { data: profile } = await context.supabase
+        .from("profiles")
+        .select("id, full_name, email")
+        .eq("id", ticket.user_id)
+        .maybeSingle();
+      (ticket as any).profile = profile;
+    }
+
     const { data: messages, error: messagesError } = await context.supabase
       .from("ticket_messages")
-      .select(`
-        *,
-        profile:profiles(full_name)
-      `)
+      .select("*")
       .eq("ticket_id", ticketId)
       .order("created_at", { ascending: true });
 
     if (messagesError) throw new Error(messagesError.message);
+
+    if (messages && messages.length > 0) {
+      const msgUserIds = Array.from(new Set(messages.map((m: any) => m.user_id).filter(Boolean)));
+      if (msgUserIds.length > 0) {
+        const { data: profiles } = await context.supabase
+          .from("profiles")
+          .select("id, full_name")
+          .in("id", msgUserIds);
+        const pMap = new Map((profiles || []).map((p: any) => [p.id, p]));
+        messages.forEach((m: any) => {
+          m.profile = pMap.get(m.user_id) || null;
+        });
+      }
+    }
 
     return { ticket, messages };
   });
@@ -255,8 +284,17 @@ export const replyTicket = createServerFn({ method: "POST" })
         updated_at: new Date().toISOString()
       })
       .eq("id", input.ticketId)
-      .select("subject, user_id, profiles(full_name, email)")
+      .select("subject, user_id")
       .single();
+
+    if (ticket && (ticket as any).user_id) {
+      const { data: p } = await supabaseAdmin
+        .from("profiles")
+        .select("full_name, email")
+        .eq("id", (ticket as any).user_id)
+        .maybeSingle();
+      (ticket as any).profiles = p;
+    }
 
     // Criar notificação no sistema
     if (ticket) {
@@ -359,11 +397,20 @@ export const updateTicketStatus = createServerFn({ method: "POST" })
 
     const { data: ticket, error: tErr } = await context.supabase
       .from("tickets")
-      .select("*, profiles(*)")
+      .select("*")
       .eq("id", input.ticketId)
       .single();
 
     if (tErr || !ticket) throw new Error("Ticket não encontrado");
+
+    if (ticket && ticket.user_id) {
+      const { data: p } = await supabaseAdmin
+        .from("profiles")
+        .select("id, full_name, email, phone")
+        .eq("id", ticket.user_id)
+        .maybeSingle();
+      (ticket as any).profiles = p;
+    }
 
     if (!isAdmin && ticket.user_id !== context.userId) {
       throw new Error("Acesso negado: Você não possui permissão para este ticket.");
@@ -469,6 +516,7 @@ export const createServerDA = createServerFn({ method: "POST" })
     const { data, error } = await context.supabase
       .from("servers")
       .insert({
+        name: input.name,
         hostname: input.hostname,
         ip_address: input.ip_address ?? null,
         api_user: input.api_user,
@@ -497,6 +545,7 @@ export const updateServerDA = createServerFn({ method: "POST" })
   )
   .handler(async ({ data: input, context }) => {
     const patch = {
+      name: input.name,
       hostname: input.hostname,
       ip_address: input.ip_address ?? null,
       api_user: input.api_user,
@@ -557,7 +606,7 @@ export const getAllProducts = createServerFn({ method: "GET" })
 
     const { data, error } = await context.supabase
       .from("products")
-      .select("id, name")
+      .select("id, name, product_type, directadmin_package")
       .order("name");
 
     if (error) {
@@ -806,13 +855,9 @@ export const createProduct = createServerFn({ method: "POST" })
         description: input.description,
         product_type: input.product_type,
         directadmin_package: input.directadmin_package || null,
-        external_id: input.external_id || null,
         is_visible: input.is_visible,
         sort_order: input.sort_order,
         disk_quota_mb: input.disk_quota_mb || null,
-        immediate_purchase: input.immediate_purchase || false,
-        setup_fee: 0,
-        auto_provision: true,
         is_featured: false
       })
       .select()
@@ -824,8 +869,7 @@ export const createProduct = createServerFn({ method: "POST" })
       product_id: product.id,
       cycle: p.cycle,
       price: p.price,
-      is_active: p.is_active,
-      currency: 'BRL'
+      is_active: p.is_active
     }));
 
     const { error: priceError } = await context.supabase
@@ -871,11 +915,9 @@ export const updateProduct = createServerFn({ method: "POST" })
         product_type: input.product_type,
         description: input.description,
         directadmin_package: input.directadmin_package || null,
-        external_id: input.external_id || null,
         is_visible: input.is_visible,
         sort_order: input.sort_order,
-        disk_quota_mb: input.disk_quota_mb,
-        immediate_purchase: input.immediate_purchase || false
+        disk_quota_mb: input.disk_quota_mb
       })
       .eq("id", input.id);
 
@@ -1159,6 +1201,9 @@ export const adminCreateClientService = createServerFn({ method: "POST" })
         billing_cycle: input.billingCycle,
         status: input.status,
         next_due_date: nextDue,
+        vps_hostname: product.product_type === 'vps' ? (input.vpsHostname || domainName) : null,
+        vps_os_template: product.product_type === 'vps' ? (input.vpsOsTemplate || 'Ubuntu') : null,
+        vps_region: product.product_type === 'vps' ? (input.vpsRegion || 'US-east') : null,
         notes: input.notes || (directAdminCreated ? "Hospedagem provisionada automaticamente no DirectAdmin." : product.product_type === 'vps' ? "Instância VPS vinculada/criada pelo administrador." : "Criado manualmente pelo administrador."),
       })
       .select()
@@ -1169,19 +1214,13 @@ export const adminCreateClientService = createServerFn({ method: "POST" })
     // 3. Se for produto VPS, gerenciar/vincular a linha na tabela vps_instances
     if (product.product_type === 'vps') {
       const vpsPayload: any = {
-        service_id: service.id,
         user_id: input.clientId,
         external_id: input.vpsExternalId || input.vpsHostname || String(Date.now()),
-        provider_id: input.vpsExternalId || null,
         name: input.vpsHostname || product.name || 'Servidor VPS',
         ip_address: input.vpsIpAddress || null,
         region: input.vpsRegion || 'US-east',
         os_template: input.vpsOsTemplate || 'Ubuntu',
         status: input.status === 'active' ? 'active' : 'pending',
-        ssh_host: input.vpsIpAddress || null,
-        ssh_port: input.vpsSshPort || 22,
-        ssh_user: input.vpsSshUser || 'root',
-        ssh_password: input.vpsSshPassword || null,
       };
 
       if (input.vpsInstanceId && input.vpsInstanceId !== 'new') {
@@ -1192,7 +1231,7 @@ export const adminCreateClientService = createServerFn({ method: "POST" })
       } else {
         await supabaseAdmin
           .from('vps_instances')
-          .upsert(vpsPayload, { onConflict: 'service_id' });
+          .insert(vpsPayload);
       }
     }
 

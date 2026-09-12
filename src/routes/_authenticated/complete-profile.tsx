@@ -45,11 +45,11 @@ function CompleteProfilePage() {
       const checkProfile = async () => {
         const { data } = await supabase
           .from("profiles")
-          .select("phone, lead_source, registration_completed")
+          .select("phone, address_line")
           .eq("id", user.id)
           .single();
         
-        if (data?.phone && data?.lead_source && data?.registration_completed) {
+        if (data?.phone && data?.address_line) {
           navigate({ to: "/dashboard" });
         }
       };
@@ -59,7 +59,7 @@ function CompleteProfilePage() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!phone || !tax_id || !country || !city || !addressLine || !leadSource || (leadSource === "Outro" && !leadSourceOther)) {
+    if (!phone || !tax_id || !country || !city || !addressLine) {
       toast.error("Por favor, preencha todos os campos obrigatórios.");
       return;
     }
@@ -71,15 +71,11 @@ function CompleteProfilePage() {
         .update({
           phone: phone.trim(),
           tax_id: tax_id.trim(),
-          identification_type: identificationType,
           country: country,
           address_line: addressLine.trim(),
           city: city.trim(),
           state: state.trim(),
           postal_code: postalCode.trim(),
-          lead_source: leadSource,
-          lead_source_other: leadSource === "Outro" ? leadSourceOther : null,
-          registration_completed: true,
         })
         .eq("id", user!.id);
 

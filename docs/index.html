@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Documentação Técnica — Painel EQSAM Cloud</title>
+  <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+  <meta name="description" content="Manual de Engenharia, Design System e Operações do Painel EQSAM Cloud">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0">
+  
+  <!-- Fontes Oficiais do Painel EQSAM -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+  <!-- Tema Dark Tecnológico alinhado ao Design System (#000606 / Neon Lime / Emerald) -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/docsify-themeable@0/dist/css/theme-simple-dark.css">
+
+  <style>
+    :root {
+      /* Tipografia */
+      --base-font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+      --code-font-family: 'JetBrains Mono', monospace;
+      --base-font-size: 15px;
+      --base-line-height: 1.65;
+
+      /* Paleta Exata do Painel EQSAM */
+      --theme-color: #22c55e;
+      --mono-hue: 180;
+      --base-background-color: #000606;
+      --sidebar-background: #000404;
+      --sidebar-border-color: #0b1e1e;
+      --sidebar-width: 19rem;
+      
+      --content-max-width: 66em;
+      --code-inline-background: #081616;
+      --code-inline-color: #4ade80;
+      --code-theme-background: #040e0e;
+      
+      --table-row-odd-background: #040e0e;
+      --table-row-even-background: #081616;
+      --table-cell-border-color: #0e2424;
+      
+      --heading-h1-color: #f0fdf4;
+      --heading-h2-color: #86efac;
+      --heading-h3-color: #a7f3d0;
+      --link-color: #4ade80;
+      
+      --sidebar-nav-link-color: #94a3b8;
+      --sidebar-nav-link-color--active: #4ade80;
+      --sidebar-nav-link-font-weight--active: 700;
+      
+      --notice-tip-background: #040e0e;
+      --notice-tip-border-color: #22c55e;
+    }
+
+    body {
+      background-color: #000606;
+      letter-spacing: -0.01em;
+    }
+
+    /* Scrollbars personalizadas estilo EQSAM */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #0e2424;
+      border-radius: 10px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #22c55e;
+    }
+
+    .markdown-section pre {
+      border: 1px solid #0e2424;
+      border-radius: 12px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+    }
+
+    .markdown-section table {
+      border: 1px solid #0e2424;
+      border-radius: 12px;
+      overflow: hidden;
+    }
+
+    .mermaid {
+      background: #040e0e;
+      padding: 24px;
+      border-radius: 12px;
+      border: 1px solid #0e2424;
+      display: flex;
+      justify-content: center;
+      margin: 1.5rem 0;
+      overflow-x: auto;
+    }
+
+    .sidebar {
+      border-right: 1px solid #0b1e1e;
+    }
+
+    .app-name-link {
+      font-weight: 800;
+      font-size: 1.15rem;
+      letter-spacing: -0.02em;
+      color: #f0fdf4 !important;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+  </style>
+</head>
+<body>
+  <div id="app">Carregando documentação do Painel EQSAM...</div>
+
+  <script>
+    window.$docsify = {
+      name: '⚡ EQSAM Cloud Docs',
+      repo: '',
+      loadSidebar: '_sidebar.md',
+      alias: {
+        '/.*/_sidebar.md': '/_sidebar.md',
+        '/01-visao-geral/_sidebar.md': '/_sidebar.md',
+        '/02-design-system-e-ux/_sidebar.md': '/_sidebar.md',
+        '/03-modulos-do-cliente/_sidebar.md': '/_sidebar.md',
+        '/04-painel-administrativo/_sidebar.md': '/_sidebar.md',
+        '/05-infraestrutura-e-operacoes/_sidebar.md': '/_sidebar.md'
+      },
+      subMaxLevel: 2,
+      auto2top: true,
+      homepage: 'README.md',
+      search: {
+        maxAge: 86400000,
+        paths: 'auto',
+        placeholder: 'Pesquisar na documentação...',
+        noData: 'Nenhum resultado encontrado.',
+        depth: 6
+      },
+      copyCode: {
+        buttonText: 'Copiar',
+        errorText: 'Erro',
+        successText: 'Copiado!'
+      },
+      pagination: {
+        previousText: 'Capítulo Anterior',
+        nextText: 'Próximo Capítulo',
+        crossChapter: true,
+        crossChapterText: true,
+      },
+      markdown: {
+        renderer: {
+          code: function(code, lang) {
+            if (lang === "mermaid") {
+              return '<div class="mermaid">' + code + '</div>';
+            }
+            return this.origin.code.apply(this, arguments);
+          }
+        }
+      },
+      plugins: [
+        function(hook, vm) {
+          hook.doneEach(function() {
+            if (window.mermaid) {
+              mermaid.run({
+                nodes: document.querySelectorAll('.mermaid')
+              });
+            }
+          });
+        }
+      ]
+    }
+  </script>
+
+  <!-- Docsify Core -->
+  <script src="https://cdn.jsdelivr.net/npm/docsify@4/lib/docsify.min.js"></script>
+  <!-- Plugin de Busca em Tempo Real -->
+  <script src="https://cdn.jsdelivr.net/npm/docsify@4/lib/plugins/search.min.js"></script>
+  <!-- Plugin de Botão Copiar Código -->
+  <script src="https://cdn.jsdelivr.net/npm/docsify-copy-code/dist/docsify-copy-code.min.js"></script>
+  <!-- Plugin de Paginação (Próximo / Anterior) -->
+  <script src="https://cdn.jsdelivr.net/npm/docsify-pagination/dist/docsify-pagination.min.js"></script>
+  <!-- Plugin de Zoom em Imagens -->
+  <script src="https://cdn.jsdelivr.net/npm/docsify@4/lib/plugins/zoom-image.min.js"></script>
+  <!-- Destaque de Sintaxe PrismJS -->
+  <script src="https://cdn.jsdelivr.net/npm/prismjs@1/components/prism-bash.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/prismjs@1/components/prism-json.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/prismjs@1/components/prism-typescript.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/prismjs@1/components/prism-yaml.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/prismjs@1/components/prism-sql.min.js"></script>
+  <!-- Suporte Completo a Diagramas Mermaid -->
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+  <script>
+    mermaid.initialize({ startOnLoad: false, theme: 'dark' });
+  </script>
+</body>
+</html>

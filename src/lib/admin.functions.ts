@@ -12,11 +12,11 @@ export const getBranding = createServerFn({ method: "GET" }).handler(async () =>
   } catch (error) {
     console.error("Error in getBranding server function:", error);
     return {
-      logo_url: null,
+      logo_url: "/images/logo-branco.webp",
       app_name: "Eqsam",
       primary_color: "oklch(0.88 0.19 128)",
       brand_color: "oklch(0.72 0.19 148)",
-      favicon_url: null,
+      favicon_url: "/images/logo.png",
     };
   }
 });
@@ -49,6 +49,7 @@ export const updateClientProfile = createServerFn({ method: "POST" })
     z
       .object({
         id: z.string().uuid(),
+        email: z.string().email().optional(),
         full_name: z.string().optional(),
         company_name: z.string().optional(),
         tax_id: z.string().optional(),
@@ -60,6 +61,8 @@ export const updateClientProfile = createServerFn({ method: "POST" })
         city: z.string().optional(),
         state: z.string().optional(),
         postal_code: z.string().optional(),
+        status: z.string().optional(),
+        notes: z.string().optional(),
         block_directadmin: z.boolean().optional(),
       })
       .parse(data),
@@ -67,6 +70,36 @@ export const updateClientProfile = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const { updateClientProfileImplementation } = await import("./admin.server");
     return updateClientProfileImplementation(data, context);
+  });
+
+export const adminChangeUserPassword = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: unknown) =>
+    z
+      .object({
+        userId: z.string().uuid(),
+        newPassword: z.string().min(6),
+      })
+      .parse(data),
+  )
+  .handler(async ({ data, context }) => {
+    const { adminChangeUserPasswordImplementation } = await import("./admin.server");
+    return adminChangeUserPasswordImplementation(data, context);
+  });
+
+export const adminSendPasswordReset = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: unknown) =>
+    z
+      .object({
+        userId: z.string().uuid(),
+        email: z.string().email(),
+      })
+      .parse(data),
+  )
+  .handler(async ({ data, context }) => {
+    const { adminSendPasswordResetImplementation } = await import("./admin.server");
+    return adminSendPasswordResetImplementation(data, context);
   });
 
 export const bulkDeleteClients = createServerFn({ method: "POST" })
@@ -78,3 +111,4 @@ export const bulkDeleteClients = createServerFn({ method: "POST" })
     const { bulkDeleteClientsImplementation } = await import("./admin.server");
     return bulkDeleteClientsImplementation(data.clientIds, context);
   });
+

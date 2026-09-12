@@ -3,7 +3,7 @@ import path from 'path';
 import fs from 'fs/promises';
 import fsSync from 'fs';
 import JSZip from 'jszip';
-import { resolveClientRoot } from '@/lib/file-manager/security';
+import { resolveClientRoot, verifyAppAuthorization, extractAndVerifyUser } from '@/lib/file-manager/security';
 
 export const Route = createFileRoute('/api/file-manager/bundle/$appId')({
   server: {
@@ -14,6 +14,10 @@ export const Route = createFileRoute('/api/file-manager/bundle/$appId')({
           if (!appId) {
             return new Response('appId is required', { status: 400 });
           }
+
+          // 1. Validar autenticação e autorização de posse do aplicativo
+          const userId = await extractAndVerifyUser(request);
+          await verifyAppAuthorization(appId, userId);
 
           const clientRoot = await resolveClientRoot(appId);
           if (!fsSync.existsSync(clientRoot)) {
@@ -44,7 +48,7 @@ export const Route = createFileRoute('/api/file-manager/bundle/$appId')({
             compressionOptions: { level: 6 },
           });
 
-          return new Response(zipBuffer, {
+          return new Response(new Uint8Array(zipBuffer), {
             status: 200,
             headers: {
               'Content-Type': 'application/zip',
@@ -54,7 +58,15 @@ export const Route = createFileRoute('/api/file-manager/bundle/$appId')({
           });
         } catch (err: any) {
           console.error('[Bundle API Error]:', err);
-          return new Response('Error generating bundle: ' + err.message, { status: 500 });
+          const msg = err.message || '';
+          let status = 500;
+          if (msg.includes('Não autorizado') || msg.includes('Sessão')) status = 401;
+          else if (msg.includes('Acesso negado')) status = 403;
+          else if (msg.includes('não encontrada')) status = 404;
+          return new Response(JSON.stringify({ error: msg }), {
+            status,
+            headers: { 'Content-Type': 'application/json' },
+          });
         }
       },
     },

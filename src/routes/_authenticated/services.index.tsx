@@ -49,16 +49,22 @@ function ClientServicesPage() {
       const { data, error } = await supabase
         .from("services")
         .select(`
-          *,
+          id,
+          user_id,
+          product_id,
+          server_id,
+          username,
+          status,
+          domain,
+          billing_cycle,
+          next_due_date,
+          suspension_reason,
+          created_at,
+          updated_at,
           products (
             name,
             product_type,
             directadmin_package
-          ),
-          vps_instances (
-            id,
-            ip_address,
-            status
           )
         `)
         .eq("user_id", effectiveUserId!)
@@ -134,8 +140,8 @@ function ClientServicesPage() {
             const status = STATUS_LABELS[svc.status] || { label: svc.status, color: "bg-muted" };
             const isVPS = isVPSService(svc);
             const vpsInstance = getVPSInstance(svc);
+            const isBlocked = Boolean((svc as any).block_directadmin || svc.suspension_reason?.includes('BLOCK_DIRECTADMIN'));
 
-            
             return (
               <div
                 key={svc.id}
@@ -151,9 +157,9 @@ function ClientServicesPage() {
                     </div>
                     <Badge variant="outline" className={cn(
                       "rounded-full border-none px-3 text-[10px] font-bold uppercase", 
-                      svc.block_directadmin ? "bg-destructive text-destructive-foreground" : status.color
+                      isBlocked ? "bg-destructive text-destructive-foreground" : status.color
                     )}>
-                      {svc.block_directadmin ? "Bloqueado" : status.label}
+                      {isBlocked ? "Bloqueado" : status.label}
                     </Badge>
                   </div>
 
@@ -213,7 +219,7 @@ function ClientServicesPage() {
                         size="sm" 
                         className="rounded-xl border-brand/20 text-brand hover:bg-brand/5"
                         onClick={async () => {
-                          if (svc.block_directadmin) {
+                          if (isBlocked) {
                             toast.error("Acesso bloqueado para este serviço.");
                             return;
                           }

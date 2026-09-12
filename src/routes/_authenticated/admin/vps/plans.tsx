@@ -41,7 +41,7 @@ const CYCLE_LABELS: Record<string, string> = {
   biennially: "2 anos",
 };
 
-const PUBLIC_ORIGIN = "https://easy-push1231231sa1d131dscxsc.lovable.app";
+const getPublicOrigin = () => (typeof window !== 'undefined' ? window.location.origin : '');
 
 function VPSPlansPage() {
   const [term, setTerm] = useState("");
@@ -54,7 +54,7 @@ function VPSPlansPage() {
       const { data, error } = await supabase
         .from("products")
         .select(
-          "id, name, slug, description, external_id, disk_quota_mb, bandwidth_quota_mb, is_visible, sort_order, product_type, group_id, immediate_purchase, product_groups(name), product_prices(cycle, price, is_active)",
+          "id, name, slug, description, disk_quota_mb, bandwidth_quota_mb, is_visible, sort_order, product_type, group_id, product_groups(name), product_prices(cycle, price, is_active)",
         )
         .eq("product_type", "vps")
         .order("sort_order");
@@ -255,7 +255,7 @@ function VPSPlansPage() {
                           className="size-6 h-6 w-6"
                           onClick={() => {
                             navigator.clipboard.writeText(
-                              `${PUBLIC_ORIGIN}/checkout/${plan.id}?immediate=true&mode=signup`,
+                              `${getPublicOrigin()}/checkout/${plan.id}?immediate=true&mode=signup`,
                             );
                             toast.success("Link copiado!");
                           }}

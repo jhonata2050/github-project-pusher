@@ -1,135 +1,56 @@
 import path from "path";
 import fs from "fs/promises";
 import fsSync from "fs";
-import { supabaseAdmin } from "../../integrations/supabase/client.server";
-import { getCoolifyApplicationsStore, type CoolifyApplicationRecord } from "../coolify.server";
+import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import { getApplicationsStore, type ApplicationRecord } from "@/lib/cloud-apps.server";
 
 /**
  * Retorna o diretório raiz canônico e isolado no filesystem para a aplicação informada.
  * Cria o diretório físico no servidor caso ainda não exista.
  */
-export async function resolveClientRoot(appId: string): Promise<string> {
-  const baseStorageDir = process.env.COLIFY_STORAGE_ROOT || 
-    process.env.STORAGE_PATH || 
+export async function resolveClientRoot(appId: string, forceSync: boolean = false): Promise<string> {
+  const baseStorageDir = process.env['EQSAM_STORAGE_ROOT'] ||
+    process.env['STORAGE_PATH'] || 
     path.resolve(process.cwd(), "storage", "apps");
 
-  const appDir = path.resolve(baseStorageDir, appId, "public_html");
+  const appBaseDir = path.resolve(baseStorageDir, appId);
+  const appDir = path.resolve(appBaseDir, "public_html");
+  const syncMarker = path.resolve(appBaseDir, ".swarm_synced");
 
   if (!fsSync.existsSync(appDir)) {
     await fs.mkdir(appDir, { recursive: true });
   }
 
-  // Se o diretório estiver vazio, inicializar arquivos base correspondentes ao tipo de serviço
-  const existingFiles = await fs.readdir(appDir).catch(() => []);
-  if (existingFiles.length === 0) {
-    let buildPack = "static";
-    let appName = "Aplicação";
-    try {
-      const store = await getCoolifyApplicationsStore();
+  // Verificar se a aplicação está provisionada no Swarm e puxar arquivos reais se necessário
+  try {
+    const isSynced = fsSync.existsSync(syncMarker);
+    if (!isSynced || forceSync) {
+      const store = await getApplicationsStore();
       const app = store[appId];
-      if (app) {
-        buildPack = app.build_pack || "static";
-        appName = app.name || "Aplicação";
+      if (app && app.status !== "provisioning") {
+        const { pullRealFilesFromSwarm } = await import("@/lib/swarm-cluster.server");
+        const pulled = await pullRealFilesFromSwarm(app, appDir);
+        if (pulled) {
+          return appDir;
+        }
       }
-    } catch {}
-
-    if (buildPack === "nixpacks" || buildPack === "dockerfile") {
-      await fs.writeFile(
-        path.join(appDir, "package.json"),
-        JSON.stringify(
-          {
-            name: appName.toLowerCase().replace(/[^a-z0-9-]/g, "-"),
-            version: "1.0.0",
-            description: `${appName} provisionado no cluster EQSAM`,
-            main: "index.js",
-            scripts: {
-              start: "node index.js",
-              dev: "node --watch index.js",
-            },
-            dependencies: {
-              express: "^4.19.2",
-            },
-          },
-          null,
-          2
-        ),
-        "utf-8"
-      );
-
-      await fs.writeFile(
-        path.join(appDir, "index.js"),
-        `// ${appName} - Servidor Node.js 24/7
-const express = require('express');
-const app = express();
-const PORT = process.env.PORT || 3000;
-
-app.use(express.json());
-app.use(express.static('public'));
-
-app.get('/', (req, res) => {
-  res.json({
-    status: 'online',
-    app: '${appName}',
-    cluster: 'DK1.EQSAM.COM',
-    timestamp: new Date().toISOString()
-  });
-});
-
-app.listen(PORT, '0.0.0.0', () => {
-  console.log(\`Servidor rodando na porta \${PORT}\`);
-});\n`,
-        "utf-8"
-      );
-
-      await fs.writeFile(
-        path.join(appDir, ".env"),
-        `PORT=3000\nNODE_ENV=production\nAPP_NAME="${appName}"\n`,
-        "utf-8"
-      );
-
-      await fs.writeFile(
-        path.join(appDir, "README.md"),
-        `# ${appName}\n\nAplicação provisionada com sucesso no Cluster DK1 EQSAM.\n\n- **Porta padrão:** 3000\n- **Engine:** Node.js / Nixpacks\n- **Gerenciador de Arquivos:** Ativo\n`,
-        "utf-8"
-      );
-    } else {
-      // Arquivos padrão para sites HTML / Caddy Server
-      await fs.writeFile(
-        path.join(appDir, "index.html"),
-        `<!DOCTYPE html>
-<html lang="pt-BR">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>${appName} — Online</title>
-  <link rel="stylesheet" href="styles.css">
-</head>
-<body>
-  <div class="container">
-    <h1>🚀 ${appName} está Online!</h1>
-    <p>Diretório raiz <code>/var/www/html</code> provisionado com sucesso no cluster.</p>
-    <p>Você pode editar este arquivo ou enviar seu projeto diretamente pelo Gerenciador de Arquivos.</p>
-  </div>
-</body>
-</html>`,
-        "utf-8"
-      );
-
-      await fs.writeFile(
-        path.join(appDir, "styles.css"),
-        `body { font-family: system-ui, sans-serif; background: #09090b; color: #f4f4f5; display: grid; place-items: center; min-height: 100vh; margin: 0; }
-.container { text-align: center; padding: 2.5rem; background: #18181b; border: 1px solid #27272a; border-radius: 1.5rem; max-width: 600px; }
-h1 { color: #10b981; margin-bottom: 1rem; }
-code { background: #27272a; padding: 0.2rem 0.5rem; border-radius: 0.4rem; font-family: monospace; }`,
-        "utf-8"
-      );
-
-      await fs.writeFile(
-        path.join(appDir, "Caddyfile"),
-        `:80 {\n\troot * /var/www/html\n\tfile_server\n\tencode zstd gzip\n\ttry_files {path} /index.html\n}\n`,
-        "utf-8"
-      );
     }
+  } catch (syncErr: any) {
+    console.warn(`[FileManager] Aviso ao sincronizar arquivos do Swarm para ${appId}:`, syncErr.message);
+  }
+
+  // Fallback: se ainda estiver vazio, inicializar com a árvore correta do template
+  try {
+    const entries = await fs.readdir(appDir);
+    if (entries.length === 0) {
+      const store = await getApplicationsStore();
+      const app = store[appId];
+      const templateId = app?.template_id || (app?.build_pack === "static" ? "static-html-landing" : "bot-starter");
+      const { scaffoldTemplateFiles } = await import("./template-definitions");
+      await scaffoldTemplateFiles(appDir, templateId, app?.name || "Minha Aplicação");
+    }
+  } catch (err: any) {
+    console.warn(`[FileManager] Aviso ao inicializar arquivos do template para ${appId}:`, err.message);
   }
 
   return appDir;
@@ -206,8 +127,8 @@ export function sanitizeFileName(name: string): string {
 /**
  * Verifica autenticação e posse da aplicação pelo usuário ou staff
  */
-export async function verifyAppAuthorization(appId: string, userId: string): Promise<CoolifyApplicationRecord> {
-  const store = await getCoolifyApplicationsStore();
+export async function verifyAppAuthorization(appId: string, userId: string): Promise<ApplicationRecord> {
+  const store = await getApplicationsStore();
   const app = store[appId];
   if (!app) {
     throw new Error("Aplicação não encontrada.");
@@ -219,4 +140,91 @@ export async function verifyAppAuthorization(appId: string, userId: string): Pro
   }
 
   return app;
+}
+
+/**
+ * Extrai o token da requisição (header Authorization Bearer ou cookie sb-*-auth-token)
+ * e valida criptograficamente sua integridade e autenticidade diretamente no Supabase Auth.
+ * Retorna o ID seguro e verificado do usuário.
+ */
+export async function extractAndVerifyUser(request: Request): Promise<string> {
+  // 1. Suporte a Developer API Token estilo Discloud CLI (header "api-token" ou Bearer "eqsam_live_...")
+  const apiTokenHeader = request.headers.get("api-token")?.trim();
+  const authHeader = request.headers.get("authorization")?.trim();
+
+  let candidateApiToken = "";
+  if (apiTokenHeader && apiTokenHeader.startsWith("eqsam_live_")) {
+    candidateApiToken = apiTokenHeader;
+  } else if (authHeader?.startsWith("Bearer eqsam_live_")) {
+    candidateApiToken = authHeader.replace("Bearer ", "").trim();
+  }
+
+  if (candidateApiToken) {
+    const { verifyApiToken } = await import("@/lib/api-tokens.server");
+    const verified = await verifyApiToken(candidateApiToken);
+    if (verified?.userId) {
+      return verified.userId;
+    }
+    throw new Error("Token de API inválido ou revogado.");
+  }
+
+  // 2. Autenticação via Sessão do Supabase (Bearer JWT ou Cookies)
+  let token = "";
+  if (authHeader?.startsWith("Bearer ")) {
+    token = authHeader.replace("Bearer ", "").trim();
+  } else {
+    const cookieHeader = request.headers.get("cookie") || "";
+    // Cookie único
+    const match = cookieHeader.match(/sb-[^=]+-auth-token=([^;]+)/);
+    if (match && match[1]) {
+      try {
+        const cookieVal = decodeURIComponent(match[1]);
+        if (cookieVal.startsWith("base64-")) {
+          const json = Buffer.from(cookieVal.slice(7), "base64").toString();
+          const parsed = JSON.parse(json);
+          token = parsed.access_token || parsed[0];
+        } else {
+          const parsed = JSON.parse(cookieVal);
+          token = parsed.access_token || parsed[0];
+        }
+      } catch (e) {}
+    } else {
+      // Cookies divididos em partes (chunks: sb-*-auth-token.0, sb-*-auth-token.1)
+      const chunkRegex = /sb-[^=]+-auth-token\.(\d+)=([^;]+)/g;
+      const chunks: { [index: number]: string } = {};
+      let m;
+      while ((m = chunkRegex.exec(cookieHeader)) !== null) {
+        if (m[1] && m[2]) {
+          chunks[parseInt(m[1], 10)] = m[2];
+        }
+      }
+      const sortedKeys = Object.keys(chunks).map(Number).sort((a, b) => a - b);
+      if (sortedKeys.length > 0) {
+        try {
+          const combined = sortedKeys.map((k) => chunks[k]).join("");
+          const cookieVal = decodeURIComponent(combined);
+          if (cookieVal.startsWith("base64-")) {
+            const json = Buffer.from(cookieVal.slice(7), "base64").toString();
+            const parsed = JSON.parse(json);
+            token = parsed.access_token || parsed[0];
+          } else {
+            const parsed = JSON.parse(cookieVal);
+            token = parsed.access_token || parsed[0];
+          }
+        } catch (e) {}
+      }
+    }
+  }
+
+  if (!token) {
+    throw new Error("Não autorizado. Faça login novamente.");
+  }
+
+  const { data: { user }, error } = await supabaseAdmin.auth.getUser(token);
+
+  if (error || !user?.id) {
+    throw new Error("Sessão inválida ou expirada. Faça login novamente.");
+  }
+
+  return user.id;
 }

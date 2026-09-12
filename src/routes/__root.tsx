@@ -13,6 +13,7 @@ import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 import { Toaster } from "@/components/ui/sonner";
 import { AuthProvider } from "@/hooks/use-auth";
+import { ThemeProvider } from "@/hooks/use-theme";
 import { Preloader } from "@/components/app/Preloader";
 
 
@@ -118,9 +119,37 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
 
 function RootShell({ children }: { children: ReactNode }) {
   return (
-    <html lang="pt-BR">
+    <html lang="pt-BR" suppressHydrationWarning>
       <head>
         <HeadContent />
+        {/* Anti-flicker theme and branding initialization script */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){
+              try {
+                var t = localStorage.getItem('eqsam_theme');
+                var isDark = t === 'dark' || (!t && window.matchMedia('(prefers-color-scheme: dark)').matches);
+                if (isDark) document.documentElement.classList.add('dark');
+                else document.documentElement.classList.remove('dark');
+              } catch(e) {}
+              try {
+                var b = localStorage.getItem('eqsam_branding');
+                if (b) {
+                  var parsed = JSON.parse(b);
+                  if (parsed.primary_color) {
+                    document.documentElement.style.setProperty('--primary', parsed.primary_color);
+                    document.documentElement.style.setProperty('--color-primary', parsed.primary_color);
+                    document.documentElement.style.setProperty('--sidebar-primary', parsed.primary_color);
+                  }
+                  if (parsed.brand_color) {
+                    document.documentElement.style.setProperty('--brand', parsed.brand_color);
+                    document.documentElement.style.setProperty('--color-brand', parsed.brand_color);
+                  }
+                }
+              } catch(e) {}
+            })();`,
+          }}
+        />
         {/* Google Tag Manager - Replace GTM-XXXXXXX with actual ID when available */}
         <script
           dangerouslySetInnerHTML={{
@@ -180,14 +209,16 @@ function RootComponent() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <AuthProvider>
-        {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
-        <div className="min-h-screen">
-          <Outlet />
-        </div>
+      <ThemeProvider>
+        <AuthProvider>
+          {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
+          <div className="min-h-screen bg-background text-foreground transition-colors duration-200">
+            <Outlet />
+          </div>
 
-        <Toaster />
-      </AuthProvider>
+          <Toaster />
+        </AuthProvider>
+      </ThemeProvider>
     </QueryClientProvider>
   );
 }

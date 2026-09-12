@@ -205,7 +205,7 @@ export async function searchDomainWithSuggestions(query: string) {
   }
   // Se ainda tiver ponto
   if (baseName.includes(".")) {
-    baseName = baseName.split(".")[0];
+    baseName = baseName.split(".")[0] || baseName;
   }
 
   const primaryDomain = clean.includes(".") ? clean : `${clean}.com.br`;

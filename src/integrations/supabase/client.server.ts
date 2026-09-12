@@ -2,6 +2,9 @@
 // Server-side Supabase client with service role key - bypasses RLS.
 // Use this for admin operations in server functions and server routes only.
 // For user-authenticated queries (with RLS), use the auth middleware instead.
+if (typeof process !== "undefined" && process.env && process.env['NODE_ENV'] !== "production") {
+  process.env['NODE_TLS_REJECT_UNAUTHORIZED'] = "0";
+}
 import { createClient } from '@supabase/supabase-js';
 import type { Database } from './types';
 
@@ -30,15 +33,8 @@ function createSupabaseFetch(supabaseKey: string): typeof fetch {
 }
 
 function createSupabaseAdminClient() {
-  const SUPABASE_URL = 
-    process.env['SUPABASE_URL'] || 
-    process.env['VITE_SUPABASE_URL'];
-
-  const SUPABASE_SERVICE_ROLE_KEY = 
-    process.env['SUPABASE_SECRET_KEY'] || 
-    process.env['SUPABASE_SERVICE_ROLE_KEY'] || 
-    process.env['SUPABASE_PUBLISHABLE_KEY'] || 
-    process.env['VITE_SUPABASE_PUBLISHABLE_KEY'];
+  const SUPABASE_URL = process.env['SUPABASE_URL'] || process.env['VITE_SUPABASE_URL'];
+  const SUPABASE_SERVICE_ROLE_KEY = process.env['SUPABASE_SECRET_KEY'] || process.env['SUPABASE_SERVICE_ROLE_KEY'] || process.env['SUPABASE_PUBLISHABLE_KEY'] || process.env['VITE_SUPABASE_PUBLISHABLE_KEY'];
 
   if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
     const missing = [

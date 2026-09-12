@@ -1,4 +1,12 @@
-import type { HealthcheckConfig, DeploymentValidationPolicy } from "./deployment-engine/types";
+export type DeploymentRuntime =
+  | "STATIC"
+  | "STATIC_SPA"
+  | "NODE"
+  | "NEXTJS"
+  | "PYTHON"
+  | "PHP"
+  | "DOCKER"
+  | "REVERSE_PROXY";
 
 export interface AppTemplate {
   id: string;
@@ -7,17 +15,47 @@ export interface AppTemplate {
   icon: string;
   description: string;
   build_pack: "nixpacks" | "dockerfile" | "dockercompose" | "static";
+  runtime?: DeploymentRuntime;
   git_repository: string;
   git_branch: string;
   recommended_ram: number; // MB
   recommended_cpu: number; // vCPU
+  recommended_disk: number; // MB (armazenamento base exigido para imagens e dados)
   default_port: number;
-  start_command?: string;
   tags: string[];
-  default_envs: Array<{ key: string; value: string; is_build_time?: boolean; is_secret?: boolean; required?: boolean }>;
-  healthcheck?: HealthcheckConfig;
-  validationPolicy?: DeploymentValidationPolicy;
+  default_envs: Array<{ key: string; value: string; is_build_time?: boolean }>;
 }
+
+export const DISK_SAFETY_MARGIN_PERCENT = 20;
+
+export function getRequiredDiskWithMargin(recommendedDiskMb?: number): number {
+  if (!recommendedDiskMb || recommendedDiskMb <= 0) return 512;
+  return Math.ceil(recommendedDiskMb * (1 + DISK_SAFETY_MARGIN_PERCENT / 100));
+}
+
+export function resolveDeploymentRuntime(
+  templateId?: string,
+  buildPack?: string,
+  category?: string
+): DeploymentRuntime {
+  const tid = (templateId || "").toLowerCase();
+  const bp = (buildPack || "").toLowerCase();
+  const cat = (category || "").toLowerCase();
+
+  if (tid.includes("openstatus")) return "DOCKER";
+  if (tid.includes("nextjs") || tid.includes("next")) return "NEXTJS";
+  if (tid.includes("react") || tid.includes("vue") || tid.includes("angular") || tid.includes("vite") || tid.includes("spa")) return "STATIC_SPA";
+  if (tid.includes("wordpress") || tid.includes("php") || tid.includes("laravel")) return "PHP";
+  if (tid.includes("python") || tid.includes("fastapi") || tid.includes("flask") || tid.includes("django")) return "PYTHON";
+  if (tid.includes("node") || tid.includes("express") || tid.includes("nest") || tid.includes("n8n") || tid.includes("typebot") || tid.includes("kuma")) return "NODE";
+  if (tid.includes("docker") || bp === "dockercompose") return "DOCKER";
+  if (tid.includes("proxy")) return "REVERSE_PROXY";
+  if (bp === "static" || tid.includes("static")) return "STATIC";
+
+  if (cat === "bots" || cat === "apis") return "NODE";
+  return "STATIC";
+}
+
 
 export const APP_TEMPLATES: AppTemplate[] = [
   // ==========================================
@@ -30,26 +68,14 @@ export const APP_TEMPLATES: AppTemplate[] = [
     icon: "https://cdn.simpleicons.org/caddy/00ADD8",
     description: "Servidor Caddy moderno em Go com suporte nativo a HTTP/3 (QUIC), compressão Zstandard/Gzip e velocidade máxima para Landing Pages HTML/CSS/JS.",
     build_pack: "static",
-    git_repository: "https://github.com/coollabsio/coolify-examples",
+    git_repository: "https://github.com/eqsam/static-html-starter",
     git_branch: "main",
     recommended_ram: 256,
     recommended_cpu: 0.2,
+    recommended_disk: 512,
     default_port: 80,
     tags: ["Caddy", "HTML", "CSS", "Landing Page", "HTTP/3", "Estático"],
     default_envs: [],
-    healthcheck: {
-      type: "http",
-      path: "/",
-      port: 80,
-      expectedStatus: [200, 304],
-      timeoutSeconds: 5,
-      retries: 5,
-    },
-    validationPolicy: {
-      requireHealthcheck: true,
-      requireDomainVerification: true,
-      expectedDomainStatuses: [200, 304],
-    },
   },
   {
     id: "wordpress-litespeed",
@@ -62,24 +88,14 @@ export const APP_TEMPLATES: AppTemplate[] = [
     git_branch: "master",
     recommended_ram: 1024,
     recommended_cpu: 1.0,
+    recommended_disk: 3072,
     default_port: 80,
     tags: ["WordPress", "CMS", "Sites", "PHP", "WooCommerce"],
     default_envs: [
-      { key: "WORDPRESS_DB_USER", value: "wordpress", is_secret: true, required: true },
-      { key: "WORDPRESS_DB_PASSWORD", value: "eqsam_wp_pass_123", is_secret: true, required: true },
-      { key: "WORDPRESS_DB_NAME", value: "wordpress", required: true },
+      { key: "WORDPRESS_DB_USER", value: "wordpress" },
+      { key: "WORDPRESS_DB_PASSWORD", value: "" },
+      { key: "WORDPRESS_DB_NAME", value: "wordpress" },
     ],
-    healthcheck: {
-      type: "http",
-      path: "/",
-      port: 80,
-      expectedStatus: [200, 301, 302],
-    },
-    validationPolicy: {
-      requireHealthcheck: true,
-      requireDomainVerification: true,
-      dependencies: ["mysql"],
-    },
   },
   {
     id: "nextjs-react-app",
@@ -88,63 +104,17 @@ export const APP_TEMPLATES: AppTemplate[] = [
     icon: "https://cdn.simpleicons.org/nextdotjs/000000",
     description: "Framework React #1 para aplicações web modernas, Server-Side Rendering (SSR), Landing Pages interativas e sistemas web com TypeScript.",
     build_pack: "nixpacks",
-    git_repository: "https://github.com/vercel/nextjs-portfolio-starter",
+    git_repository: "https://github.com/vercel/next-learn",
     git_branch: "main",
     recommended_ram: 512,
     recommended_cpu: 0.5,
+    recommended_disk: 1536,
     default_port: 3000,
-    start_command: "npx next start -H 0.0.0.0 -p 3000",
     tags: ["Next.js", "React", "TypeScript", "Frontend", "SSR"],
     default_envs: [
-      { key: "HOSTNAME", value: "0.0.0.0" },
-      { key: "HOST", value: "0.0.0.0" },
       { key: "PORT", value: "3000" },
       { key: "NODE_ENV", value: "production" },
     ],
-    healthcheck: {
-      type: "http",
-      path: "/",
-      port: 3000,
-      expectedStatus: [200, 304, 307, 308],
-      timeoutSeconds: 8,
-      retries: 6,
-      startPeriodSeconds: 3,
-    },
-    validationPolicy: {
-      requireHealthcheck: true,
-      requireDomainVerification: true,
-      expectedDomainStatuses: [200, 304, 307, 308],
-    },
-  },
-  {
-    id: "react-vite-spa",
-    name: "React + Vite (SPA Estático)",
-    category: "websites",
-    icon: "https://cdn.simpleicons.org/vite/646CFF",
-    description: "Aplicação Single Page Application (SPA) em React com Vite compilada para HTML/CSS/JS e servida em alta velocidade com Caddy Server HTTP/3.",
-    build_pack: "static",
-    git_repository: "https://github.com/vitejs/vite",
-    git_branch: "main",
-    recommended_ram: 256,
-    recommended_cpu: 0.2,
-    default_port: 80,
-    tags: ["React", "Vite", "SPA", "Frontend", "TypeScript", "Estático"],
-    default_envs: [
-      { key: "NODE_ENV", value: "production" },
-    ],
-    healthcheck: {
-      type: "http",
-      path: "/",
-      port: 80,
-      expectedStatus: [200, 304],
-      timeoutSeconds: 5,
-      retries: 4,
-    },
-    validationPolicy: {
-      requireHealthcheck: true,
-      requireDomainVerification: true,
-      expectedDomainStatuses: [200, 304],
-    },
   },
   {
     id: "ghost-cms",
@@ -157,6 +127,7 @@ export const APP_TEMPLATES: AppTemplate[] = [
     git_branch: "main",
     recommended_ram: 1024,
     recommended_cpu: 1.0,
+    recommended_disk: 2048,
     default_port: 2368,
     tags: ["Ghost", "Blog", "Newsletters", "CMS", "Node.js"],
     default_envs: [
@@ -179,12 +150,13 @@ export const APP_TEMPLATES: AppTemplate[] = [
     git_branch: "11.x",
     recommended_ram: 512,
     recommended_cpu: 0.5,
+    recommended_disk: 1024,
     default_port: 8000,
     tags: ["PHP", "Laravel", "Composer", "Web App", "API"],
     default_envs: [
       { key: "APP_ENV", value: "production" },
       { key: "APP_DEBUG", value: "false" },
-      { key: "APP_KEY", value: "base64:eqsam_laravel_placeholder_key=" },
+      { key: "APP_KEY", value: "" },
     ],
   },
   {
@@ -198,6 +170,7 @@ export const APP_TEMPLATES: AppTemplate[] = [
     git_branch: "main",
     recommended_ram: 512,
     recommended_cpu: 0.5,
+    recommended_disk: 1024,
     default_port: 5000,
     tags: ["Python", "Django", "Flask", "Gunicorn", "Web App"],
     default_envs: [
@@ -216,6 +189,7 @@ export const APP_TEMPLATES: AppTemplate[] = [
     git_branch: "master",
     recommended_ram: 256,
     recommended_cpu: 0.5,
+    recommended_disk: 512,
     default_port: 3000,
     tags: ["Go", "Golang", "Fiber", "Gin", "Microsserviço"],
     default_envs: [
@@ -233,6 +207,7 @@ export const APP_TEMPLATES: AppTemplate[] = [
     git_branch: "main",
     recommended_ram: 1024,
     recommended_cpu: 1.0,
+    recommended_disk: 2048,
     default_port: 8080,
     tags: ["Java", "Spring Boot", "JVM", "Corporativo", "API"],
     default_envs: [
@@ -250,6 +225,7 @@ export const APP_TEMPLATES: AppTemplate[] = [
     git_branch: "master",
     recommended_ram: 256,
     recommended_cpu: 0.5,
+    recommended_disk: 512,
     default_port: 8080,
     tags: ["Rust", "Actix", "Axum", "Ultra-Rápido", "Backend"],
     default_envs: [
@@ -271,11 +247,12 @@ export const APP_TEMPLATES: AppTemplate[] = [
     git_branch: "main",
     recommended_ram: 1536,
     recommended_cpu: 1.0,
+    recommended_disk: 2048,
     default_port: 8080,
     tags: ["WhatsApp", "Evolution API", "Chatbot", "Node.js"],
     default_envs: [
       { key: "SERVER_PORT", value: "8080" },
-      { key: "AUTHENTICATION_API_KEY", value: "eqsam_api_secret_key_12345" },
+      { key: "AUTHENTICATION_API_KEY", value: "" },
       { key: "DATABASE_ENABLED", value: "false" },
     ],
   },
@@ -290,6 +267,7 @@ export const APP_TEMPLATES: AppTemplate[] = [
     git_branch: "main",
     recommended_ram: 512,
     recommended_cpu: 0.5,
+    recommended_disk: 512,
     default_port: 3000,
     tags: ["Discord", "Bot", "TypeScript", "Node.js"],
     default_envs: [
@@ -309,11 +287,14 @@ export const APP_TEMPLATES: AppTemplate[] = [
     git_branch: "main",
     recommended_ram: 2048,
     recommended_cpu: 1.5,
+    recommended_disk: 3584,
     default_port: 3000,
     tags: ["Typebot", "Chatbot", "Conversão", "WhatsApp"],
     default_envs: [
       { key: "PORT", value: "3000" },
       { key: "NODE_ENV", value: "production" },
+      { key: "POSTGRES_PASSWORD", value: "" },
+      { key: "ENCRYPTION_SECRET", value: "" },
     ],
   },
 
@@ -331,12 +312,15 @@ export const APP_TEMPLATES: AppTemplate[] = [
     git_branch: "master",
     recommended_ram: 2048,
     recommended_cpu: 1.5,
+    recommended_disk: 2560,
     default_port: 5678,
     tags: ["N8N", "No-Code", "Automação", "Webhooks"],
     default_envs: [
       { key: "N8N_PORT", value: "5678" },
       { key: "GENERIC_TIMEZONE", value: "America/Sao_Paulo" },
       { key: "N8N_METRICS", value: "true" },
+      { key: "DB_POSTGRESDB_PASSWORD", value: "" },
+      { key: "N8N_ENCRYPTION_KEY", value: "" },
     ],
   },
   {
@@ -350,10 +334,52 @@ export const APP_TEMPLATES: AppTemplate[] = [
     git_branch: "master",
     recommended_ram: 512,
     recommended_cpu: 0.5,
+    recommended_disk: 1024,
     default_port: 3001,
     tags: ["Monitor", "Uptime", "Ping", "Alertas"],
     default_envs: [
       { key: "PORT", value: "3001" },
+    ],
+  },
+  {
+    id: "openstatus-monitor",
+    name: "OpenStatus (Monitor & Status Page)",
+    category: "tools",
+    icon: "https://avatars.githubusercontent.com/u/132470761?s=200&v=4",
+    description: "Plataforma open-source moderna de monitoramento de disponibilidade, alertas em tempo real e páginas de status públicas para APIs e websites.",
+    build_pack: "dockerfile",
+    runtime: "DOCKER",
+    git_repository: "https://github.com/openstatusHQ/openstatus.git",
+    git_branch: "main",
+    recommended_ram: 1024,
+    recommended_cpu: 1.0,
+    recommended_disk: 7168,
+    default_port: 3000,
+    tags: ["OpenStatus", "Status Page", "Monitoramento", "Uptime", "Alertas", "Next.js"],
+    default_envs: [
+      { key: "RESEND_API_KEY", value: "re_insira_sua_chave_resend_aqui" },
+      { key: "ADMIN_EMAIL", value: "admin@eqsam.com" },
+      { key: "NEXTAUTH_SECRET", value: "" },
+      { key: "AUTH_SECRET", value: "" },
+      { key: "NEXTAUTH_URL", value: "https://admin-openstatus.dk1.eqsam.com" },
+      { key: "NEXT_PUBLIC_URL", value: "https://admin-openstatus.dk1.eqsam.com" },
+      { key: "DATABASE_URL", value: "http://db:8080" },
+      { key: "TURSO_DATABASE_URL", value: "http://db:8080" },
+      { key: "CRON_SECRET", value: "" },
+      { key: "PORT", value: "3000" },
+      { key: "HOSTNAME", value: "0.0.0.0" },
+      { key: "NODE_ENV", value: "production" },
+      { key: "SELF_HOST", value: "true" },
+      { key: "AUTH_TRUST_HOST", value: "true" },
+      { key: "SKIP_ENV_VALIDATION", value: "true" },
+      { key: "NODE_OPTIONS", value: "--max-old-space-size=512" },
+      { key: "PROJECT_ID_VERCEL", value: "dummy" },
+      { key: "TEAM_ID_VERCEL", value: "dummy" },
+      { key: "VERCEL_AUTH_BEARER_TOKEN", value: "dummy" },
+      { key: "STRIPE_SECRET_KEY", value: "dummy" },
+      { key: "TINY_BIRD_API_KEY", value: "dummy" },
+      { key: "UNKEY_API_ID", value: "dummy" },
+      { key: "UNKEY_TOKEN", value: "dummy" },
     ],
   },
 
@@ -362,65 +388,22 @@ export const APP_TEMPLATES: AppTemplate[] = [
   // ==========================================
   {
     id: "fastify-api-starter",
-    name: "Fastify REST API",
+    name: "Fastify / Express REST API",
     category: "apis",
     icon: "https://cdn.simpleicons.org/fastify/000000",
-    description: "Estrutura moderna de API Node.js ultrarrápida com TypeScript, validação Zod, rotas assíncronas e Swagger automático.",
+    description: "Estrutura moderna de API Node.js ultrarrápida com TypeScript, validação Zod e Swagger automático.",
     build_pack: "nixpacks",
     git_repository: "https://github.com/fastify/fastify",
     git_branch: "main",
     recommended_ram: 512,
     recommended_cpu: 0.5,
+    recommended_disk: 512,
     default_port: 3000,
     tags: ["Fastify", "Node.js", "REST API", "Backend"],
     default_envs: [
       { key: "PORT", value: "3000" },
-      { key: "HOST", value: "0.0.0.0" },
       { key: "NODE_ENV", value: "production" },
     ],
-    healthcheck: {
-      type: "http",
-      path: "/",
-      port: 3000,
-      expectedStatus: [200, 201, 204, 301, 302, 304, 404],
-      timeoutSeconds: 6,
-      retries: 4,
-    },
-    validationPolicy: {
-      requireHealthcheck: true,
-      requireDomainVerification: true,
-    },
-  },
-  {
-    id: "express-api-starter",
-    name: "Express.js REST API",
-    category: "apis",
-    icon: "https://cdn.simpleicons.org/express/000000",
-    description: "Framework web minimalista e consagrado para Node.js, ideal para microsserviços, middlewares e endpoints REST.",
-    build_pack: "nixpacks",
-    git_repository: "https://github.com/expressjs/express",
-    git_branch: "master",
-    recommended_ram: 512,
-    recommended_cpu: 0.5,
-    default_port: 3000,
-    tags: ["Express", "Node.js", "REST API", "Backend", "JavaScript"],
-    default_envs: [
-      { key: "PORT", value: "3000" },
-      { key: "HOST", value: "0.0.0.0" },
-      { key: "NODE_ENV", value: "production" },
-    ],
-    healthcheck: {
-      type: "http",
-      path: "/",
-      port: 3000,
-      expectedStatus: [200, 201, 204, 301, 302, 304, 404],
-      timeoutSeconds: 6,
-      retries: 4,
-    },
-    validationPolicy: {
-      requireHealthcheck: true,
-      requireDomainVerification: true,
-    },
   },
   {
     id: "python-fastapi",
@@ -433,6 +416,7 @@ export const APP_TEMPLATES: AppTemplate[] = [
     git_branch: "master",
     recommended_ram: 512,
     recommended_cpu: 0.5,
+    recommended_disk: 512,
     default_port: 8000,
     tags: ["Python", "FastAPI", "Uvicorn", "Swagger"],
     default_envs: [
@@ -442,11 +426,11 @@ export const APP_TEMPLATES: AppTemplate[] = [
   },
 
   // ==========================================
-  // 6. BANCOS DE DADOS DEDICADOS
+  // 6. BANCOS DE DADOS
   // ==========================================
   {
     id: "postgresql-db",
-    name: "PostgreSQL 16 Database",
+    name: "PostgreSQL Database",
     category: "databases",
     icon: "https://cdn.simpleicons.org/postgresql/4169E1",
     description: "O banco de dados relacional e relacional-objeto mais avançado e confiável do mundo para aplicações modernas.",
@@ -455,30 +439,18 @@ export const APP_TEMPLATES: AppTemplate[] = [
     git_branch: "master",
     recommended_ram: 512,
     recommended_cpu: 0.5,
+    recommended_disk: 1536,
     default_port: 5432,
     tags: ["PostgreSQL", "Postgres", "SQL", "Relacional", "Database"],
     default_envs: [
       { key: "POSTGRES_DB", value: "main" },
       { key: "POSTGRES_USER", value: "postgres" },
-      { key: "POSTGRES_PASSWORD", value: "••••••••", is_secret: true, required: true },
-      { key: "PGDATA", value: "/var/lib/postgresql/data/pgdata" },
+      { key: "POSTGRES_PASSWORD", value: "" },
     ],
-    healthcheck: {
-      type: "command",
-      command: "pg_isready -U postgres -d main",
-      port: 5432,
-      timeoutSeconds: 5,
-      retries: 6,
-      startPeriodSeconds: 10,
-    },
-    validationPolicy: {
-      requireHealthcheck: true,
-      requireDomainVerification: false,
-    },
   },
   {
     id: "mysql-db",
-    name: "MySQL 8.4 Database",
+    name: "MySQL Database",
     category: "databases",
     icon: "https://cdn.simpleicons.org/mysql/4479A1",
     description: "O sistema gerenciador de banco de dados relacional mais popular do mundo, ideal para WordPress, Laravel e sistemas web.",
@@ -487,87 +459,34 @@ export const APP_TEMPLATES: AppTemplate[] = [
     git_branch: "master",
     recommended_ram: 512,
     recommended_cpu: 0.5,
+    recommended_disk: 1536,
     default_port: 3306,
     tags: ["MySQL", "SQL", "Database", "Relacional", "Web"],
     default_envs: [
       { key: "MYSQL_DATABASE", value: "main" },
       { key: "MYSQL_USER", value: "dbuser" },
-      { key: "MYSQL_PASSWORD", value: "••••••••", is_secret: true, required: true },
-      { key: "MYSQL_ROOT_PASSWORD", value: "••••••••", is_secret: true, required: true },
+      { key: "MYSQL_PASSWORD", value: "" },
+      { key: "MYSQL_ROOT_PASSWORD", value: "" },
     ],
-    healthcheck: {
-      type: "command",
-      command: "mysqladmin ping -h 127.0.0.1 -u dbuser",
-      port: 3306,
-      timeoutSeconds: 5,
-      retries: 6,
-      startPeriodSeconds: 15,
-    },
-    validationPolicy: {
-      requireHealthcheck: true,
-      requireDomainVerification: false,
-    },
-  },
-  {
-    id: "mariadb-db",
-    name: "MariaDB 11.4 Database",
-    category: "databases",
-    icon: "https://cdn.simpleicons.org/mariadb/003545",
-    description: "Banco de dados relacional comunitário e de altíssima performance, 100% compatível com MySQL.",
-    build_pack: "dockerfile",
-    git_repository: "https://github.com/MariaDB/mariadb-docker",
-    git_branch: "master",
-    recommended_ram: 512,
-    recommended_cpu: 0.5,
-    default_port: 3306,
-    tags: ["MariaDB", "MySQL", "SQL", "Database", "Relacional"],
-    default_envs: [
-      { key: "MARIADB_DATABASE", value: "main" },
-      { key: "MARIADB_USER", value: "dbuser" },
-      { key: "MARIADB_PASSWORD", value: "••••••••", is_secret: true, required: true },
-      { key: "MARIADB_ROOT_PASSWORD", value: "••••••••", is_secret: true, required: true },
-    ],
-    healthcheck: {
-      type: "command",
-      command: "mariadb-admin ping -h 127.0.0.1 -u dbuser",
-      port: 3306,
-      timeoutSeconds: 5,
-      retries: 6,
-      startPeriodSeconds: 12,
-    },
-    validationPolicy: {
-      requireHealthcheck: true,
-      requireDomainVerification: false,
-    },
   },
   {
     id: "redis-standalone",
-    name: "Redis 7.2 (Cache & Filas)",
+    name: "Redis Cache & Broker",
     category: "databases",
     icon: "https://cdn.simpleicons.org/redis/DC382D",
-    description: "Banco de dados em memória ultrarrápido para filas, pub/sub, cache de sessões e alta velocidade com persistência AOF.",
+    description: "Banco de dados em memória ultrarrápido para filas, pub/sub, cache de sessões e alta velocidade.",
     build_pack: "dockerfile",
     git_repository: "https://github.com/redis/redis",
     git_branch: "7.2",
     recommended_ram: 512,
     recommended_cpu: 0.5,
+    recommended_disk: 512,
     default_port: 6379,
     tags: ["Redis", "Cache", "PubSub", "Filas"],
     default_envs: [
-      { key: "REDIS_PASSWORD", value: "••••••••", is_secret: true, required: true },
+      { key: "REDIS_PORT", value: "6379" },
+      { key: "REDIS_PASSWORD", value: "" },
     ],
-    healthcheck: {
-      type: "command",
-      command: "redis-cli ping",
-      port: 6379,
-      timeoutSeconds: 4,
-      retries: 5,
-      startPeriodSeconds: 4,
-    },
-    validationPolicy: {
-      requireHealthcheck: true,
-      requireDomainVerification: false,
-    },
   },
   {
     id: "pocketbase-backend",
@@ -580,22 +499,11 @@ export const APP_TEMPLATES: AppTemplate[] = [
     git_branch: "master",
     recommended_ram: 512,
     recommended_cpu: 0.5,
+    recommended_disk: 512,
     default_port: 8090,
     tags: ["PocketBase", "SQLite", "Realtime", "Go"],
     default_envs: [
       { key: "PORT", value: "8090" },
     ],
-    healthcheck: {
-      type: "http",
-      path: "/api/health",
-      port: 8090,
-      expectedStatus: [200],
-      timeoutSeconds: 5,
-      retries: 4,
-    },
-    validationPolicy: {
-      requireHealthcheck: true,
-      requireDomainVerification: true,
-    },
   },
 ];

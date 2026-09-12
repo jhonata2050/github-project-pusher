@@ -1,7 +1,10 @@
 import { Check } from "lucide-react";
 
-export function StepSummary({ product, currentPrice, domain, vpsConfig, brl }: any) {
+export function StepSummary({ product, currentPrice, domain, vpsConfig, brl, pricingDetails }: any) {
   const productType = product?.product_type?.toLowerCase() || "other";
+  const actualPrice = Number(currentPrice?.price ?? 0);
+  const originalPrice = pricingDetails?.originalPrice;
+  const hasDiscount = Boolean(pricingDetails?.hasDiscount || (originalPrice && originalPrice > actualPrice));
 
   return (
     <div className="space-y-6">
@@ -42,8 +45,13 @@ export function StepSummary({ product, currentPrice, domain, vpsConfig, brl }: a
         <div className="flex justify-between items-center pt-6 border-t-2 border-brand/20">
           <span className="text-lg font-bold">Total a pagar:</span>
           <div className="text-right">
-            <span className="text-2xl font-black text-brand">{brl.format(Number(currentPrice?.price ?? 0))}</span>
-            <p className="text-[10px] text-muted-foreground uppercase">{currentPrice?.cycle}</p>
+            {hasDiscount && (
+              <span className="text-xs text-muted-foreground line-through block font-semibold mb-0.5">
+                {brl.format(originalPrice)}
+              </span>
+            )}
+            <span className="text-2xl font-black text-brand leading-none block">{brl.format(actualPrice)}</span>
+            <p className="text-[10px] text-muted-foreground uppercase mt-1">{currentPrice?.cycle}</p>
           </div>
         </div>
       </div>

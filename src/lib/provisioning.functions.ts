@@ -12,23 +12,39 @@ export const getProvisioningLogs = createServerFn({ method: "GET" })
   )
   .handler(async ({ data, context }) => {
     let query = context.supabase
-      .from("provisioning_logs")
-      .select(`
-        *,
-        services(id, domain, products(name))
-      `)
+      .from("audit_logs")
+      .select("id, action, entity_type, entity_id, description, metadata, created_at, user_id")
       .order("created_at", { ascending: false });
 
     if (data.serviceId) {
-      query = query.eq("service_id", data.serviceId);
-    }
-    if (data.clientId) {
+      query = query.or(`entity_id.eq.${data.serviceId},metadata->>serviceId.eq.${data.serviceId}`);
+    } else if (data.clientId) {
       query = query.eq("user_id", data.clientId);
+    } else {
+      query = query.or("action.ilike.%provision%,entity_type.eq.service");
     }
 
-    const { data: logs, error } = await query;
-    if (error) throw error;
-    return logs;
+    const { data: logs, error } = await query.limit(50);
+    if (error) {
+      console.warn("[getProvisioningLogs] fallback:", error.message);
+      return [];
+    }
+
+    return (logs || []).map((l: any) => ({
+      id: l.id,
+      service_id: l.entity_id,
+      user_id: l.user_id,
+      action: l.action,
+      status: l.metadata?.status || (l.action.includes("failed") ? "failed" : "success"),
+      message: l.description,
+      details: l.metadata,
+      created_at: l.created_at,
+      services: {
+        id: l.entity_id,
+        domain: l.metadata?.domain || "Serviço",
+        products: { name: l.metadata?.productName || "Hospedagem / VPS" }
+      }
+    }));
   });
 
 export const getClientProvisioningAudit = createServerFn({ method: "GET" })

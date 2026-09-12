@@ -202,9 +202,7 @@ function AdminFinanceSettingsPage() {
   if (isLoading) return <div className="h-96 flex items-center justify-center">Carregando...</div>;
 
   const defaultWebhook = typeof window !== 'undefined' 
-    ? (window.location.origin.includes('id-preview--') 
-        ? `https://easy-push1231231sa1d131dscxsc.lovable.app/api/public/webhook`
-        : `${window.location.origin}/api/public/webhook`)
+    ? `${window.location.origin}/api/public/webhook`
     : '';
 
   const copyToClipboard = (text: string) => {

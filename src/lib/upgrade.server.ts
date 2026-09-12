@@ -92,8 +92,8 @@ export async function getAvailableUpgradesImplementation(serviceId: string, user
         diskGb: product.disk_gb,
       };
     })
-    .filter((p): p is NonNullable<typeof p> => p !== null)
-    .sort((a, b) => a.targetPrice - b.targetPrice);
+    .filter((p: any) => p !== null)
+    .sort((a: any, b: any) => a.targetPrice - b.targetPrice);
 
   return {
     service: {

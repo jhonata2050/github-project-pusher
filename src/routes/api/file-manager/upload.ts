@@ -3,70 +3,17 @@ import { createClient } from '@supabase/supabase-js';
 import path from 'path';
 import fs from 'fs/promises';
 import fsSync from 'fs';
-import { resolveClientRoot, validateSafePath, verifyAppAuthorization } from '@/lib/file-manager/security';
+import { resolveClientRoot, validateSafePath, verifyAppAuthorization, extractAndVerifyUser } from '@/lib/file-manager/security';
 import { auditLogOperation } from '@/lib/file-manager/filesystem';
-import { syncAppFilesToCoolify } from '@/lib/file-manager/server';
-
-function decodeJwtPayload(token: string): any {
-  try {
-    const parts = token.split('.');
-    if (parts.length !== 3) return null;
-    const base64Url = parts[1];
-    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
-    const jsonPayload = decodeURIComponent(
-      atob(base64)
-        .split('')
-        .map((c) => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
-        .join('')
-    );
-    return JSON.parse(jsonPayload);
-  } catch {
-    return null;
-  }
-}
+import { syncAppFilesToContainer, verifyAppDiskQuota } from '@/lib/file-manager/server';
 
 export const Route = createFileRoute('/api/file-manager/upload')({
   server: {
     handlers: {
       POST: async ({ request }) => {
         try {
-          let token = '';
-          const authHeader = request.headers.get('authorization');
-          if (authHeader?.startsWith('Bearer ')) {
-            token = authHeader.replace('Bearer ', '').trim();
-          } else {
-            const cookieHeader = request.headers.get('cookie') || '';
-            const match = cookieHeader.match(/sb-[^=]+-auth-token=([^;]+)/);
-            if (match) {
-              try {
-                const cookieVal = decodeURIComponent(match[1]);
-                if (cookieVal.startsWith('base64-')) {
-                  const json = Buffer.from(cookieVal.slice(7), 'base64').toString();
-                  const parsed = JSON.parse(json);
-                  token = parsed.access_token || parsed[0];
-                } else {
-                  const parsed = JSON.parse(cookieVal);
-                  token = parsed.access_token || parsed[0];
-                }
-              } catch (e) {}
-            }
-          }
-
-          if (!token) {
-            return new Response(JSON.stringify({ error: 'Não autorizado. Faça login novamente.' }), {
-              status: 401,
-              headers: { 'Content-Type': 'application/json' },
-            });
-          }
-
-          const decoded = decodeJwtPayload(token);
-          const userId = decoded?.sub;
-          if (!userId) {
-            return new Response(JSON.stringify({ error: 'Token inválido.' }), {
-              status: 401,
-              headers: { 'Content-Type': 'application/json' },
-            });
-          }
+          // 1. Validação criptográfica da sessão do usuário
+          const userId = await extractAndVerifyUser(request);
 
           const formData = await request.formData();
           const appId = formData.get('appId') as string;
@@ -80,8 +27,9 @@ export const Route = createFileRoute('/api/file-manager/upload')({
             });
           }
 
-          // Verificar permissões
+          // Verificar permissões e cota de disco do plano
           await verifyAppAuthorization(appId, userId);
+          await verifyAppDiskQuota(appId, file.size, userId);
           const clientRoot = await resolveClientRoot(appId);
 
           const fileName = file.name.replace(/^[\/\\]+/, '');
@@ -95,6 +43,28 @@ export const Route = createFileRoute('/api/file-manager/upload')({
 
           const arrayBuffer = await file.arrayBuffer();
           const buffer = Buffer.from(arrayBuffer);
+          const autoExtract = formData.get('autoExtract') === 'true' || formData.get('extract') === 'true';
+
+          if (autoExtract && (fileName.endsWith('.zip') || file.type.includes('zip'))) {
+            const { uploadCloudApplicationZip } = await import('@/lib/cloud-apps.server');
+            const result = await uploadCloudApplicationZip(appId, fileName, buffer.toString('base64'), true, userId);
+            await auditLogOperation(userId, appId, 'UPLOAD_AND_EXTRACT', {
+              fileName,
+              sizeBytes: buffer.length,
+              extractedCount: result.extractedCount,
+            });
+            return new Response(
+              JSON.stringify({
+                success: true,
+                extracted: true,
+                name: fileName,
+                count: result.extractedCount,
+                message: `ZIP descompactado e deploy iniciado com sucesso (${result.extractedCount} arquivos).`,
+              }),
+              { status: 200, headers: { 'Content-Type': 'application/json' } }
+            );
+          }
+
           await fs.writeFile(fullPath, buffer);
 
           const stat = await fs.stat(fullPath);
@@ -105,9 +75,9 @@ export const Route = createFileRoute('/api/file-manager/upload')({
             sizeBytes: stat.size,
           });
 
-          // Sincronização em segundo plano com o container Caddy
-          syncAppFilesToCoolify(appId).catch((err) => {
-            console.warn('[Coolify Auto-Sync Warning]:', err.message);
+          // Sincronização em segundo plano com o container
+          syncAppFilesToContainer(appId).catch((err) => {
+            console.warn('[Container Auto-Sync Warning]:', err.message);
           });
 
           return new Response(
@@ -123,9 +93,14 @@ export const Route = createFileRoute('/api/file-manager/upload')({
             }
           );
         } catch (error: any) {
-          console.error('[API File Upload Error]:', error);
-          return new Response(JSON.stringify({ error: error.message || 'Erro ao processar upload.' }), {
-            status: 500,
+          console.error('[Upload Route Error]:', error);
+          const msg = error.message || 'Erro ao processar upload.';
+          let status = 500;
+          if (msg.includes('Não autorizado') || msg.includes('Sessão') || msg.includes('login') || msg.includes('Token') || msg.includes('token')) status = 401;
+          else if (msg.includes('Acesso negado')) status = 403;
+          else if (msg.includes('Cota de disco')) status = 413;
+          return new Response(JSON.stringify({ error: msg }), {
+            status,
             headers: { 'Content-Type': 'application/json' },
           });
         }

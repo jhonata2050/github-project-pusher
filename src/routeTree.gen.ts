@@ -23,12 +23,12 @@ import { Route as AuthenticatedServicesRouteImport } from './routes/_authenticat
 import { Route as AuthenticatedTicketsRouteImport } from './routes/_authenticated/tickets'
 import { Route as AuthenticatedWalletRouteImport } from './routes/_authenticated/wallet'
 import { Route as AuthResetPasswordRouteImport } from './routes/auth.reset-password'
+import { Route as CheckoutIndexRouteImport } from './routes/checkout.index'
 import { Route as CheckoutProductIdRouteImport } from './routes/checkout.$productId'
 import { Route as AuthenticatedAdminIndexRouteImport } from './routes/_authenticated/admin/index'
 import { Route as AuthenticatedAdminAffiliatesRouteImport } from './routes/_authenticated/admin/affiliates'
 import { Route as AuthenticatedAdminBrandingRouteImport } from './routes/_authenticated/admin/branding'
 import { Route as AuthenticatedAdminClientsRouteImport } from './routes/_authenticated/admin/clients'
-import { Route as AuthenticatedAdminCoolifyRouteImport } from './routes/_authenticated/admin/coolify'
 import { Route as AuthenticatedAdminCouponsRouteImport } from './routes/_authenticated/admin/coupons'
 import { Route as AuthenticatedAdminDatabaseRouteImport } from './routes/_authenticated/admin/database'
 import { Route as AuthenticatedAdminDomainsRouteImport } from './routes/_authenticated/admin/domains'
@@ -61,6 +61,7 @@ import { Route as ApiPublicBrandingRouteImport } from './routes/api/public/brand
 import { Route as ApiPublicPasswordResetRouteImport } from './routes/api/public/password-reset'
 import { Route as ApiPublicVpsMetricsRouteImport } from './routes/api/public/vps-metrics'
 import { Route as ApiPublicWebhookRouteImport } from './routes/api/public/webhook'
+import { Route as ApiUserTokensRouteImport } from './routes/api/user/tokens'
 import { Route as AuthenticatedAdminClientsIndexRouteImport } from './routes/_authenticated/admin/clients.index'
 import { Route as AuthenticatedAdminClientsClientIdRouteImport } from './routes/_authenticated/admin/clients.$clientId'
 import { Route as AuthenticatedAdminVpsIndexRouteImport } from './routes/_authenticated/admin/vps/index'
@@ -69,6 +70,7 @@ import { Route as ApiFileManagerBundleAppIdRouteImport } from './routes/api/file
 import { Route as ApiFileManagerJobsJobIdRouteImport } from './routes/api/file-manager/jobs/$jobId'
 import { Route as ApiFileManagerJobsCompressRouteImport } from './routes/api/file-manager/jobs/compress'
 import { Route as ApiFileManagerJobsExtractRouteImport } from './routes/api/file-manager/jobs/extract'
+import { Route as ApiFileManagerLogsAppIdRouteImport } from './routes/api/file-manager/logs/$appId'
 import { Route as ApiPublicCronMaintenanceRouteImport } from './routes/api/public/cron/maintenance'
 import { Route as ApiPublicScriptsInstallAgentRouteImport } from './routes/api/public/scripts/install-agent'
 import { Route as ApiPublicScriptsUninstallAgentRouteImport } from './routes/api/public/scripts/uninstall-agent'
@@ -150,6 +152,11 @@ const AuthResetPasswordRoute = AuthResetPasswordRouteImport.update({
   path: '/reset-password',
   getParentRoute: () => AuthRoute,
 } as any)
+const CheckoutIndexRoute = CheckoutIndexRouteImport.update({
+  id: '/checkout/',
+  path: '/checkout/',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const CheckoutProductIdRoute = CheckoutProductIdRouteImport.update({
   id: '/checkout/$productId',
   path: '/checkout/$productId',
@@ -176,12 +183,6 @@ const AuthenticatedAdminClientsRoute =
   AuthenticatedAdminClientsRouteImport.update({
     id: '/clients',
     path: '/clients',
-    getParentRoute: () => AuthenticatedAdminRouteRoute,
-  } as any)
-const AuthenticatedAdminCoolifyRoute =
-  AuthenticatedAdminCoolifyRouteImport.update({
-    id: '/coolify',
-    path: '/coolify',
     getParentRoute: () => AuthenticatedAdminRouteRoute,
   } as any)
 const AuthenticatedAdminCouponsRoute =
@@ -365,6 +366,11 @@ const ApiPublicWebhookRoute = ApiPublicWebhookRouteImport.update({
   path: '/api/public/webhook',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiUserTokensRoute = ApiUserTokensRouteImport.update({
+  id: '/api/user/tokens',
+  path: '/api/user/tokens',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AuthenticatedAdminClientsIndexRoute =
   AuthenticatedAdminClientsIndexRouteImport.update({
     id: '/',
@@ -412,6 +418,11 @@ const ApiFileManagerJobsExtractRoute =
     path: '/api/file-manager/jobs/extract',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiFileManagerLogsAppIdRoute = ApiFileManagerLogsAppIdRouteImport.update({
+  id: '/api/file-manager/logs/$appId',
+  path: '/api/file-manager/logs/$appId',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicCronMaintenanceRoute =
   ApiPublicCronMaintenanceRouteImport.update({
     id: '/api/public/cron/maintenance',
@@ -485,10 +496,10 @@ export interface FileRoutesByFullPath {
   '/wallet': typeof AuthenticatedWalletRoute
   '/auth/reset-password': typeof AuthResetPasswordRoute
   '/checkout/$productId': typeof CheckoutProductIdRoute
+  '/checkout/': typeof CheckoutIndexRoute
   '/admin/affiliates': typeof AuthenticatedAdminAffiliatesRoute
   '/admin/branding': typeof AuthenticatedAdminBrandingRoute
   '/admin/clients': typeof AuthenticatedAdminClientsRouteWithChildren
-  '/admin/coolify': typeof AuthenticatedAdminCoolifyRoute
   '/admin/coupons': typeof AuthenticatedAdminCouponsRoute
   '/admin/database': typeof AuthenticatedAdminDatabaseRoute
   '/admin/domains': typeof AuthenticatedAdminDomainsRoute
@@ -515,6 +526,7 @@ export interface FileRoutesByFullPath {
   '/api/public/password-reset': typeof ApiPublicPasswordResetRoute
   '/api/public/vps-metrics': typeof ApiPublicVpsMetricsRoute
   '/api/public/webhook': typeof ApiPublicWebhookRoute
+  '/api/user/tokens': typeof ApiUserTokensRoute
   '/admin/': typeof AuthenticatedAdminIndexRoute
   '/apps/': typeof AuthenticatedAppsIndexRoute
   '/domains/': typeof AuthenticatedDomainsIndexRoute
@@ -528,6 +540,7 @@ export interface FileRoutesByFullPath {
   '/api/file-manager/jobs/$jobId': typeof ApiFileManagerJobsJobIdRoute
   '/api/file-manager/jobs/compress': typeof ApiFileManagerJobsCompressRoute
   '/api/file-manager/jobs/extract': typeof ApiFileManagerJobsExtractRoute
+  '/api/file-manager/logs/$appId': typeof ApiFileManagerLogsAppIdRoute
   '/api/public/cron/maintenance': typeof ApiPublicCronMaintenanceRoute
   '/api/public/scripts/install-agent': typeof ApiPublicScriptsInstallAgentRoute
   '/api/public/scripts/uninstall-agent': typeof ApiPublicScriptsUninstallAgentRoute
@@ -552,9 +565,9 @@ export interface FileRoutesByTo {
   '/wallet': typeof AuthenticatedWalletRoute
   '/auth/reset-password': typeof AuthResetPasswordRoute
   '/checkout/$productId': typeof CheckoutProductIdRoute
+  '/checkout': typeof CheckoutIndexRoute
   '/admin/affiliates': typeof AuthenticatedAdminAffiliatesRoute
   '/admin/branding': typeof AuthenticatedAdminBrandingRoute
-  '/admin/coolify': typeof AuthenticatedAdminCoolifyRoute
   '/admin/coupons': typeof AuthenticatedAdminCouponsRoute
   '/admin/database': typeof AuthenticatedAdminDatabaseRoute
   '/admin/domains': typeof AuthenticatedAdminDomainsRoute
@@ -581,6 +594,7 @@ export interface FileRoutesByTo {
   '/api/public/password-reset': typeof ApiPublicPasswordResetRoute
   '/api/public/vps-metrics': typeof ApiPublicVpsMetricsRoute
   '/api/public/webhook': typeof ApiPublicWebhookRoute
+  '/api/user/tokens': typeof ApiUserTokensRoute
   '/admin': typeof AuthenticatedAdminIndexRoute
   '/apps': typeof AuthenticatedAppsIndexRoute
   '/domains': typeof AuthenticatedDomainsIndexRoute
@@ -594,6 +608,7 @@ export interface FileRoutesByTo {
   '/api/file-manager/jobs/$jobId': typeof ApiFileManagerJobsJobIdRoute
   '/api/file-manager/jobs/compress': typeof ApiFileManagerJobsCompressRoute
   '/api/file-manager/jobs/extract': typeof ApiFileManagerJobsExtractRoute
+  '/api/file-manager/logs/$appId': typeof ApiFileManagerLogsAppIdRoute
   '/api/public/cron/maintenance': typeof ApiPublicCronMaintenanceRoute
   '/api/public/scripts/install-agent': typeof ApiPublicScriptsInstallAgentRoute
   '/api/public/scripts/uninstall-agent': typeof ApiPublicScriptsUninstallAgentRoute
@@ -624,10 +639,10 @@ export interface FileRoutesById {
   '/_authenticated/wallet': typeof AuthenticatedWalletRoute
   '/auth/reset-password': typeof AuthResetPasswordRoute
   '/checkout/$productId': typeof CheckoutProductIdRoute
+  '/checkout/': typeof CheckoutIndexRoute
   '/_authenticated/admin/affiliates': typeof AuthenticatedAdminAffiliatesRoute
   '/_authenticated/admin/branding': typeof AuthenticatedAdminBrandingRoute
   '/_authenticated/admin/clients': typeof AuthenticatedAdminClientsRouteWithChildren
-  '/_authenticated/admin/coolify': typeof AuthenticatedAdminCoolifyRoute
   '/_authenticated/admin/coupons': typeof AuthenticatedAdminCouponsRoute
   '/_authenticated/admin/database': typeof AuthenticatedAdminDatabaseRoute
   '/_authenticated/admin/domains': typeof AuthenticatedAdminDomainsRoute
@@ -654,6 +669,7 @@ export interface FileRoutesById {
   '/api/public/password-reset': typeof ApiPublicPasswordResetRoute
   '/api/public/vps-metrics': typeof ApiPublicVpsMetricsRoute
   '/api/public/webhook': typeof ApiPublicWebhookRoute
+  '/api/user/tokens': typeof ApiUserTokensRoute
   '/_authenticated/admin/': typeof AuthenticatedAdminIndexRoute
   '/_authenticated/apps/': typeof AuthenticatedAppsIndexRoute
   '/_authenticated/domains/': typeof AuthenticatedDomainsIndexRoute
@@ -667,6 +683,7 @@ export interface FileRoutesById {
   '/api/file-manager/jobs/$jobId': typeof ApiFileManagerJobsJobIdRoute
   '/api/file-manager/jobs/compress': typeof ApiFileManagerJobsCompressRoute
   '/api/file-manager/jobs/extract': typeof ApiFileManagerJobsExtractRoute
+  '/api/file-manager/logs/$appId': typeof ApiFileManagerLogsAppIdRoute
   '/api/public/cron/maintenance': typeof ApiPublicCronMaintenanceRoute
   '/api/public/scripts/install-agent': typeof ApiPublicScriptsInstallAgentRoute
   '/api/public/scripts/uninstall-agent': typeof ApiPublicScriptsUninstallAgentRoute
@@ -697,10 +714,10 @@ export interface FileRouteTypes {
     | '/wallet'
     | '/auth/reset-password'
     | '/checkout/$productId'
+    | '/checkout/'
     | '/admin/affiliates'
     | '/admin/branding'
     | '/admin/clients'
-    | '/admin/coolify'
     | '/admin/coupons'
     | '/admin/database'
     | '/admin/domains'
@@ -727,6 +744,7 @@ export interface FileRouteTypes {
     | '/api/public/password-reset'
     | '/api/public/vps-metrics'
     | '/api/public/webhook'
+    | '/api/user/tokens'
     | '/admin/'
     | '/apps/'
     | '/domains/'
@@ -740,6 +758,7 @@ export interface FileRouteTypes {
     | '/api/file-manager/jobs/$jobId'
     | '/api/file-manager/jobs/compress'
     | '/api/file-manager/jobs/extract'
+    | '/api/file-manager/logs/$appId'
     | '/api/public/cron/maintenance'
     | '/api/public/scripts/install-agent'
     | '/api/public/scripts/uninstall-agent'
@@ -764,9 +783,9 @@ export interface FileRouteTypes {
     | '/wallet'
     | '/auth/reset-password'
     | '/checkout/$productId'
+    | '/checkout'
     | '/admin/affiliates'
     | '/admin/branding'
-    | '/admin/coolify'
     | '/admin/coupons'
     | '/admin/database'
     | '/admin/domains'
@@ -793,6 +812,7 @@ export interface FileRouteTypes {
     | '/api/public/password-reset'
     | '/api/public/vps-metrics'
     | '/api/public/webhook'
+    | '/api/user/tokens'
     | '/admin'
     | '/apps'
     | '/domains'
@@ -806,6 +826,7 @@ export interface FileRouteTypes {
     | '/api/file-manager/jobs/$jobId'
     | '/api/file-manager/jobs/compress'
     | '/api/file-manager/jobs/extract'
+    | '/api/file-manager/logs/$appId'
     | '/api/public/cron/maintenance'
     | '/api/public/scripts/install-agent'
     | '/api/public/scripts/uninstall-agent'
@@ -835,10 +856,10 @@ export interface FileRouteTypes {
     | '/_authenticated/wallet'
     | '/auth/reset-password'
     | '/checkout/$productId'
+    | '/checkout/'
     | '/_authenticated/admin/affiliates'
     | '/_authenticated/admin/branding'
     | '/_authenticated/admin/clients'
-    | '/_authenticated/admin/coolify'
     | '/_authenticated/admin/coupons'
     | '/_authenticated/admin/database'
     | '/_authenticated/admin/domains'
@@ -865,6 +886,7 @@ export interface FileRouteTypes {
     | '/api/public/password-reset'
     | '/api/public/vps-metrics'
     | '/api/public/webhook'
+    | '/api/user/tokens'
     | '/_authenticated/admin/'
     | '/_authenticated/apps/'
     | '/_authenticated/domains/'
@@ -878,6 +900,7 @@ export interface FileRouteTypes {
     | '/api/file-manager/jobs/$jobId'
     | '/api/file-manager/jobs/compress'
     | '/api/file-manager/jobs/extract'
+    | '/api/file-manager/logs/$appId'
     | '/api/public/cron/maintenance'
     | '/api/public/scripts/install-agent'
     | '/api/public/scripts/uninstall-agent'
@@ -897,15 +920,18 @@ export interface RootRouteChildren {
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   AuthRoute: typeof AuthRouteWithChildren
   CheckoutProductIdRoute: typeof CheckoutProductIdRoute
+  CheckoutIndexRoute: typeof CheckoutIndexRoute
   ApiFileManagerUploadRoute: typeof ApiFileManagerUploadRoute
   ApiPublicBrandingRoute: typeof ApiPublicBrandingRoute
   ApiPublicPasswordResetRoute: typeof ApiPublicPasswordResetRoute
   ApiPublicVpsMetricsRoute: typeof ApiPublicVpsMetricsRoute
   ApiPublicWebhookRoute: typeof ApiPublicWebhookRoute
+  ApiUserTokensRoute: typeof ApiUserTokensRoute
   ApiFileManagerBundleAppIdRoute: typeof ApiFileManagerBundleAppIdRoute
   ApiFileManagerJobsJobIdRoute: typeof ApiFileManagerJobsJobIdRoute
   ApiFileManagerJobsCompressRoute: typeof ApiFileManagerJobsCompressRoute
   ApiFileManagerJobsExtractRoute: typeof ApiFileManagerJobsExtractRoute
+  ApiFileManagerLogsAppIdRoute: typeof ApiFileManagerLogsAppIdRoute
   ApiPublicCronMaintenanceRoute: typeof ApiPublicCronMaintenanceRoute
   ApiPublicScriptsInstallAgentRoute: typeof ApiPublicScriptsInstallAgentRoute
   ApiPublicScriptsUninstallAgentRoute: typeof ApiPublicScriptsUninstallAgentRoute
@@ -1018,6 +1044,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthResetPasswordRouteImport
       parentRoute: typeof AuthRoute
     }
+    '/checkout/': {
+      id: '/checkout/'
+      path: '/checkout'
+      fullPath: '/checkout/'
+      preLoaderRoute: typeof CheckoutIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/checkout/$productId': {
       id: '/checkout/$productId'
       path: '/checkout/$productId'
@@ -1051,13 +1084,6 @@ declare module '@tanstack/react-router' {
       path: '/clients'
       fullPath: '/admin/clients'
       preLoaderRoute: typeof AuthenticatedAdminClientsRouteImport
-      parentRoute: typeof AuthenticatedAdminRouteRoute
-    }
-    '/_authenticated/admin/coolify': {
-      id: '/_authenticated/admin/coolify'
-      path: '/coolify'
-      fullPath: '/admin/coolify'
-      preLoaderRoute: typeof AuthenticatedAdminCoolifyRouteImport
       parentRoute: typeof AuthenticatedAdminRouteRoute
     }
     '/_authenticated/admin/coupons': {
@@ -1284,6 +1310,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicWebhookRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/user/tokens': {
+      id: '/api/user/tokens'
+      path: '/api/user/tokens'
+      fullPath: '/api/user/tokens'
+      preLoaderRoute: typeof ApiUserTokensRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/_authenticated/admin/clients/': {
       id: '/_authenticated/admin/clients/'
       path: '/'
@@ -1338,6 +1371,13 @@ declare module '@tanstack/react-router' {
       path: '/api/file-manager/jobs/extract'
       fullPath: '/api/file-manager/jobs/extract'
       preLoaderRoute: typeof ApiFileManagerJobsExtractRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/file-manager/logs/$appId': {
+      id: '/api/file-manager/logs/$appId'
+      path: '/api/file-manager/logs/$appId'
+      fullPath: '/api/file-manager/logs/$appId'
+      preLoaderRoute: typeof ApiFileManagerLogsAppIdRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/public/cron/maintenance': {
@@ -1434,7 +1474,6 @@ interface AuthenticatedAdminRouteRouteChildren {
   AuthenticatedAdminAffiliatesRoute: typeof AuthenticatedAdminAffiliatesRoute
   AuthenticatedAdminBrandingRoute: typeof AuthenticatedAdminBrandingRoute
   AuthenticatedAdminClientsRoute: typeof AuthenticatedAdminClientsRouteWithChildren
-  AuthenticatedAdminCoolifyRoute: typeof AuthenticatedAdminCoolifyRoute
   AuthenticatedAdminCouponsRoute: typeof AuthenticatedAdminCouponsRoute
   AuthenticatedAdminDatabaseRoute: typeof AuthenticatedAdminDatabaseRoute
   AuthenticatedAdminDomainsRoute: typeof AuthenticatedAdminDomainsRoute
@@ -1458,7 +1497,6 @@ const AuthenticatedAdminRouteRouteChildren: AuthenticatedAdminRouteRouteChildren
     AuthenticatedAdminAffiliatesRoute: AuthenticatedAdminAffiliatesRoute,
     AuthenticatedAdminBrandingRoute: AuthenticatedAdminBrandingRoute,
     AuthenticatedAdminClientsRoute: AuthenticatedAdminClientsRouteWithChildren,
-    AuthenticatedAdminCoolifyRoute: AuthenticatedAdminCoolifyRoute,
     AuthenticatedAdminCouponsRoute: AuthenticatedAdminCouponsRoute,
     AuthenticatedAdminDatabaseRoute: AuthenticatedAdminDatabaseRoute,
     AuthenticatedAdminDomainsRoute: AuthenticatedAdminDomainsRoute,
@@ -1585,15 +1623,18 @@ const rootRouteChildren: RootRouteChildren = {
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   AuthRoute: AuthRouteWithChildren,
   CheckoutProductIdRoute: CheckoutProductIdRoute,
+  CheckoutIndexRoute: CheckoutIndexRoute,
   ApiFileManagerUploadRoute: ApiFileManagerUploadRoute,
   ApiPublicBrandingRoute: ApiPublicBrandingRoute,
   ApiPublicPasswordResetRoute: ApiPublicPasswordResetRoute,
   ApiPublicVpsMetricsRoute: ApiPublicVpsMetricsRoute,
   ApiPublicWebhookRoute: ApiPublicWebhookRoute,
+  ApiUserTokensRoute: ApiUserTokensRoute,
   ApiFileManagerBundleAppIdRoute: ApiFileManagerBundleAppIdRoute,
   ApiFileManagerJobsJobIdRoute: ApiFileManagerJobsJobIdRoute,
   ApiFileManagerJobsCompressRoute: ApiFileManagerJobsCompressRoute,
   ApiFileManagerJobsExtractRoute: ApiFileManagerJobsExtractRoute,
+  ApiFileManagerLogsAppIdRoute: ApiFileManagerLogsAppIdRoute,
   ApiPublicCronMaintenanceRoute: ApiPublicCronMaintenanceRoute,
   ApiPublicScriptsInstallAgentRoute: ApiPublicScriptsInstallAgentRoute,
   ApiPublicScriptsUninstallAgentRoute: ApiPublicScriptsUninstallAgentRoute,

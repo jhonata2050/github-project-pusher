@@ -40,7 +40,7 @@ export async function getDomainRegistrarSettings() {
     ]);
 
   const map: Record<string, any> = {};
-  rows?.forEach((r) => { map[r.key] = r.value; });
+  rows?.forEach((r: any) => { map[r.key] = r.value; });
 
   return {
     defaultRegistrar: map["domain_default_registrar"] || "openprovider",
@@ -140,9 +140,9 @@ export async function getClientDomainsList(supabaseClient: any, userId: string) 
  * Detalhes de um domínio específico
  */
 export async function getDomainDetailsById(supabaseClient: any, userId: string, domainId: string) {
-  const { data: domain, error } = await supabaseClient
+  let { data: domain, error } = await supabaseClient
     .from("domains")
-    .select("*, profiles(*)")
+    .select("*")
     .eq("id", domainId)
     .maybeSingle();
 
@@ -150,11 +150,20 @@ export async function getDomainDetailsById(supabaseClient: any, userId: string, 
     // Fallback admin
     const { data: adminDomain } = await supabaseAdmin
       .from("domains")
-      .select("*, profiles(*)")
+      .select("*")
       .eq("id", domainId)
       .maybeSingle();
     if (!adminDomain) throw new Error("Domínio não encontrado");
-    return adminDomain;
+    domain = adminDomain;
+  }
+
+  if (domain && domain.user_id) {
+    const { data: p } = await supabaseAdmin
+      .from("profiles")
+      .select("id, full_name, email, phone")
+      .eq("id", domain.user_id)
+      .maybeSingle();
+    domain.profiles = p;
   }
 
   return domain;

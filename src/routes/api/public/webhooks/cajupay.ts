@@ -30,11 +30,10 @@ export const Route = createFileRoute('/api/public/webhooks/cajupay')({
 
           if (!authorized) {
             await supabaseAdmin.from('audit_logs').insert({
-              category: 'webhook',
+              entity_type: 'webhook',
               action: 'cajupay.invalid_signature',
-              status: 'failure',
               description: 'Webhook CajuPay rejeitado: assinatura ausente ou inválida',
-              metadata: {} as any,
+              metadata: { category: 'webhook', status: 'failure' } as any,
             });
             return new Response('Invalid signature', { status: 401 });
           }

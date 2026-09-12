@@ -197,7 +197,7 @@ export const importDatabaseBackup = createServerFn({ method: "POST" })
 
     if (!isAdmin) throw new Error("Unauthorized");
 
-    const payload = input.backupData.data || input.backupData;
+    const payload = (input.backupData as any)['data'] || input.backupData;
     const availableTables = Object.keys(payload);
     const tablesToRun = input.tablesToRestore && input.tablesToRestore.length > 0
       ? input.tablesToRestore

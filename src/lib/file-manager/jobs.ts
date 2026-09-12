@@ -5,7 +5,7 @@ import fs from 'fs/promises';
 import fsSync from 'fs';
 import JSZip from 'jszip';
 import { validateSafePath, resolveClientRoot, sanitizeFileName } from './security';
-import { syncAppFilesToCoolify } from './server';
+import { syncAppFilesToContainer } from './server';
 import { auditLogOperation, formatBytes } from './filesystem';
 
 export type JobType = 'extract' | 'compress' | 'bulk_delete' | 'bulk_move' | 'bulk_copy';
@@ -23,13 +23,15 @@ export interface IFileJob {
   processedFiles: number;
   currentFile: string;
   conflictPolicy: ConflictPolicy;
-  resultSummary?: Record<string, any>;
-  error?: string;
+  resultSummary?: Record<string, any> | undefined;
+  error?: string | undefined;
   createdAt: string;
-  startedAt?: string;
-  completedAt?: string;
-  abortController?: AbortController;
+  startedAt?: string | undefined;
+  completedAt?: string | undefined;
+  abortController?: AbortController | undefined;
 }
+
+export type ISafeFileJob = Omit<IFileJob, 'abortController'>;
 
 class JobManagerService extends EventEmitter {
   private jobs: Map<string, IFileJob> = new Map();
@@ -53,18 +55,18 @@ class JobManagerService extends EventEmitter {
     }
   }
 
-  public getJob(jobId: string): IFileJob | undefined {
+  public getJob(jobId: string): ISafeFileJob | undefined {
     const job = this.jobs.get(jobId);
     if (!job) return undefined;
     // Retorna sem o AbortController para não quebrar serialização JSON
     const { abortController, ...safeJob } = job;
-    return safeJob as IFileJob;
+    return safeJob as ISafeFileJob;
   }
 
-  public cancelJob(jobId: string, userId: string): boolean {
+  public cancelJob(jobId: string, userId?: string): boolean {
     const job = this.jobs.get(jobId);
     if (!job) return false;
-    if (job.userId !== userId) {
+    if (userId && job.userId !== userId) {
       throw new Error('Acesso negado para cancelar este Job.');
     }
     if (job.status === 'running' || job.status === 'pending') {
@@ -88,7 +90,7 @@ class JobManagerService extends EventEmitter {
     archivePath: string;
     targetDir: string;
     conflictPolicy?: ConflictPolicy;
-  }): Promise<IFileJob> {
+  }): Promise<ISafeFileJob> {
     const { appId, userId, archivePath, targetDir, conflictPolicy = 'overwrite' } = params;
     const lockKey = `extract:${appId}:${archivePath}`;
 
@@ -138,10 +140,10 @@ class JobManagerService extends EventEmitter {
       const fullArchivePath = await validateSafePath(clientRoot, archivePath);
 
       if (!fsSync.existsSync(fullArchivePath)) {
-        throw new Error('Arquivo compactado não encontrado.');
+        throw new Error('Arquivo ZIP de origem não encontrado.');
       }
 
-      const destDirectory = await validateSafePath(clientRoot, targetDir);
+      const destDirectory = targetDir ? await validateSafePath(clientRoot, targetDir) : clientRoot;
       if (!fsSync.existsSync(destDirectory)) {
         await fs.mkdir(destDirectory, { recursive: true });
       }
@@ -163,7 +165,9 @@ class JobManagerService extends EventEmitter {
         }
 
         const entryName = entries[i];
+        if (!entryName) continue;
         const entry = zip.files[entryName];
+        if (!entry) continue;
 
         job.currentFile = entryName;
         job.processedFiles = i + 1;
@@ -206,14 +210,19 @@ class JobManagerService extends EventEmitter {
         }
       }
 
+      // 1. Concluir o job imediatamente para fechar o modal na UI sem esperas desnecessárias
       job.status = 'completed';
       job.progress = 100;
+      job.currentFile = 'Extração concluída com sucesso!';
       job.completedAt = new Date().toISOString();
       job.resultSummary = {
         totalFiles: job.totalFiles,
         extractedCount,
         skippedCount,
       };
+
+      this.emit(`job:${job.id}`, job);
+      this.activeLocks.delete(lockKey);
 
       await auditLogOperation(job.userId, job.appId, 'EXTRACT', {
         archivePath,
@@ -222,10 +231,13 @@ class JobManagerService extends EventEmitter {
         skippedCount,
       });
 
-      // Disparar sincronização com Caddy em background
-      syncAppFilesToCoolify(job.appId).catch(() => {});
+      // 2. Sincronizar com o cluster Swarm em segundo plano (não trava o usuário no modal)
+      syncAppFilesToContainer(job.appId)
+        .then(() => console.log(`[JobExtract] Sincronização com cluster Swarm concluída para job ${job.id}`))
+        .catch((syncErr: any) => console.warn(`[JobExtract Sync Warning]:`, syncErr?.message));
     } catch (err: any) {
-      if (job.status !== 'cancelled') {
+      this.activeLocks.delete(lockKey);
+      if ((job.status as string) !== 'cancelled') {
         job.status = 'failed';
         job.error = err.message || 'Erro inesperado na descompactação.';
         job.completedAt = new Date().toISOString();
@@ -245,7 +257,7 @@ class JobManagerService extends EventEmitter {
     paths: string[];
     archiveName: string;
     targetDir: string;
-  }): Promise<IFileJob> {
+  }): Promise<ISafeFileJob> {
     const { appId, userId, paths, archiveName, targetDir } = params;
     const cleanArchiveName = sanitizeFileName(archiveName.endsWith('.zip') ? archiveName : `${archiveName}.zip`);
     const lockKey = `compress:${appId}:${targetDir}/${cleanArchiveName}`;
@@ -293,20 +305,16 @@ class JobManagerService extends EventEmitter {
 
     try {
       const clientRoot = await resolveClientRoot(job.appId);
-      const destDirectory = await validateSafePath(clientRoot, targetDir);
+      const destDirectory = targetDir ? await validateSafePath(clientRoot, targetDir) : clientRoot;
 
-      if (!fsSync.existsSync(destDirectory)) {
-        await fs.mkdir(destDirectory, { recursive: true });
-      }
-
-      const filesToPack: Array<{ fullPath: string; relPath: string }> = [];
+      const filesToPack: { fullPath: string; relPath: string }[] = [];
 
       async function collect(absPath: string, relBase: string) {
-        const stat = await fs.stat(absPath);
-        if (stat.isDirectory()) {
-          const entries = await fs.readdir(absPath);
-          for (const ent of entries) {
-            await collect(path.join(absPath, ent), relBase ? `${relBase}/${ent}` : ent);
+        const stats = await fs.stat(absPath);
+        if (stats.isDirectory()) {
+          const children = await fs.readdir(absPath);
+          for (const c of children) {
+            await collect(path.join(absPath, c), path.join(relBase, c));
           }
         } else {
           filesToPack.push({ fullPath: absPath, relPath: relBase });
@@ -329,6 +337,7 @@ class JobManagerService extends EventEmitter {
         }
 
         const item = filesToPack[i];
+        if (!item) continue;
         job.currentFile = item.relPath;
         job.processedFiles = i + 1;
         job.progress = Math.round(((i + 1) / (filesToPack.length + 1)) * 90);
@@ -349,7 +358,7 @@ class JobManagerService extends EventEmitter {
         {
           type: 'nodebuffer',
           compression: 'DEFLATE',
-          compressionOptions: { level: 6 },
+          compressionOptions: { level: 1 },
         },
         (metadata) => {
           job.progress = 90 + Math.round(metadata.percent * 0.1);
@@ -377,9 +386,9 @@ class JobManagerService extends EventEmitter {
         sizeBytes: zipBuffer.length,
       });
 
-      syncAppFilesToCoolify(job.appId).catch(() => {});
+      syncAppFilesToContainer(job.appId).catch(() => {});
     } catch (err: any) {
-      if (job.status !== 'cancelled') {
+      if ((job.status as string) !== 'cancelled') {
         job.status = 'failed';
         job.error = err.message || 'Erro inesperado na compressão.';
         job.completedAt = new Date().toISOString();

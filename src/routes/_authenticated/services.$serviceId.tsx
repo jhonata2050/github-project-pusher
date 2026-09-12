@@ -83,8 +83,12 @@ function ServiceManagementPage() {
     }
   });
 
+  const isDirectAdminBlocked = Boolean(
+    service && ((service as any).block_directadmin || service.suspension_reason?.includes('BLOCK_DIRECTADMIN'))
+  );
+
   const handleSSO = async (command?: string) => {
-    if (service && (service as any).block_directadmin) {
+    if (isDirectAdminBlocked) {
       toast.error("Seu acesso ao painel de controle foi temporariamente bloqueado para este serviço. Por favor, entre em contato com o suporte.");
       return;
     }
@@ -195,10 +199,10 @@ function ServiceManagementPage() {
             {service?.status && (
               <Badge className={cn(
                 "rounded-full px-4 py-1",
-                service.block_directadmin ? 'bg-destructive text-destructive-foreground' : 
+                isDirectAdminBlocked ? 'bg-destructive text-destructive-foreground' : 
                 service.status === 'active' ? 'bg-success/20 text-success' : 'bg-warning/20 text-warning'
               )}>
-                {service.block_directadmin ? 'Bloqueado' : service.status === 'active' ? 'Ativo' : service.status}
+                {isDirectAdminBlocked ? 'Bloqueado' : service.status === 'active' ? 'Ativo' : service.status}
               </Badge>
             )}
           </div>
@@ -307,7 +311,7 @@ function ServiceManagementPage() {
           )}
         </div>
 
-        {service && service.block_directadmin && (
+        {service && isDirectAdminBlocked && (
           <Card className="rounded-3xl border-destructive/20 bg-destructive/5 border shadow-sm">
             <CardContent className="p-6 flex items-start gap-4">
               <ShieldAlert className="size-8 text-destructive shrink-0 mt-1" />

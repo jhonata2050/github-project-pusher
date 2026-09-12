@@ -49,3 +49,47 @@ export const getInvoiceDetails = createServerFn({ method: "GET" })
     const { fetchInvoiceDetails } = await import("./finance.server");
     return fetchInvoiceDetails(context.supabase, context.userId, data.id);
   });
+
+export const adminUpdateInvoice = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: unknown) =>
+    z
+      .object({
+        id: z.string().uuid(),
+        status: z.enum(["pending", "paid", "cancelled", "refunded", "overdue"]).optional(),
+        due_date: z.string().optional(),
+        total_amount: z.number().optional(),
+        subtotal: z.number().optional(),
+        discount_amount: z.number().optional(),
+        payment_method: z.string().nullable().optional(),
+        paid_at: z.string().nullable().optional(),
+        notes: z.string().nullable().optional(),
+      })
+      .parse(data)
+  )
+  .handler(async ({ data, context }) => {
+    const { adminUpdateInvoiceImplementation } = await import("./finance.server");
+    return adminUpdateInvoiceImplementation(data as any, context);
+  });
+
+export const adminCreateManualInvoice = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: unknown) =>
+    z
+      .object({
+        userId: z.string().uuid(),
+        description: z.string().min(1),
+        amount: z.number().min(0.01),
+        dueDate: z.string(),
+        serviceId: z.string().uuid().nullable().optional(),
+        notes: z.string().nullable().optional(),
+        status: z.enum(["pending", "paid"]).default("pending"),
+        paymentMethod: z.string().nullable().optional(),
+      })
+      .parse(data)
+  )
+  .handler(async ({ data, context }) => {
+    const { adminCreateManualInvoiceImplementation } = await import("./finance.server");
+    return adminCreateManualInvoiceImplementation(data as any, context);
+  });
+

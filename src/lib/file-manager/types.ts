@@ -7,17 +7,17 @@ export interface IFileInfo {
   size: number;
   sizeFormatted: string;
   mtime: string; // ISO string da última modificação real no filesystem
-  birthtime?: string;
+  birthtime?: string | undefined;
   permissions: string; // Octal (ex: "0755", "0644")
   rwx: string; // String rwx (ex: "-rwxr-xr-x", "drwxr-xr-x")
-  owner?: string;
-  group?: string;
+  owner?: string | undefined;
+  group?: string | undefined;
   mimeType: string;
   isHidden: boolean;
   isSymlink: boolean;
-  symlinkTarget?: string;
-  sha256?: string;
-  isWritable?: boolean;
+  symlinkTarget?: string | undefined;
+  sha256?: string | undefined;
+  isWritable?: boolean | undefined;
 }
 
 export interface IFileListResult {

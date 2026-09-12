@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>404</title>
+
+    <style>
+      html,
+      body {
+        height: 100%;
+        margin: 0;
+        padding: 0;
+        background: #0f0f0f;
+        overflow: hidden;
+        font-family: "Poppins", sans-serif;
+      }
+
+      .page-404 {
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-direction: column;
+        gap: 18px;
+        position: relative;
+        overflow: hidden;
+        padding: 20px;
+        box-sizing: border-box;
+      }
+
+      /* GRID */
+      .page-404::before {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background-image:
+          linear-gradient(rgba(255, 140, 66, 0.04) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(255, 140, 66, 0.04) 1px, transparent 1px);
+        background-size: 60px 60px;
+        pointer-events: none;
+        z-index: 0;
+      }
+
+      /* GLOW */
+      .page-404::after {
+        content: "";
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        width: 650px;
+        height: 650px;
+        background: radial-gradient(
+          circle,
+          rgba(255, 140, 66, 0.12) 0%,
+          rgba(255, 140, 66, 0.06) 35%,
+          transparent 70%
+        );
+        border-radius: 50%;
+        pointer-events: none;
+        z-index: 0;
+      }
+
+      /* IMAGEM */
+      .img-404 {
+        position: relative;
+        z-index: 2;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 100%;
+        box-sizing: border-box;
+      }
+
+      .img-404 img {
+        max-width: 90%;
+        max-height: 75vh;
+        object-fit: contain;
+        display: block;
+        filter: drop-shadow(0 0 30px rgba(255, 140, 66, 0.15));
+      }
+
+      /* BOTÃO */
+      .btn-back {
+        position: relative;
+        z-index: 2;
+        padding: 10px 18px;
+        font-size: 14px;
+        color: rgba(255, 255, 255, 0.75);
+        text-decoration: none;
+        border: 1px solid rgba(255, 140, 66, 0.25);
+        border-radius: 8px;
+        background: rgba(255, 140, 66, 0.04);
+        transition: all 0.25s ease;
+      }
+
+      .btn-back:hover {
+        color: #ff8c42;
+        border-color: rgba(255, 140, 66, 0.5);
+        background: rgba(255, 140, 66, 0.08);
+        transform: translateY(-2px);
+      }
+
+      /* 📱 MOBILE FIX */
+      @media (max-width: 768px) {
+        .img-404 img {
+          max-width: 95%;
+          max-height: 60vh;
+        }
+
+        .page-404::after {
+          width: 420px;
+          height: 420px;
+          opacity: 0.7;
+        }
+
+        .btn-back {
+          font-size: 13px;
+          padding: 9px 16px;
+        }
+      }
+    </style>
+  </head>
+
+  <body>
+    <div class="page-404">
+      <div class="img-404">
+        <a href="https://eqsam.com">
+          <img src="cdn/imagens/404.webp" alt="404"
+        /></a>
+      </div>
+
+      <a class="btn-back" href="https://eqsam.com"> ← Voltar ao site </a>
+    </div>
+  </body>
+</html>

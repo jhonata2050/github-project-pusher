@@ -1,4 +1,4 @@
-process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
+process.env['NODE_TLS_REJECT_UNAUTHORIZED'] = '0';
 
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 
@@ -208,23 +208,11 @@ export async function provisionContaboVPS(serviceId: string, config: {
     'BR': 'US-east',
   };
 
-  const newVpsId = crypto.randomUUID();
-  const domainUrl = process.env['APP_URL'] || 'https://eqsam.srvbr.top';
-  const installAgentScript = `#!/bin/bash
-sleep 20
-curl -sSL ${domainUrl}/api/public/scripts/install-agent | bash -s -- ${newVpsId} > /var/log/eqsam-agent-install.log 2>&1 || true
-`;
-  const userDataB64 = Buffer.from(installAgentScript).toString('base64');
-
-  const shortId = crypto.randomUUID().slice(0, 4).toUpperCase();
-  const vpsDisplayName = config.displayName || (service.domain ? `${service.domain} #${shortId}` : `${service.products?.name || "VPS Cloud"} [Cluster #${shortId}]`);
-
-  const payload: any = {
+  const payload = {
     imageId: config.imageId,
     productId: config.productId,
     region: regionAliases[config.region] || config.region,
-    displayName: vpsDisplayName,
-    userData: userDataB64,
+    displayName: config.displayName || service.domain || `VPS-${service.id.slice(0, 8)}`,
   };
 
   const res = await fetch('https://api.contabo.com/v1/compute/instances', {
@@ -253,7 +241,6 @@ curl -sSL ${domainUrl}/api/public/scripts/install-agent | bash -s -- ${newVpsId}
   const status = String(created?.status || 'provisioning').toLowerCase();
 
   const vpsPayload = {
-    id: newVpsId,
     user_id: service.user_id,
     external_id: String(externalId),
     name: payload.displayName,

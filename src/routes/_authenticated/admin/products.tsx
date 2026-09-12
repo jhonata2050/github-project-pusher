@@ -52,7 +52,7 @@ function ProductsPage() {
       const { data, error } = await supabase
         .from("products")
         .select(
-          "id, name, slug, description, directadmin_package, external_id, disk_quota_mb, is_visible, sort_order, product_type, group_id, immediate_purchase, product_groups(name), product_prices(cycle, price, is_active)",
+          "id, name, slug, description, directadmin_package, disk_quota_mb, is_visible, sort_order, product_type, group_id, product_groups(name), product_prices(cycle, price, is_active)",
         )
         .neq("product_type", "vps")
         .order("sort_order");
@@ -253,7 +253,7 @@ function ProductsPage() {
                     <dt>Preços ativos</dt>
                     <dd className="text-foreground">{product.product_prices?.filter(p => p.is_active).length ?? 0}</dd>
                   </div>
-                  {product.immediate_purchase && (
+                  {(product as any).immediate_purchase && (
                     <div className="flex justify-between items-center mt-1">
                       <dt className="text-brand font-medium">Link de Venda</dt>
                       <dd>
@@ -263,7 +263,7 @@ function ProductsPage() {
                           className="size-6 h-6 w-6"
                           onClick={(e) => {
                             e.stopPropagation();
-                            const publicOrigin = "https://easy-push1231231sa1d131dscxsc.lovable.app";
+                            const publicOrigin = typeof window !== 'undefined' ? window.location.origin : '';
                             const url = `${publicOrigin}/checkout/${product.id}?immediate=true&mode=signup`;
                             navigator.clipboard.writeText(url);
                             toast.success("Link copiado!");
@@ -371,7 +371,7 @@ function ProductsPage() {
                     <div className="flex-1 min-w-0">
                       <Label className="text-[10px] text-brand font-bold uppercase">Link do Plano</Label>
                       <p className="text-[10px] truncate text-muted-foreground">
-                        {`easy-push1231231sa1d131dscxsc.lovable.app/checkout/${editingProduct.id}...`}
+                        {`/checkout/${editingProduct.id}?immediate=true&mode=signup`}
                       </p>
                     </div>
                     <Button 
@@ -379,7 +379,7 @@ function ProductsPage() {
                       size="icon" 
                       className="size-8"
                       onClick={() => {
-                        const publicOrigin = "https://easy-push1231231sa1d131dscxsc.lovable.app";
+                        const publicOrigin = typeof window !== 'undefined' ? window.location.origin : '';
                         const url = `${publicOrigin}/checkout/${editingProduct.id}?immediate=true&mode=signup`;
                         navigator.clipboard.writeText(url);
                         toast.success("Link copiado!");
@@ -482,7 +482,7 @@ function ProductsPage() {
                   {Object.keys(CYCLE_LABELS).map(cycle => {
                     const priceObj = editingProduct.prices.find((p: any) => p.cycle === cycle) || { cycle, price: 0, is_active: false };
                     return (
-                      <div key={cycle} className="flex items-center gap-4 rounded-xl border border-border p-3 bg-white">
+                      <div key={cycle} className="flex items-center gap-4 rounded-xl border border-border/70 p-3 bg-card">
                         <div className="flex-1">
                           <Label className="capitalize text-xs">{CYCLE_LABELS[cycle]}</Label>
                         </div>

@@ -28,14 +28,12 @@ export const Route = createFileRoute('/api/public/password-reset')({
             user_agent: request.headers.get('user-agent')?.slice(0, 500) || null,
           })
 
-          // Supabase handle password reset email
-          const { error } = await supabaseAdmin.auth.admin.generateLink({
-            type: 'recovery',
-            email: email,
-            options: {
-              redirectTo: `${new URL(request.url).origin}/auth/reset-password`
-            }
-          })
+          // Dispara o e-mail de recuperação de senha oficial do Supabase
+          const { getCanonicalPublicUrl } = await import('@/lib/payments.server');
+          const canonicalOrigin = getCanonicalPublicUrl(request);
+          const { error } = await supabaseAdmin.auth.resetPasswordForEmail(email, {
+            redirectTo: `${canonicalOrigin}/auth/reset-password`
+          });
 
           if (error) {
             console.error('[PasswordReset] Error:', error)

@@ -1,67 +1,13 @@
 import { createFileRoute } from '@tanstack/react-router';
 import { jobManager } from '@/lib/file-manager/jobs';
-import { verifyAppAuthorization } from '@/lib/file-manager/security';
-
-function decodeJwtPayload(token: string): any {
-  try {
-    const parts = token.split('.');
-    if (parts.length !== 3) return null;
-    const base64Url = parts[1];
-    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
-    const jsonPayload = decodeURIComponent(
-      atob(base64)
-        .split('')
-        .map((c) => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
-        .join('')
-    );
-    return JSON.parse(jsonPayload);
-  } catch {
-    return null;
-  }
-}
+import { verifyAppAuthorization, extractAndVerifyUser } from '@/lib/file-manager/security';
 
 export const Route = createFileRoute('/api/file-manager/jobs/compress')({
   server: {
     handlers: {
       POST: async ({ request }) => {
         try {
-          let token = '';
-          const authHeader = request.headers.get('authorization');
-          if (authHeader?.startsWith('Bearer ')) {
-            token = authHeader.replace('Bearer ', '').trim();
-          } else {
-            const cookieHeader = request.headers.get('cookie') || '';
-            const match = cookieHeader.match(/sb-[^=]+-auth-token=([^;]+)/);
-            if (match) {
-              try {
-                const cookieVal = decodeURIComponent(match[1]);
-                if (cookieVal.startsWith('base64-')) {
-                  const json = Buffer.from(cookieVal.slice(7), 'base64').toString();
-                  const parsed = JSON.parse(json);
-                  token = parsed.access_token || parsed[0];
-                } else {
-                  const parsed = JSON.parse(cookieVal);
-                  token = parsed.access_token || parsed[0];
-                }
-              } catch (e) {}
-            }
-          }
-
-          if (!token) {
-            return new Response(JSON.stringify({ error: 'Não autorizado. Faça login novamente.' }), {
-              status: 401,
-              headers: { 'Content-Type': 'application/json' },
-            });
-          }
-
-          const decoded = decodeJwtPayload(token);
-          const userId = decoded?.sub;
-          if (!userId) {
-            return new Response(JSON.stringify({ error: 'Token inválido.' }), {
-              status: 401,
-              headers: { 'Content-Type': 'application/json' },
-            });
-          }
+          const userId = await extractAndVerifyUser(request);
 
           const body = await request.json();
           const { appId, paths, archiveName, targetDir = '' } = body;
@@ -89,8 +35,12 @@ export const Route = createFileRoute('/api/file-manager/jobs/compress')({
           });
         } catch (err: any) {
           console.error('[API Compress Job Error]:', err);
-          return new Response(JSON.stringify({ error: err.message || 'Erro ao iniciar compressão.' }), {
-            status: 500,
+          const msg = err.message || 'Erro ao iniciar compressão.';
+          let status = 500;
+          if (msg.includes('Não autorizado') || msg.includes('Sessão') || msg.includes('login')) status = 401;
+          else if (msg.includes('Acesso negado')) status = 403;
+          return new Response(JSON.stringify({ error: msg }), {
+            status,
             headers: { 'Content-Type': 'application/json' },
           });
         }

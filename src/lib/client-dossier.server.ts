@@ -78,7 +78,7 @@ export async function fetchClientDossier(
     supabaseAdmin.from("profiles").select("*").eq("id", clientId).maybeSingle(),
     supabaseAdmin
       .from("invoices")
-      .select("id, status, total_amount, subtotal, tax_amount, discount_amount, due_date, paid_at, payment_method, created_at")
+      .select("id, status, total_amount, subtotal, tax_amount, discount_amount, due_date, paid_at, payment_method, notes, created_at, invoice_items(id, description, amount, quantity, service_id)")
       .eq("user_id", clientId)
       .order("created_at", { ascending: false })
       .limit(RECENT_LIMIT),
