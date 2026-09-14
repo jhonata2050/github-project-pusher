@@ -1259,7 +1259,22 @@ describe("Lei da Preservação de Fachadas (Facade Integrity Tests)", () => {
     const card = await import("../../src/components/apps/overview/AppConnectionEndpointsCard");
     expect(typeof card.AppConnectionEndpointsCard).toBe("function");
   });
+
+  it("invoice-lifecycle.server fachada e submódulos devem reexportar funções essenciais de pedidos, detalhes e admin", async () => {
+    const lifecycleFacade = await import("../../src/lib/finance/invoice-lifecycle.server");
+    expect(typeof lifecycleFacade.placeOrder).toBe("function");
+    expect(typeof lifecycleFacade.fetchInvoiceDetails).toBe("function");
+    expect(typeof lifecycleFacade.adminUpdateInvoiceImplementation).toBe("function");
+    expect(typeof lifecycleFacade.adminCreateManualInvoiceImplementation).toBe("function");
+
+    const lifecycleModule = await import("../../src/lib/finance/invoice-lifecycle/index");
+    expect(typeof lifecycleModule.placeOrder).toBe("function");
+    expect(typeof lifecycleModule.fetchInvoiceDetails).toBe("function");
+    expect(typeof lifecycleModule.adminUpdateInvoiceImplementation).toBe("function");
+    expect(typeof lifecycleModule.adminCreateManualInvoiceImplementation).toBe("function");
+  });
 });
+
 
 describe("Motor Caddy & Hardening de Segurança OWASP", () => {
   it("deve incluir cabeçalhos anti-fingerprinting e bloqueio de arquivos sensíveis", () => {
