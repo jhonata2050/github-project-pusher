@@ -1602,6 +1602,16 @@ describe("Lei da Preservação de Fachadas (Facade Integrity Tests)", () => {
     expect(typeof sub.moveApplicationFiles).toBe("function");
     expect(typeof sub.copyApplicationFiles).toBe("function");
   });
+
+  it("Phase 70: client edit service modal subcomponentes devem ser exportados corretamente", async () => {
+    const serviceSub = await import("../../src/components/admin/clients/modals/service/index");
+    expect(typeof serviceSub.ServiceVpsOrHostingFields).toBe("function");
+    expect(typeof serviceSub.ServiceDirectAdminBlock).toBe("function");
+    expect(typeof serviceSub.ServiceActionButtons).toBe("function");
+
+    const modal = await import("../../src/components/admin/clients/modals/ClientEditServiceModal");
+    expect(typeof modal.ClientEditServiceModal).toBe("function");
+  });
 });
 
 
