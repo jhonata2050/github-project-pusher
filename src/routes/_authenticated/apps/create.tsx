@@ -1,40 +1,18 @@
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useState, useRef } from "react";
-import { 
-  Upload, 
-  Github, 
-  Sparkles, 
-  Box, 
-  Cpu, 
-  HardDrive, 
-  ArrowLeft, 
-  CheckCircle2, 
-  AlertTriangle, 
-  Zap, 
-  FileArchive, 
-  X, 
-  Globe, 
-  KeyRound,
-  Check,
-  Plus
-} from "lucide-react";
+import { createFileRoute, Link } from "@tanstack/react-router";
+import { ArrowLeft } from "lucide-react";
 import { AppShell } from "@/components/app/AppShell";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
-import { getMyApplications, applyTemplateToApp } from "@/lib/cloud-apps.functions";
-import { APP_TEMPLATES, type AppTemplate, getRequiredDiskWithMargin } from "@/lib/templates.data";
-import { useAuth } from "@/hooks/use-auth";
-import { toast } from "sonner";
-
-type CreateAppSearchParams = {
-  mode?: "zip" | "github" | "templates";
-  appId?: string;
-  category?: string;
-};
+import {
+  DeployTypeSelector,
+  DeployZipSection,
+  DeployGithubSection,
+  DeployTemplateSection,
+  CreateAppNameInput,
+  CreateAppSidebar,
+  useCreateApp,
+  type CreateAppSearchParams,
+} from "@/components/apps/create";
 
 export const Route = createFileRoute("/_authenticated/apps/create")({
   validateSearch: (search: Record<string, unknown>): CreateAppSearchParams => {
@@ -55,183 +33,46 @@ export const Route = createFileRoute("/_authenticated/apps/create")({
   component: CreateAppPage,
 });
 
-type DeployType = "zip" | "github" | "templates";
-
 function CreateAppPage() {
   const search = Route.useSearch();
-  const navigate = useNavigate();
-  const queryClient = useQueryClient();
-  const { user, impersonatedClientId } = useAuth();
-  const effectiveUserId = impersonatedClientId || user?.id;
-
-  const [deployType, setDeployType] = useState<DeployType>(search.mode || "zip");
-  const [appName, setAppName] = useState(
-    search.mode === "templates" || !search.mode ? (APP_TEMPLATES[0]?.name || "") : ""
-  );
-  const [selectedAppId, setSelectedAppId] = useState<string>(search.appId || "");
-
-  // Estado para ZIP
-  const [zipFile, setZipFile] = useState<File | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-
-  // Estado para GitHub
-  const [gitRepo, setGitRepo] = useState("");
-  const [gitBranch, setGitBranch] = useState("main");
-  const [buildPack, setBuildPack] = useState<"nixpacks" | "dockerfile">("nixpacks");
-
-  // Estado para Templates
-  const [selectedTemplate, setSelectedTemplate] = useState<AppTemplate | null>(APP_TEMPLATES[0] ?? null);
-  const [templateCategory, setTemplateCategory] = useState<string>(search.category || "all");
-
-  const { data: apps, isLoading: loadingApps } = useQuery({
-    queryKey: ["myApplications", effectiveUserId],
-    enabled: Boolean(effectiveUserId),
-    queryFn: () => getMyApplications({ data: { clientId: effectiveUserId } }),
+  const {
+    deployType,
+    setDeployType,
+    appName,
+    setAppName,
+    selectedAppId,
+    setSelectedAppId,
+    zipFile,
+    setZipFile,
+    gitRepo,
+    setGitRepo,
+    gitBranch,
+    setGitBranch,
+    buildPack,
+    setBuildPack,
+    selectedTemplate,
+    setSelectedTemplate,
+    templateCategory,
+    setTemplateCategory,
+    apps,
+    activeApp,
+    resourceComp,
+    handleFileDrop,
+    handleFileSelect,
+    deployMutation,
+    handleDeploy,
+  } = useCreateApp({
+    initialMode: search.mode,
+    initialAppId: search.appId,
+    initialCategory: search.category,
   });
-
-  const activeApp = apps?.find((a: any) => a.id === (selectedAppId || apps?.[0]?.id)) || apps?.[0];
-  const activeAppDisk = (activeApp as any)?.service?.products?.disk_quota_mb || activeApp?.disk_limit_mb || 1536;
-  const requiredDiskWithMargin = selectedTemplate ? getRequiredDiskWithMargin(selectedTemplate.recommended_disk) : 0;
-
-  const isRamUnderpowered = Boolean(
-    deployType === "templates" && 
-    activeApp && 
-    selectedTemplate && 
-    activeApp.memory_limit < selectedTemplate.recommended_ram
-  );
-
-  const isCpuUnderpowered = Boolean(
-    deployType === "templates" && 
-    activeApp && 
-    selectedTemplate && 
-    activeApp.cpu_limit && 
-    activeApp.cpu_limit < selectedTemplate.recommended_cpu
-  );
-
-  const isDiskUnderpowered = Boolean(
-    deployType === "templates" && 
-    activeApp && 
-    selectedTemplate && 
-    requiredDiskWithMargin > 0 && 
-    activeAppDisk < requiredDiskWithMargin
-  );
-
-  const isTemplateUnderpowered = isRamUnderpowered || isCpuUnderpowered || isDiskUnderpowered;
-
-  const deployMutation = useMutation({
-    mutationFn: async () => {
-      if (!activeApp) throw new Error("Selecione uma aplicação/recurso para o deploy.");
-
-      const trimmedName = appName.trim();
-      if (!trimmedName) {
-        throw new Error("O nome da aplicação é obrigatório. Por favor, informe o nome para prosseguir.");
-      }
-
-      if (deployType === "templates" && selectedTemplate) {
-        if (isTemplateUnderpowered) {
-          let reason = "";
-          if (isDiskUnderpowered) {
-            reason = `seu plano contratado possui ${activeAppDisk} MB de disco, mas o modelo ${selectedTemplate.name} exige no mínimo ${selectedTemplate.recommended_disk} MB (+ 20% de margem de segurança para operação = ${requiredDiskWithMargin} MB).`;
-          } else if (isRamUnderpowered) {
-            reason = `seu plano contratado possui ${activeApp.memory_limit} MB de RAM, mas o modelo ${selectedTemplate.name} exige no mínimo ${selectedTemplate.recommended_ram} MB de RAM.`;
-          } else {
-            reason = `seu plano contratado possui ${activeApp.cpu_limit || 0.5} vCPU, mas o modelo ${selectedTemplate.name} exige no mínimo ${selectedTemplate.recommended_cpu} vCPU.`;
-          }
-          throw new Error(`Plano incompatível: ${reason} Faça upgrade do seu plano para continuar.`);
-        }
-        return applyTemplateToApp({
-          data: {
-            appId: activeApp.id,
-            template: {
-              id: selectedTemplate.id,
-              git_repository: selectedTemplate.git_repository,
-              git_branch: selectedTemplate.git_branch,
-              build_pack: selectedTemplate.build_pack,
-              default_envs: selectedTemplate.default_envs,
-              default_port: selectedTemplate.default_port,
-              name: trimmedName,
-            },
-          },
-        });
-      }
-
-      if (deployType === "github") {
-        if (!gitRepo) throw new Error("Informe a URL do repositório GitHub.");
-        return applyTemplateToApp({
-          data: {
-            appId: activeApp.id,
-            template: {
-              git_repository: gitRepo,
-              git_branch: gitBranch || "main",
-              build_pack: buildPack,
-              name: trimmedName,
-            },
-          },
-        });
-      }
-
-      if (deployType === "zip") {
-        if (!zipFile) throw new Error("Selecione um arquivo .zip para fazer o upload.");
-        // Simular deploy do zip com template base e build Nixpacks
-        return applyTemplateToApp({
-          data: {
-            appId: activeApp.id,
-            template: {
-              git_repository: "https://github.com/eqsam/nodejs-starter",
-              git_branch: "main",
-              build_pack: "nixpacks",
-              name: trimmedName,
-            },
-          },
-        });
-      }
-      return null;
-    },
-    onSuccess: () => {
-      toast.success("Aplicação criada e deploy iniciado com sucesso!");
-      queryClient.invalidateQueries({ queryKey: ["myApplications"] });
-      if (activeApp) {
-        navigate({ to: "/apps/$appId", params: { appId: activeApp.id } });
-      } else {
-        navigate({ to: "/apps" });
-      }
-    },
-    onError: (err: any) => {
-      toast.error(err.message || "Falha ao realizar deploy.");
-    },
-  });
-
-  const handleFileDrop = (e: React.DragEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-      const file = e.dataTransfer.files[0];
-      if (file.name.endsWith(".zip")) {
-        setZipFile(file);
-        if (!appName) setAppName(file.name.replace(".zip", ""));
-      } else {
-        toast.error("Apenas arquivos no formato .zip são aceitos.");
-      }
-    }
-  };
-
-  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      const file = e.target.files[0];
-      if (file.name.endsWith(".zip")) {
-        setZipFile(file);
-        if (!appName) setAppName(file.name.replace(".zip", ""));
-      } else {
-        toast.error("Apenas arquivos no formato .zip são aceitos.");
-      }
-    }
-  };
 
   return (
     <AppShell breadcrumb={<span><Link to="/apps" className="hover:underline">Aplicações</Link> / Criar aplicação</span>}>
       <div className="max-w-6xl mx-auto space-y-6">
         <div className="flex items-center gap-3">
           <Link to="/apps">
-            <Button size="icon" variant="outline" className="rounded-2xl h-10 w-10">
+            <Button size="icon" variant="outline" className="rounded-2xl h-10 w-10 cursor-pointer">
               <ArrowLeft className="h-4 w-4" />
             </Button>
           </Link>
@@ -244,7 +85,6 @@ function CreateAppPage() {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Coluna Principal: Origem do Deploy */}
           <div className="lg:col-span-2 space-y-6">
             <Card className="rounded-3xl border shadow-sm">
               <CardHeader className="pb-4">
@@ -254,399 +94,61 @@ function CreateAppPage() {
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
-                {/* 3 Opções de Deploy em Botões/Cards */}
-                <div className="grid grid-cols-3 gap-3">
-                  <button
-                    type="button"
-                    onClick={() => setDeployType("zip")}
-                    className={`flex flex-col items-center justify-center p-4 rounded-2xl border-2 transition-all text-center gap-2 ${
-                      deployType === "zip"
-                        ? "border-primary bg-primary/5 text-primary font-bold shadow-sm"
-                        : "border-border hover:border-muted-foreground/50 text-muted-foreground"
-                    }`}
-                  >
-                    <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center">
-                      <Upload className="h-5 w-5" />
-                    </div>
-                    <span className="text-xs font-semibold">Upload ZIP</span>
-                  </button>
+                <DeployTypeSelector
+                  deployType={deployType}
+                  onChangeDeployType={setDeployType}
+                />
 
-                  <button
-                    type="button"
-                    onClick={() => setDeployType("github")}
-                    className={`flex flex-col items-center justify-center p-4 rounded-2xl border-2 transition-all text-center gap-2 ${
-                      deployType === "github"
-                        ? "border-primary bg-primary/5 text-primary font-bold shadow-sm"
-                        : "border-border hover:border-muted-foreground/50 text-muted-foreground"
-                    }`}
-                  >
-                    <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center">
-                      <Github className="h-5 w-5" />
-                    </div>
-                    <span className="text-xs font-semibold">GitHub</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => setDeployType("templates")}
-                    className={`flex flex-col items-center justify-center p-4 rounded-2xl border-2 transition-all text-center gap-2 ${
-                      deployType === "templates"
-                        ? "border-primary bg-primary/5 text-primary font-bold shadow-sm"
-                        : "border-border hover:border-muted-foreground/50 text-muted-foreground"
-                    }`}
-                  >
-                    <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center">
-                      <Sparkles className="h-5 w-5" />
-                    </div>
-                    <span className="text-xs font-semibold">Templates</span>
-                  </button>
-                </div>
-
-                {/* Conteúdo: UPLOAD ZIP */}
                 {deployType === "zip" && (
-                  <div className="space-y-4">
-                    <input
-                      ref={fileInputRef}
-                      type="file"
-                      accept=".zip"
-                      onChange={handleFileSelect}
-                      className="hidden"
-                    />
-
-                    {!zipFile ? (
-                      <div
-                        onDragOver={(e) => e.preventDefault()}
-                        onDrop={handleFileDrop}
-                        onClick={() => fileInputRef.current?.click()}
-                        className="border-2 border-dashed rounded-3xl p-10 text-center hover:border-primary/50 transition-all cursor-pointer bg-muted/20 hover:bg-muted/40 group"
-                      >
-                        <div className="h-14 w-14 rounded-2xl bg-primary/10 text-primary flex items-center justify-center mx-auto mb-3 group-hover:scale-110 transition-transform">
-                          <Upload className="h-7 w-7" />
-                        </div>
-                        <p className="font-bold text-sm">Arraste o arquivo .zip aqui</p>
-                        <p className="text-xs text-primary font-medium mt-0.5">ou clique para selecionar</p>
-                        <p className="text-[11px] text-muted-foreground mt-2">
-                          Apenas arquivos .zip aceitos (Node.js, Python, PHP, Docker, HTML)
-                        </p>
-                      </div>
-                    ) : (
-                      <div className="bg-muted/40 p-4 rounded-2xl border flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                          <div className="h-10 w-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center">
-                            <FileArchive className="h-5 w-5" />
-                          </div>
-                          <div>
-                            <p className="font-bold text-xs">{zipFile.name}</p>
-                            <p className="text-[11px] text-muted-foreground">
-                              {(zipFile.size / (1024 * 1024)).toFixed(2)} MB • Pronto para envio
-                            </p>
-                          </div>
-                        </div>
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          onClick={() => setZipFile(null)}
-                          className="h-8 w-8 rounded-xl text-rose-500 hover:bg-rose-50"
-                        >
-                          <X className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {/* Conteúdo: GITHUB */}
-                {deployType === "github" && (
-                  <div className="space-y-4">
-                    <div className="space-y-2">
-                      <Label className="text-xs">URL do Repositório (Público ou Privado)</Label>
-                      <Input
-                        value={gitRepo}
-                        onChange={(e) => setGitRepo(e.target.value)}
-                        placeholder="https://github.com/usuario/meu-bot"
-                        className="rounded-xl font-mono text-xs"
-                      />
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-3">
-                      <div className="space-y-2">
-                        <Label className="text-xs">Branch</Label>
-                        <Input
-                          value={gitBranch}
-                          onChange={(e) => setGitBranch(e.target.value)}
-                          placeholder="main"
-                          className="rounded-xl font-mono text-xs"
-                        />
-                      </div>
-
-                      <div className="space-y-2">
-                        <Label className="text-xs">Motor de Build</Label>
-                        <select
-                          value={buildPack}
-                          onChange={(e: any) => setBuildPack(e.target.value)}
-                          className="w-full h-10 px-3 rounded-xl border bg-background text-xs font-semibold"
-                        >
-                          <option value="nixpacks">Nixpacks (Auto-detect)</option>
-                          <option value="dockerfile">Dockerfile Customizado</option>
-                        </select>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {/* Conteúdo: TEMPLATES */}
-                {deployType === "templates" && (
-                  <div className="space-y-3">
-                    <div className="flex flex-col gap-2">
-                      <Label className="text-xs">Escolha a Categoria e o Modelo Pré-Configurado</Label>
-                      
-                      {/* Menu Separador de Categorias no Topo */}
-                      <div className="flex items-center gap-1.5 overflow-x-auto pb-1 no-scrollbar">
-                        {[
-                          { id: "all", label: "Todos" },
-                          { id: "websites", label: "Sites & CMS" },
-                          { id: "languages", label: "Linguagens" },
-                          { id: "bots", label: "Bots & WhatsApp" },
-                          { id: "automations", label: "Automação" },
-                          { id: "apis", label: "APIs & Backend" },
-                          { id: "databases", label: "Bancos" },
-                          { id: "tools", label: "Ferramentas" },
-                        ].map((cat) => (
-                          <button
-                            key={cat.id}
-                            type="button"
-                            onClick={() => setTemplateCategory(cat.id)}
-                            className={`px-3 py-1.5 rounded-xl text-[11px] font-semibold whitespace-nowrap transition-all cursor-pointer ${
-                              templateCategory === cat.id
-                                ? "bg-primary text-primary-foreground shadow-xs font-bold"
-                                : "bg-muted/70 text-muted-foreground hover:bg-muted"
-                            }`}
-                          >
-                            {cat.label}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-2.5 max-h-84 overflow-y-auto pr-1">
-                      {APP_TEMPLATES.filter((t) => templateCategory === "all" || t.category === templateCategory).map((tmpl) => {
-                        const isSelected = selectedTemplate?.id === tmpl.id;
-                        return (
-                          <button
-                            key={tmpl.id}
-                            type="button"
-                            onClick={() => {
-                              setSelectedTemplate(tmpl);
-                              if (!appName.trim() || APP_TEMPLATES.some(t => t.name === appName || t.name.toLowerCase().replace(/[^a-z0-9]/g, "-") === appName)) {
-                                setAppName(tmpl.name);
-                              }
-                            }}
-                            className={`p-3 rounded-2xl border text-left flex items-start gap-3 transition-all cursor-pointer ${
-                              isSelected
-                                ? "border-primary bg-primary/5 ring-1 ring-primary shadow-xs"
-                                : "hover:border-border hover:bg-muted/30"
-                            }`}
-                          >
-                            <div className="h-9 w-9 rounded-xl bg-white dark:bg-zinc-800 p-1.5 flex items-center justify-center border shadow-xs flex-shrink-0 mt-0.5">
-                              <img 
-                                src={tmpl.icon} 
-                                alt={tmpl.name} 
-                                className="h-full w-full object-contain"
-                                onError={(e: any) => { e.target.src = "https://raw.githubusercontent.com/baptisteArno/typebot.io/main/apps/builder/public/favicon.svg"; }}
-                              />
-                            </div>
-                            <div className="overflow-hidden min-w-0">
-                              <p className="font-bold text-xs truncate text-foreground">{tmpl.name}</p>
-                              <p className="text-[10px] text-muted-foreground truncate mt-0.5">
-                                <span className="font-semibold text-primary">{tmpl.recommended_ram}MB RAM</span> • {tmpl.recommended_cpu} vCPU • <span className="font-medium text-amber-600 dark:text-amber-400">{getRequiredDiskWithMargin(tmpl.recommended_disk)}MB HD</span>
-                              </p>
-                            </div>
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-
-            {/* Configurações da Aplicação */}
-            <Card className="rounded-3xl border shadow-sm">
-              <CardHeader className="pb-4">
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-base font-bold">Parâmetros da Aplicação</CardTitle>
-                  <Badge variant="outline" className="text-[10px] font-semibold text-amber-600 dark:text-amber-400 border-amber-500/30 bg-amber-500/5">
-                    Campo Obrigatório
-                  </Badge>
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <Label className="text-xs font-semibold flex items-center gap-1">
-                      Nome da Aplicação <span className="text-rose-500 font-bold text-sm">*</span>
-                    </Label>
-                    {!appName.trim() && (
-                      <span className="text-[10px] font-bold text-rose-500">Obrigatório preencher</span>
-                    )}
-                  </div>
-                  <Input
-                    value={appName}
-                    onChange={(e) => setAppName(e.target.value)}
-                    placeholder="Ex: meu-bot-whatsapp, n8n, api-node"
-                    className={`rounded-xl font-medium text-xs h-11 ${
-                      !appName.trim() 
-                        ? "border-rose-500/60 focus-visible:ring-rose-500 bg-rose-500/5" 
-                        : "border-border"
-                    }`}
-                    required
+                  <DeployZipSection
+                    zipFile={zipFile}
+                    onFileDrop={handleFileDrop}
+                    onFileSelect={handleFileSelect}
+                    onRemoveFile={() => setZipFile(null)}
                   />
-                  {!appName.trim() ? (
-                    <p className="text-[11px] text-rose-500 font-medium">
-                      ⚠️ O preenchimento do nome da aplicação é obrigatório para identificação no painel.
-                    </p>
-                  ) : (
-                    <p className="text-[11px] text-muted-foreground">
-                      Identificação visual da sua aplicação na lista de serviços e no painel.
-                    </p>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Coluna Lateral: Resumo do Plano & Botão de Deploy */}
-          <div className="space-y-6">
-            <Card className="rounded-3xl border shadow-sm">
-              <CardHeader className="pb-4">
-                <CardTitle className="text-base font-bold">Resumo do Deploy</CardTitle>
-                <CardDescription className="text-xs">
-                  Recurso onde a aplicação será instanciada.
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4 text-xs">
-                {apps && apps.length > 0 ? (
-                  <div className="space-y-2.5">
-                    <div className="flex items-center justify-between">
-                      <Label className="text-xs font-semibold">Recurso / Serviço Contratado:</Label>
-                      <Link to="/plans" search={{ tab: "paas" }} className="text-[11px] font-bold text-primary hover:underline flex items-center gap-1">
-                        <Plus className="h-3 w-3" /> Contratar novo
-                      </Link>
-                    </div>
-                    <select
-                      className="w-full h-10 px-3 rounded-xl border bg-background font-semibold text-xs focus:ring-1 focus:ring-primary cursor-pointer"
-                      value={selectedAppId || apps[0]?.id}
-                      onChange={(e) => {
-                        if (e.target.value === "__new_plan__") {
-                          navigate({ to: "/plans", search: { tab: "paas" } });
-                          return;
-                        }
-                        setSelectedAppId(e.target.value);
-                      }}
-                    >
-                      {apps.map((a: any) => (
-                        <option key={a.id} value={a.id}>
-                          {a.name} ({a.memory_limit} MB • {a.cpu_limit} vCPU)
-                        </option>
-                      ))}
-                      <option value="__new_plan__">➕ Contratar novo plano...</option>
-                    </select>
-
-                    <Link to="/checkout" search={{ service: "containers" }} className="block pt-1">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        className="w-full rounded-xl text-xs border-dashed gap-1.5 font-semibold text-muted-foreground hover:text-primary hover:border-primary/50 hover:bg-primary/5"
-                      >
-                        <Plus className="h-3.5 w-3.5 text-primary" /> Contratar novo plano PaaS
-                      </Button>
-                    </Link>
-                  </div>
-                ) : (
-                  <div className="bg-amber-500/10 border border-amber-500/30 p-3.5 rounded-2xl space-y-2 text-amber-700 dark:text-amber-300">
-                    <p className="font-bold flex items-center gap-1.5 text-xs">
-                      <AlertTriangle className="h-4 w-4" /> Nenhum plano ativo
-                    </p>
-                    <p className="text-[11px] leading-relaxed">
-                      Você precisa de um plano de aplicação para iniciar o container.
-                    </p>
-                    <Link to="/checkout" search={{ service: "containers" }}>
-                      <Button size="sm" className="w-full rounded-xl text-xs mt-1 font-bold">
-                        <Plus className="h-3.5 w-3.5 mr-1" /> Contratar Novo Plano PaaS
-                      </Button>
-                    </Link>
-                  </div>
                 )}
 
-                {activeApp && (
-                  <div className="bg-muted/40 p-4 rounded-2xl border space-y-2.5">
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Memória Alocada:</span>
-                      <span className="font-bold">{activeApp.memory_limit} MB RAM</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">CPU Alocada:</span>
-                      <span className="font-bold">{activeApp.cpu_limit} vCPU</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Espaço em Disco:</span>
-                      <span className="font-bold">{activeAppDisk} MB HD</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">SSL & Domínio:</span>
-                      <span className="text-lime-600 font-semibold flex items-center gap-1">
-                        <CheckCircle2 className="h-3 w-3" /> Automático
-                      </span>
-                    </div>
-                  </div>
+                {deployType === "github" && (
+                  <DeployGithubSection
+                    gitRepo={gitRepo}
+                    onChangeGitRepo={setGitRepo}
+                    gitBranch={gitBranch}
+                    onChangeGitBranch={setGitBranch}
+                    buildPack={buildPack}
+                    onChangeBuildPack={setBuildPack}
+                  />
                 )}
 
-                {isTemplateUnderpowered && (
-                  <div className="bg-rose-500/10 border-2 border-rose-500/40 p-3.5 rounded-2xl space-y-2 text-rose-800 dark:text-rose-300">
-                    <p className="font-bold flex items-center gap-1.5 text-xs text-rose-700 dark:text-rose-400">
-                      <AlertTriangle className="h-4 w-4" /> Upgrade Obrigatório de Recursos
-                    </p>
-                    <p className="text-[11px] leading-relaxed">
-                      O modelo <strong>{selectedTemplate?.name}</strong> requer no mínimo{" "}
-                      <strong>{selectedTemplate?.recommended_ram} MB de RAM</strong>,{" "}
-                      <strong>{selectedTemplate?.recommended_cpu} vCPU</strong> e{" "}
-                      <strong>{requiredDiskWithMargin} MB de Disco</strong> ({selectedTemplate?.recommended_disk} MB base + 20% de margem de segurança para operação e dados).
-                    </p>
-                    <p className="text-[11px] leading-relaxed">
-                      Seu plano atual fornece: <strong>{activeApp?.memory_limit} MB RAM</strong>,{" "}
-                      <strong>{activeApp?.cpu_limit || 0.5} vCPU</strong> e{" "}
-                      <strong>{activeAppDisk} MB de Disco</strong>.
-                    </p>
-                    <p className="text-[11px] font-semibold text-rose-600 dark:text-rose-400">
-                      Faça o upgrade do seu plano para liberar o deploy deste modelo com segurança.
-                    </p>
-                  </div>
-                )}
-
-                {isTemplateUnderpowered ? (
-                  <Link to="/plans" search={{ tab: "paas" }} className="block w-full">
-                    <Button
-                      type="button"
-                      className="w-full rounded-xl gap-2 font-bold h-11 text-xs bg-amber-600 hover:bg-amber-700 text-white shadow-sm"
-                    >
-                      <Sparkles className="h-4 w-4" />
-                      Fazer Upgrade para Instalar
-                    </Button>
-                  </Link>
-                ) : (
-                  <Button
-                    onClick={() => deployMutation.mutate()}
-                    disabled={deployMutation.isPending || !activeApp || !appName.trim() || (deployType === "zip" && !zipFile)}
-                    className="w-full rounded-xl gap-2 font-bold h-11 text-xs"
-                  >
-                    <Zap className="h-4 w-4" />
-                    {deployMutation.isPending ? "Criando e Compilando..." : "Criar Aplicação e Iniciar Deploy"}
-                  </Button>
+                {deployType === "templates" && (
+                  <DeployTemplateSection
+                    selectedTemplate={selectedTemplate}
+                    onSelectTemplate={setSelectedTemplate}
+                    templateCategory={templateCategory}
+                    onChangeTemplateCategory={setTemplateCategory}
+                  />
                 )}
               </CardContent>
             </Card>
+
+            <CreateAppNameInput
+              appName={appName}
+              onChangeAppName={setAppName}
+            />
           </div>
+
+          <CreateAppSidebar
+            apps={apps}
+            selectedAppId={selectedAppId}
+            onSelectAppId={setSelectedAppId}
+            activeApp={activeApp}
+            selectedTemplate={selectedTemplate}
+            resourceComp={resourceComp}
+            deployType={deployType}
+            appName={appName}
+            zipFile={zipFile}
+            isDeploying={deployMutation.isPending}
+            onDeploy={handleDeploy}
+          />
         </div>
       </div>
     </AppShell>

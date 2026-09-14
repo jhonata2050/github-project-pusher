@@ -382,6 +382,84 @@ describe("Lei da Preservação de Fachadas (Facade Integrity Tests)", () => {
     expect(typeof ProductCatalogGrid).toBe("function");
     expect(typeof useCheckoutProduct).toBe("function");
   });
+
+  it("apps/create submódulos e checkResourceCompatibility devem validar recursos e exportar componentes", async () => {
+    const {
+      checkResourceCompatibility,
+      DeployTypeSelector,
+      DeployZipSection,
+      DeployGithubSection,
+      DeployTemplateSection,
+      CreateAppNameInput,
+      CreateAppSidebar,
+      useCreateApp,
+    } = await import("../../src/components/apps/create");
+
+    expect(typeof checkResourceCompatibility).toBe("function");
+    expect(typeof DeployTypeSelector).toBe("function");
+    expect(typeof DeployZipSection).toBe("function");
+    expect(typeof DeployGithubSection).toBe("function");
+    expect(typeof DeployTemplateSection).toBe("function");
+    expect(typeof CreateAppNameInput).toBe("function");
+    expect(typeof CreateAppSidebar).toBe("function");
+    expect(typeof useCreateApp).toBe("function");
+
+    const template: any = {
+      id: "evolution-api",
+      name: "Evolution API",
+      recommended_ram: 1024,
+      recommended_cpu: 1,
+      recommended_disk: 1536,
+    };
+
+    // Cenário 1: RAM insuficiente
+    const ramUnderpowered = checkResourceCompatibility(
+      { memory_limit: 512, cpu_limit: 1, disk_limit_mb: 4096 },
+      template,
+      "templates"
+    );
+    expect(ramUnderpowered.isRamUnderpowered).toBe(true);
+    expect(ramUnderpowered.isTemplateUnderpowered).toBe(true);
+
+    // Cenário 2: vCPU insuficiente
+    const cpuUnderpowered = checkResourceCompatibility(
+      { memory_limit: 2048, cpu_limit: 0.5, disk_limit_mb: 4096 },
+      template,
+      "templates"
+    );
+    expect(cpuUnderpowered.isCpuUnderpowered).toBe(true);
+    expect(cpuUnderpowered.isTemplateUnderpowered).toBe(true);
+
+    // Cenário 3: Disco insuficiente (com margem de 20%)
+    // template.recommended_disk = 1536, com margem de 20% = ceil(1536 * 1.2) = 1844
+    const diskUnderpowered = checkResourceCompatibility(
+      { memory_limit: 2048, cpu_limit: 2, disk_limit_mb: 1600 },
+      template,
+      "templates"
+    );
+    expect(diskUnderpowered.isDiskUnderpowered).toBe(true);
+    expect(diskUnderpowered.isTemplateUnderpowered).toBe(true);
+    expect(diskUnderpowered.requiredDiskWithMargin).toBe(1844);
+
+    // Cenário 4: Recursos plenamente suficientes
+    const sufficient = checkResourceCompatibility(
+      { memory_limit: 2048, cpu_limit: 2, disk_limit_mb: 4096 },
+      template,
+      "templates"
+    );
+    expect(sufficient.isRamUnderpowered).toBe(false);
+    expect(sufficient.isCpuUnderpowered).toBe(false);
+    expect(sufficient.isDiskUnderpowered).toBe(false);
+    expect(sufficient.isTemplateUnderpowered).toBe(false);
+
+    // Cenário 5: Deploy via zip não deve acusar underpowered de templates
+    const zipDeploy = checkResourceCompatibility(
+      { memory_limit: 256, cpu_limit: 0.2, disk_limit_mb: 512 },
+      template,
+      "zip"
+    );
+    expect(zipDeploy.isTemplateUnderpowered).toBe(false);
+  });
 });
 
 describe("Motor Caddy & Hardening de Segurança OWASP", () => {
