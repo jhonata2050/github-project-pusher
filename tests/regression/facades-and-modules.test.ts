@@ -1081,6 +1081,22 @@ describe("Lei da Preservação de Fachadas (Facade Integrity Tests)", () => {
     const tab = await import("../../src/components/apps/tabs/AppDomainsTab");
     expect(typeof tab.AppDomainsTab).toBe("function");
   });
+
+  it("wallet.server fachada e submódulo devem reexportar todas as operações financeiras de carteira", async () => {
+    const walletFacade = await import("../../src/lib/wallet.server");
+    expect(typeof walletFacade.getWalletData).toBe("function");
+    expect(typeof walletFacade.createWalletDeposit).toBe("function");
+    expect(typeof walletFacade.payInvoiceWithBalance).toBe("function");
+    expect(typeof walletFacade.autoPayPendingInvoices).toBe("function");
+    expect(typeof walletFacade.adminAdjustBalance).toBe("function");
+
+    const walletSubmodule = await import("../../src/lib/wallet");
+    expect(walletSubmodule.getWalletData).toBe(walletFacade.getWalletData);
+    expect(walletSubmodule.createWalletDeposit).toBe(walletFacade.createWalletDeposit);
+    expect(walletSubmodule.payInvoiceWithBalance).toBe(walletFacade.payInvoiceWithBalance);
+    expect(walletSubmodule.autoPayPendingInvoices).toBe(walletFacade.autoPayPendingInvoices);
+    expect(walletSubmodule.adminAdjustBalance).toBe(walletFacade.adminAdjustBalance);
+  });
 });
 
 describe("Motor Caddy & Hardening de Segurança OWASP", () => {
