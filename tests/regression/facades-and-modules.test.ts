@@ -735,6 +735,33 @@ describe("Lei da Preservação de Fachadas (Facade Integrity Tests)", () => {
     expect(typeof statsModule.getAdminStatsImplementation).toBe("function");
     expect(typeof statsModule.getLeadSourceStatsImplementation).toBe("function");
   });
+
+  it("swarm-files.server fachada e submódulos devem exportar operações de sincronização, pull e mutações", async () => {
+    const swarmFiles = await import("../../src/lib/swarm/swarm-files.server");
+    expect(typeof swarmFiles.syncFilesToSwarmContainer).toBe("function");
+    expect(typeof swarmFiles.pullRealFilesFromSwarm).toBe("function");
+    expect(typeof swarmFiles.writeRemoteSwarmFile).toBe("function");
+    expect(typeof swarmFiles.deleteRemoteSwarmItems).toBe("function");
+    expect(typeof swarmFiles.createRemoteSwarmDirectory).toBe("function");
+
+    // Submódulo sftp
+    const sftpModule = await import("../../src/lib/swarm/files/sftp.server");
+    expect(typeof sftpModule.uploadSftpBuffer).toBe("function");
+
+    // Submódulo sync
+    const syncModule = await import("../../src/lib/swarm/files/sync.server");
+    expect(typeof syncModule.syncFilesToSwarmContainer).toBe("function");
+
+    // Submódulo pull
+    const pullModule = await import("../../src/lib/swarm/files/pull.server");
+    expect(typeof pullModule.pullRealFilesFromSwarm).toBe("function");
+
+    // Submódulo mutations
+    const mutationsModule = await import("../../src/lib/swarm/files/mutations.server");
+    expect(typeof mutationsModule.writeRemoteSwarmFile).toBe("function");
+    expect(typeof mutationsModule.deleteRemoteSwarmItems).toBe("function");
+    expect(typeof mutationsModule.createRemoteSwarmDirectory).toBe("function");
+  });
 });
 
 describe("Motor Caddy & Hardening de Segurança OWASP", () => {
