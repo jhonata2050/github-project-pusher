@@ -683,6 +683,38 @@ describe("Lei da Preservação de Fachadas (Facade Integrity Tests)", () => {
     expect(typeof adminAffiliates.GlobalSettingsTab).toBe("function");
     expect(typeof adminAffiliates.EditAffiliateModal).toBe("function");
   });
+
+  it("Admin Facade e Submódulos devem exportar branding, gestão de clientes e stats", async () => {
+    const adminFacade = await import("../../src/lib/admin.server");
+    expect(adminFacade.DEFAULT_BRANDING).toBeDefined();
+    expect(adminFacade.DEFAULT_BRANDING.app_name).toBe("Eqsam");
+    expect(typeof adminFacade.getBrandingImplementation).toBe("function");
+    expect(typeof adminFacade.updateBrandingImplementation).toBe("function");
+    expect(typeof adminFacade.updateClientProfileImplementation).toBe("function");
+    expect(typeof adminFacade.adminChangeUserPasswordImplementation).toBe("function");
+    expect(typeof adminFacade.adminSendPasswordResetImplementation).toBe("function");
+    expect(typeof adminFacade.bulkDeleteClientsImplementation).toBe("function");
+    expect(typeof adminFacade.getAdminStatsImplementation).toBe("function");
+    expect(typeof adminFacade.getLeadSourceStatsImplementation).toBe("function");
+
+    // Submódulo branding
+    const brandingModule = await import("../../src/lib/admin/branding.server");
+    expect(typeof brandingModule.getBrandingImplementation).toBe("function");
+    expect(typeof brandingModule.updateBrandingImplementation).toBe("function");
+    expect(brandingModule.DEFAULT_BRANDING.favicon_url).toBe("/images/logo.png");
+
+    // Submódulo clients
+    const clientsModule = await import("../../src/lib/admin/clients.server");
+    expect(typeof clientsModule.updateClientProfileImplementation).toBe("function");
+    expect(typeof clientsModule.adminChangeUserPasswordImplementation).toBe("function");
+    expect(typeof clientsModule.adminSendPasswordResetImplementation).toBe("function");
+    expect(typeof clientsModule.bulkDeleteClientsImplementation).toBe("function");
+
+    // Submódulo stats
+    const statsModule = await import("../../src/lib/admin/stats.server");
+    expect(typeof statsModule.getAdminStatsImplementation).toBe("function");
+    expect(typeof statsModule.getLeadSourceStatsImplementation).toBe("function");
+  });
 });
 
 describe("Motor Caddy & Hardening de Segurança OWASP", () => {
