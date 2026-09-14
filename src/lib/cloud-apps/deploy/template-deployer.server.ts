@@ -45,10 +45,6 @@ export async function applyTemplateToApplication(
     );
     if (matched) {
       templateId = matched.id;
-    } else if (template.git_repository.toLowerCase().includes("openstatus")) {
-      templateId = "openstatus-monitor";
-    } else if (template.git_repository.toLowerCase().includes("typebot")) {
-      templateId = "typebot-builder";
     } else if (template.git_repository.toLowerCase().includes("pocketbase")) {
       templateId = "pocketbase-backend";
     } else if (template.git_repository.toLowerCase().includes("uptime-kuma") || template.git_repository.toLowerCase().includes("kuma")) {

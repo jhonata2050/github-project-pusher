@@ -95,9 +95,7 @@ export async function deployCloudApplicationFromGit(
   );
 
   let friendlyName = app.name;
-  if (cleanRepoUrl.toLowerCase().includes("openstatus")) {
-    friendlyName = "OpenStatus Monitor";
-  } else if (repoName) {
+  if (repoName) {
     friendlyName = repoName
       .split(/[-_]/)
       .map((w) => w.charAt(0).toUpperCase() + w.slice(1))

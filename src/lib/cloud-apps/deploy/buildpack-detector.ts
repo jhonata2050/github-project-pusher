@@ -30,15 +30,7 @@ export function detectProjectBuildpack(
     fsSync.existsSync(path.join(clientRoot, "requirements.txt")) ||
     fsSync.existsSync(path.join(clientRoot, "pyproject.toml"));
 
-  if (cleanRepoUrl.toLowerCase().includes("openstatus")) {
-    detectedBuildPack = "dockerfile";
-    defaultPort = 3000;
-    templateId = "openstatus-monitor";
-    deploymentRecord?.logs.push({
-      output: `Template identificado: OpenStatus (Monitoramento em tempo real • Next.js/Dockerfile)`,
-      type: "stdout",
-    });
-  } else if (hasDockerfile) {
+  if (hasDockerfile) {
     detectedBuildPack = "dockerfile";
     templateId = "docker-custom";
     deploymentRecord?.logs.push({

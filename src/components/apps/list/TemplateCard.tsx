@@ -30,7 +30,7 @@ export function TemplateCard({ tmpl, onOpenInstall }: TemplateCardProps) {
               alt={tmpl.name}
               className="h-full w-full object-contain"
               onError={(e: any) => {
-                e.target.src = "https://raw.githubusercontent.com/baptisteArno/typebot.io/main/apps/builder/public/favicon.svg";
+                e.target.src = "https://cdn.simpleicons.org/docker/2496ED";
               }}
             />
           </div>

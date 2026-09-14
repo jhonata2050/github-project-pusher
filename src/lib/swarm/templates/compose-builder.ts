@@ -23,8 +23,6 @@ import {
   buildStaticCaddyCompose,
 } from "./runtimes.compose";
 import {
-  buildTypebotCompose,
-  buildOpenStatusCompose,
   buildEvolutionCompose,
 } from "./complex-apps.compose";
 
@@ -43,9 +41,6 @@ export async function buildTemplateComposeYaml(
   if (templateId.includes("kuma")) {
     return buildKumaCompose(ctx);
   }
-  if (templateId.includes("openstatus")) {
-    return buildOpenStatusCompose(ctx);
-  }
   if (templateId.includes("evolution") || templateId.includes("whatsapp")) {
     return buildEvolutionCompose(ctx);
   }
@@ -54,9 +49,6 @@ export async function buildTemplateComposeYaml(
   }
   if (templateId.includes("pocketbase")) {
     return buildPocketbaseCompose(ctx);
-  }
-  if (templateId.includes("typebot")) {
-    return buildTypebotCompose(ctx);
   }
   if (templateId.includes("php") || templateId.includes("laravel")) {
     return buildPhpCompose(ctx);

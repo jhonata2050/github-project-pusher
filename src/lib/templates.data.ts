@@ -42,12 +42,11 @@ export function resolveDeploymentRuntime(
   const bp = (buildPack || "").toLowerCase();
   const cat = (category || "").toLowerCase();
 
-  if (tid.includes("openstatus")) return "DOCKER";
   if (tid.includes("nextjs") || tid.includes("next")) return "NEXTJS";
   if (tid.includes("react") || tid.includes("vue") || tid.includes("angular") || tid.includes("vite") || tid.includes("spa")) return "STATIC_SPA";
   if (tid.includes("wordpress") || tid.includes("php") || tid.includes("laravel")) return "PHP";
   if (tid.includes("python") || tid.includes("fastapi") || tid.includes("flask") || tid.includes("django")) return "PYTHON";
-  if (tid.includes("node") || tid.includes("express") || tid.includes("nest") || tid.includes("n8n") || tid.includes("typebot") || tid.includes("kuma")) return "NODE";
+  if (tid.includes("node") || tid.includes("express") || tid.includes("nest") || tid.includes("n8n") || tid.includes("kuma")) return "NODE";
   if (tid.includes("docker") || bp === "dockercompose") return "DOCKER";
   if (tid.includes("proxy")) return "REVERSE_PROXY";
   if (bp === "static" || tid.includes("static")) return "STATIC";
@@ -276,27 +275,6 @@ export const APP_TEMPLATES: AppTemplate[] = [
       { key: "NODE_ENV", value: "production" },
     ],
   },
-  {
-    id: "typebot-viewer",
-    name: "Typebot (Criador de Chatbots)",
-    category: "bots",
-    icon: "https://raw.githubusercontent.com/baptisteArno/typebot.io/main/apps/builder/public/favicon.svg",
-    description: "Criador de chatbots interativos de alta conversão para sites, WhatsApp e atendimento com design moderno.",
-    build_pack: "dockerfile",
-    git_repository: "https://github.com/baptisteArno/typebot.io",
-    git_branch: "main",
-    recommended_ram: 2048,
-    recommended_cpu: 1.5,
-    recommended_disk: 3584,
-    default_port: 3000,
-    tags: ["Typebot", "Chatbot", "Conversão", "WhatsApp"],
-    default_envs: [
-      { key: "PORT", value: "3000" },
-      { key: "NODE_ENV", value: "production" },
-      { key: "POSTGRES_PASSWORD", value: "" },
-      { key: "ENCRYPTION_SECRET", value: "" },
-    ],
-  },
 
   // ==========================================
   // 4. AUTOMAÇÕES & FERRAMENTAS
@@ -339,47 +317,6 @@ export const APP_TEMPLATES: AppTemplate[] = [
     tags: ["Monitor", "Uptime", "Ping", "Alertas"],
     default_envs: [
       { key: "PORT", value: "3001" },
-    ],
-  },
-  {
-    id: "openstatus-monitor",
-    name: "OpenStatus (Monitor & Status Page)",
-    category: "tools",
-    icon: "https://avatars.githubusercontent.com/u/132470761?s=200&v=4",
-    description: "Plataforma open-source moderna de monitoramento de disponibilidade, alertas em tempo real e páginas de status públicas para APIs e websites.",
-    build_pack: "dockerfile",
-    runtime: "DOCKER",
-    git_repository: "https://github.com/openstatusHQ/openstatus.git",
-    git_branch: "main",
-    recommended_ram: 1024,
-    recommended_cpu: 1.0,
-    recommended_disk: 7168,
-    default_port: 3000,
-    tags: ["OpenStatus", "Status Page", "Monitoramento", "Uptime", "Alertas", "Next.js"],
-    default_envs: [
-      { key: "RESEND_API_KEY", value: "re_insira_sua_chave_resend_aqui" },
-      { key: "ADMIN_EMAIL", value: "admin@eqsam.com" },
-      { key: "NEXTAUTH_SECRET", value: "" },
-      { key: "AUTH_SECRET", value: "" },
-      { key: "NEXTAUTH_URL", value: "https://admin-openstatus.dk1.eqsam.com" },
-      { key: "NEXT_PUBLIC_URL", value: "https://admin-openstatus.dk1.eqsam.com" },
-      { key: "DATABASE_URL", value: "http://db:8080" },
-      { key: "TURSO_DATABASE_URL", value: "http://db:8080" },
-      { key: "CRON_SECRET", value: "" },
-      { key: "PORT", value: "3000" },
-      { key: "HOSTNAME", value: "0.0.0.0" },
-      { key: "NODE_ENV", value: "production" },
-      { key: "SELF_HOST", value: "true" },
-      { key: "AUTH_TRUST_HOST", value: "true" },
-      { key: "SKIP_ENV_VALIDATION", value: "true" },
-      { key: "NODE_OPTIONS", value: "--max-old-space-size=512" },
-      { key: "PROJECT_ID_VERCEL", value: "dummy" },
-      { key: "TEAM_ID_VERCEL", value: "dummy" },
-      { key: "VERCEL_AUTH_BEARER_TOKEN", value: "dummy" },
-      { key: "STRIPE_SECRET_KEY", value: "dummy" },
-      { key: "TINY_BIRD_API_KEY", value: "dummy" },
-      { key: "UNKEY_API_ID", value: "dummy" },
-      { key: "UNKEY_TOKEN", value: "dummy" },
     ],
   },
 
