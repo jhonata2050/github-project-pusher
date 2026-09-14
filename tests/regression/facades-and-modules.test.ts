@@ -1487,6 +1487,33 @@ describe("Lei da Preservação de Fachadas (Facade Integrity Tests)", () => {
     expect(typeof sub.cancelJobFn).toBe("function");
     expect(typeof sub.forcePullFilesFromSwarmFn).toBe("function");
   });
+
+  it("Phase 66: vps-admin.functions.ts fachada e submódulos devem reexportar todas as funções de administração VPS", async () => {
+    const facade = await import("../../src/lib/vps-admin.functions");
+    const sub = await import("../../src/lib/vps-admin/index");
+
+    // Instances
+    expect(typeof facade.getVPSAdminData).toBe("function");
+    expect(typeof facade.updateVPSInstance).toBe("function");
+    expect(typeof facade.updateVPSSSHDetails).toBe("function");
+    expect(typeof facade.assignInstanceToClient).toBe("function");
+    expect(typeof facade.getAvailableVPSInstances).toBe("function");
+
+    expect(typeof sub.getVPSAdminData).toBe("function");
+    expect(typeof sub.updateVPSInstance).toBe("function");
+    expect(typeof sub.updateVPSSSHDetails).toBe("function");
+    expect(typeof sub.assignInstanceToClient).toBe("function");
+    expect(typeof sub.getAvailableVPSInstances).toBe("function");
+
+    // Contabo Ops
+    expect(typeof facade.syncContaboInstancesFn).toBe("function");
+    expect(typeof facade.performAdminVPSAction).toBe("function");
+    expect(typeof facade.getContaboPlansFn).toBe("function");
+
+    expect(typeof sub.syncContaboInstancesFn).toBe("function");
+    expect(typeof sub.performAdminVPSAction).toBe("function");
+    expect(typeof sub.getContaboPlansFn).toBe("function");
+  });
 });
 
 
