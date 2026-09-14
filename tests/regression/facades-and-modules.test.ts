@@ -601,6 +601,51 @@ describe("Lei da Preservação de Fachadas (Facade Integrity Tests)", () => {
     expect(privDir.octal).toBe("0700");
     expect(privDir.rwx).toBe("drwx------");
   });
+
+  it("ContainerLogsViewer e submódulos container-logs devem realizar parsing inteligente e exportar componentes", async () => {
+    const viewer = await import("../../src/components/apps/ContainerLogsViewer");
+    const logsModule = await import("../../src/components/apps/container-logs");
+
+    expect(typeof viewer.ContainerLogsViewer).toBe("function");
+    expect(typeof logsModule.LogsHeader).toBe("function");
+    expect(typeof logsModule.LogsFilterBar).toBe("function");
+    expect(typeof logsModule.LogsTerminalBody).toBe("function");
+    expect(typeof logsModule.LogsFooter).toBe("function");
+    expect(typeof logsModule.parseSingleLogLine).toBe("function");
+    expect(typeof logsModule.useParsedLogs).toBe("function");
+    expect(typeof logsModule.getEngineBadge).toBe("function");
+
+    // Teste de getEngineBadge
+    expect(logsModule.getEngineBadge("static")).toBe("Caddy Server 2 (HTTP/3)");
+    expect(logsModule.getEngineBadge("dockerfile")).toBe("Dockerfile Container");
+    expect(logsModule.getEngineBadge("dockercompose")).toBe("Docker Compose Stack");
+    expect(logsModule.getEngineBadge("nixpacks")).toBe("Nixpacks Auto-Engine");
+    expect(logsModule.getEngineBadge(undefined)).toBe("Cluster Service");
+    expect(logsModule.getEngineBadge("custom")).toBe("custom");
+
+    // Teste de parseSingleLogLine - Swarm
+    const swarmLine = logsModule.parseSingleLogLine("2026-09-14T12:00:00Z app_test_web.1.abc@dk1 | Server ready", 0);
+    expect(swarmLine.id).toBe("log-0");
+    expect(swarmLine.source).toBe("web.1.abc@dk1");
+    expect(swarmLine.message).toBe("Server ready");
+    expect(swarmLine.level).toBe("info");
+    expect(swarmLine.isJson).toBe(false);
+
+    // Teste de parseSingleLogLine - JSON estruturado de erro
+    const jsonError = logsModule.parseSingleLogLine(
+      JSON.stringify({ level: "error", msg: "Database connection failed", port: 5432 }),
+      1
+    );
+    expect(jsonError.level).toBe("error");
+    expect(jsonError.message).toBe("Database connection failed");
+    expect(jsonError.meta.port).toBe(5432);
+    expect(jsonError.isJson).toBe(true);
+
+    // Teste de parseSingleLogLine - Heurística de texto plano
+    const plainWarn = logsModule.parseSingleLogLine("Warning: memory threshold exceeded (85%)", 2);
+    expect(plainWarn.level).toBe("warn");
+    expect(plainWarn.message).toContain("Warning: memory threshold exceeded");
+  });
 });
 
 describe("Motor Caddy & Hardening de Segurança OWASP", () => {
