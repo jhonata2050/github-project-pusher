@@ -1612,6 +1612,19 @@ describe("Lei da Preservação de Fachadas (Facade Integrity Tests)", () => {
     const modal = await import("../../src/components/admin/clients/modals/ClientEditServiceModal");
     expect(typeof modal.ClientEditServiceModal).toBe("function");
   });
+
+  it("Phase 71: tickets mutations.server fachada e submódulos devem exportar todas as funções de mutação de tickets", async () => {
+    const facade = await import("../../src/lib/support/tickets/mutations.server");
+    const sub = await import("../../src/lib/support/tickets/mutations/index");
+
+    expect(typeof facade.createTicket).toBe("function");
+    expect(typeof facade.replyTicket).toBe("function");
+    expect(typeof facade.updateTicketStatus).toBe("function");
+
+    expect(typeof sub.createTicket).toBe("function");
+    expect(typeof sub.replyTicket).toBe("function");
+    expect(typeof sub.updateTicketStatus).toBe("function");
+  });
 });
 
 
