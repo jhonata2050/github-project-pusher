@@ -287,6 +287,15 @@ describe("Lei da Preservação de Fachadas (Facade Integrity Tests)", () => {
 
     const { useFileManager } = await import("../../src/components/file-manager/hooks/useFileManager");
     expect(typeof useFileManager).toBe("function");
+
+    // Sub-hooks modulares do File Manager
+    const fmHooks = await import("../../src/components/file-manager/hooks");
+    expect(typeof fmHooks.useFileManagerNavigation).toBe("function");
+    expect(typeof fmHooks.useFileManagerSelection).toBe("function");
+    expect(typeof fmHooks.useFileManagerModals).toBe("function");
+    expect(typeof fmHooks.useFileManagerJobs).toBe("function");
+    expect(typeof fmHooks.useFileManagerOperations).toBe("function");
+    expect(typeof fmHooks.useFileManagerUpload).toBe("function");
   });
 
   it("AppShell e submódulos de shell devem ser exportados corretamente com seções de navegação válidas", async () => {
