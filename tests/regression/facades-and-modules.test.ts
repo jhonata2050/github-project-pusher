@@ -1293,7 +1293,18 @@ describe("Lei da Preservação de Fachadas (Facade Integrity Tests)", () => {
     expect(typeof opsModule.getAffiliateReferrals).toBe("function");
     expect(typeof opsModule.getAdminAffiliatesList).toBe("function");
   });
+
+  it("affiliates componentes e submódulos de UI devem ser exportados corretamente", async () => {
+    const aff = await import("../../src/components/affiliates");
+    expect(typeof aff.AffiliateBanner).toBe("function");
+    expect(typeof aff.AffiliateLinkCard).toBe("function");
+    expect(typeof aff.AffiliateStatsCards).toBe("function");
+    expect(typeof aff.AffiliateReferralsCard).toBe("function");
+    expect(typeof aff.AffiliateHowItWorks).toBe("function");
+    expect(typeof aff.AffiliateWithdrawModal).toBe("function");
+  });
 });
+
 
 
 
