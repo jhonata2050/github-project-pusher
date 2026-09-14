@@ -762,6 +762,25 @@ describe("Lei da Preservação de Fachadas (Facade Integrity Tests)", () => {
     expect(typeof mutationsModule.deleteRemoteSwarmItems).toBe("function");
     expect(typeof mutationsModule.createRemoteSwarmDirectory).toBe("function");
   });
+
+  it("cloud-apps/deployer.server fachada e submódulos devem exportar deploy de template, git e detector de buildpack", async () => {
+    const deployer = await import("../../src/lib/cloud-apps/deployer.server");
+    expect(typeof deployer.applyTemplateToApplication).toBe("function");
+    expect(typeof deployer.deployCloudApplicationFromGit).toBe("function");
+    expect(typeof deployer.detectProjectBuildpack).toBe("function");
+
+    // Submódulo buildpack-detector
+    const detectorModule = await import("../../src/lib/cloud-apps/deploy/buildpack-detector");
+    expect(typeof detectorModule.detectProjectBuildpack).toBe("function");
+
+    // Submódulo template-deployer
+    const templateModule = await import("../../src/lib/cloud-apps/deploy/template-deployer.server");
+    expect(typeof templateModule.applyTemplateToApplication).toBe("function");
+
+    // Submódulo git-deployer
+    const gitModule = await import("../../src/lib/cloud-apps/deploy/git-deployer.server");
+    expect(typeof gitModule.deployCloudApplicationFromGit).toBe("function");
+  });
 });
 
 describe("Motor Caddy & Hardening de Segurança OWASP", () => {
