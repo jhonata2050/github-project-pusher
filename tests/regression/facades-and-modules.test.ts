@@ -469,6 +469,74 @@ describe("Lei da Preservação de Fachadas (Facade Integrity Tests)", () => {
     expect(typeof adminServers.ServerCard).toBe("function");
     expect(typeof adminServers.ExternalProviderCard).toBe("function");
   });
+
+  it("ssh-connection-manager.server fachada e submódulos ssh devem exportar todos os métodos, classes de erro e utilitários", async () => {
+    const sshFacade = await import("../../src/lib/ssh-connection-manager.server");
+    const sshModule = await import("../../src/lib/ssh");
+
+    // Validação da Fachada
+    expect(typeof sshFacade.SshConnectionManager).toBe("function");
+    expect(typeof sshFacade.SshConnectionManager.getServerKey).toBe("function");
+    expect(typeof sshFacade.SshConnectionManager.isConnectionAlive).toBe("function");
+    expect(typeof sshFacade.SshConnectionManager.getConnection).toBe("function");
+    expect(typeof sshFacade.SshConnectionManager.execCommand).toBe("function");
+    expect(typeof sshFacade.SshConnectionManager.uploadBuffer).toBe("function");
+    expect(typeof sshFacade.SshConnectionManager.getStatus).toBe("function");
+    expect(typeof sshFacade.SshConnectionManager.getMetrics).toBe("function");
+    expect(typeof sshFacade.SshConnectionManager.resetMetrics).toBe("function");
+    expect(typeof sshFacade.SshConnectionManager.closeAll).toBe("function");
+
+    // Classes de erro
+    expect(typeof sshFacade.CircuitBreakerOpenError).toBe("function");
+    expect(typeof sshFacade.SwarmAuthError).toBe("function");
+    expect(typeof sshFacade.SshTimeoutError).toBe("function");
+    expect(typeof sshFacade.SshSwarmTransport).toBe("function");
+
+    // Validação do getServerKey
+    const sampleServer = {
+      id: "srv-primary",
+      host: "10.0.0.1",
+      sshPort: 2222,
+      sshUser: "deployer",
+    };
+    expect(sshFacade.SshConnectionManager.getServerKey(sampleServer)).toBe("srv-primary:10.0.0.1:2222:deployer");
+    expect(sshModule.getServerKey(sampleServer)).toBe("srv-primary:10.0.0.1:2222:deployer");
+
+    // Fallbacks padrão do getServerKey
+    expect(sshFacade.SshConnectionManager.getServerKey({})).toBe("default:45.159.172.137:30795:root");
+
+    // Instanciação e comportamento de erros semânticos
+    const cbError = new sshFacade.CircuitBreakerOpenError("srv-1", 15000);
+    expect(cbError.name).toBe("CircuitBreakerOpenError");
+    expect(cbError.serverKey).toBe("srv-1");
+    expect(cbError.retryAfterMs).toBe(15000);
+    expect(cbError.message).toContain("15s");
+
+    const authError = new sshFacade.SwarmAuthError("srv-1", "Public key rejected");
+    expect(authError.name).toBe("SwarmAuthError");
+    expect(authError.serverKey).toBe("srv-1");
+    expect(authError.message).toContain("Public key rejected");
+
+    const timeoutError = new sshFacade.SshTimeoutError("docker ps", 5000);
+    expect(timeoutError.name).toBe("SshTimeoutError");
+    expect(timeoutError.command).toBe("docker ps");
+    expect(timeoutError.timeoutMs).toBe(5000);
+
+    // Instanciação de SshSwarmTransport e consulta de status
+    const transport = new sshFacade.SshSwarmTransport(sampleServer);
+    expect(typeof transport.exec).toBe("function");
+    expect(typeof transport.uploadBuffer).toBe("function");
+    const status = transport.getStatus();
+    expect(status.state).toBe("disconnected");
+    expect(status.circuit).toBe("CLOSED");
+    expect(status.activeChannels).toBe(0);
+
+    // Métricas
+    sshFacade.SshConnectionManager.resetMetrics();
+    const metrics = sshFacade.SshConnectionManager.getMetrics();
+    expect(metrics.sshConnectionsCreated).toBe(0);
+    expect(metrics.sshChannelsCreated).toBe(0);
+  });
 });
 
 describe("Motor Caddy & Hardening de Segurança OWASP", () => {
