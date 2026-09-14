@@ -177,6 +177,17 @@ describe("Lei da Preservação de Fachadas (Facade Integrity Tests)", () => {
     ]);
     expect(pending.length).toBe(2);
     expect(pending.map(p => p.key)).toEqual(["DB_PASSWORD", "API_KEY"]);
+
+    const { useAppManagement } = await import("../../src/components/apps/hooks/useAppManagement");
+    expect(typeof useAppManagement).toBe("function");
+
+    // Sub-hooks modulares de gestão de apps
+    const appHooks = await import("../../src/components/apps/hooks");
+    expect(typeof appHooks.useAppModals).toBe("function");
+    expect(typeof appHooks.useAppDeployTracker).toBe("function");
+    expect(typeof appHooks.useAppDomain).toBe("function");
+    expect(typeof appHooks.useAppOperations).toBe("function");
+    expect(typeof appHooks.detectPendingRequiredEnvs).toBe("function");
   });
 
   it("AppOverviewTab e subcomponentes de overview devem ser exportados corretamente", async () => {
