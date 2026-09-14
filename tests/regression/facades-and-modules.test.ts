@@ -958,6 +958,28 @@ describe("Lei da Preservação de Fachadas (Facade Integrity Tests)", () => {
     expect(typeof adminFinance.FinancePrioritiesTab).toBe("function");
     expect(typeof adminFinance.FinanceNotificationsTab).toBe("function");
   });
+
+  it("admin dashboard subcomponentes e widgets devem ser exportados corretamente", async () => {
+    const adminDashboard = await import("../../src/components/admin/dashboard");
+    expect(typeof adminDashboard.AdminStatCards).toBe("function");
+    expect(typeof adminDashboard.AdminStatCardsSkeleton).toBe("function");
+    expect(typeof adminDashboard.CriticalTicketsCard).toBe("function");
+    expect(typeof adminDashboard.ProvisioningAlertCard).toBe("function");
+    expect(typeof adminDashboard.FinancialPerformanceCard).toBe("function");
+    expect(typeof adminDashboard.OperationalShortcutsCard).toBe("function");
+    expect(typeof adminDashboard.SystemHealthCard).toBe("function");
+    expect(typeof adminDashboard.LeadSourceChartCard).toBe("function");
+    expect(typeof adminDashboard.ProvisioningAuditModal).toBe("function");
+    expect(typeof adminDashboard.getSLAStatus).toBe("function");
+    expect(typeof adminDashboard.formatCurrency).toBe("function");
+
+    // Validação do helper de SLA
+    const recentDate = new Date().toISOString();
+    expect(adminDashboard.getSLAStatus(recentDate).label).toBe("PENDENTE");
+
+    const oldDate = new Date(Date.now() - 30 * 60 * 60 * 1000).toISOString();
+    expect(adminDashboard.getSLAStatus(oldDate).label).toBe("CRÍTICO (>24h)");
+  });
 });
 
 describe("Motor Caddy & Hardening de Segurança OWASP", () => {
