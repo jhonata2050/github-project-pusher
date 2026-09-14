@@ -1379,6 +1379,13 @@ describe("Lei da Preservação de Fachadas (Facade Integrity Tests)", () => {
     expect(typeof cloudApps.getCloudApplicationFiles).toBe("function");
     expect(typeof cloudApps.saveCloudApplicationFile).toBe("function");
   });
+
+  it("Phase 61: admin client details subcomponentes devem ser exportados corretamente", async () => {
+    const details = await import("../../src/components/admin/clients/details/index");
+    expect(typeof details.ClientDetailHeader).toBe("function");
+    expect(typeof details.ClientDetailTabs).toBe("function");
+    expect(typeof details.ClientDetailModals).toBe("function");
+  });
 });
 
 
