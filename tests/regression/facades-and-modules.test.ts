@@ -1625,6 +1625,21 @@ describe("Lei da Preservação de Fachadas (Facade Integrity Tests)", () => {
     expect(typeof sub.replyTicket).toBe("function");
     expect(typeof sub.updateTicketStatus).toBe("function");
   });
+
+  it("Phase 72: git-deployer.server fachada e submódulos git devem exportar deployCloudApplicationFromGit e helpers", async () => {
+    const facade = await import("../../src/lib/cloud-apps/deploy/git-deployer.server");
+    const sub = await import("../../src/lib/cloud-apps/deploy/git/index");
+
+    expect(typeof facade.deployCloudApplicationFromGit).toBe("function");
+    expect(typeof facade.resetPreviousGitDeploy).toBe("function");
+    expect(typeof facade.fetchGitSourceCode).toBe("function");
+    expect(typeof facade.deployGitSwarmStack).toBe("function");
+
+    expect(typeof sub.deployCloudApplicationFromGit).toBe("function");
+    expect(typeof sub.resetPreviousGitDeploy).toBe("function");
+    expect(typeof sub.fetchGitSourceCode).toBe("function");
+    expect(typeof sub.deployGitSwarmStack).toBe("function");
+  });
 });
 
 
