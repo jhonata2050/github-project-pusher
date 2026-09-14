@@ -1121,6 +1121,32 @@ describe("Lei da Preservação de Fachadas (Facade Integrity Tests)", () => {
     expect(Array.isArray(branding.PRESETS)).toBe(true);
     expect(branding.PRESETS.length).toBeGreaterThan(0);
   });
+
+  it("file-manager server fachada e submódulo devem reexportar todas as operações de I/O, cota e sincronização", async () => {
+    const fmServerFacade = await import("../../src/lib/file-manager/server");
+    expect(typeof fmServerFacade.verifyAppDiskQuota).toBe("function");
+    expect(typeof fmServerFacade.listAppFiles).toBe("function");
+    expect(typeof fmServerFacade.readAppFile).toBe("function");
+    expect(typeof fmServerFacade.writeAppFile).toBe("function");
+    expect(typeof fmServerFacade.createAppFile).toBe("function");
+    expect(typeof fmServerFacade.createAppDirectory).toBe("function");
+    expect(typeof fmServerFacade.deleteAppItems).toBe("function");
+    expect(typeof fmServerFacade.renameAppItem).toBe("function");
+    expect(typeof fmServerFacade.copyAppItems).toBe("function");
+    expect(typeof fmServerFacade.moveAppItems).toBe("function");
+    expect(typeof fmServerFacade.chmodAppItem).toBe("function");
+    expect(typeof fmServerFacade.compressAppItems).toBe("function");
+    expect(typeof fmServerFacade.extractAppArchive).toBe("function");
+    expect(typeof fmServerFacade.uploadAppFilesBatch).toBe("function");
+    expect(typeof fmServerFacade.syncAppFilesToContainer).toBe("function");
+    expect(typeof fmServerFacade.searchAppFiles).toBe("function");
+
+    const fmServerSubmodule = await import("../../src/lib/file-manager/server/index");
+    expect(fmServerSubmodule.verifyAppDiskQuota).toBe(fmServerFacade.verifyAppDiskQuota);
+    expect(fmServerSubmodule.listAppFiles).toBe(fmServerFacade.listAppFiles);
+    expect(fmServerSubmodule.writeAppFile).toBe(fmServerFacade.writeAppFile);
+    expect(fmServerSubmodule.syncAppFilesToContainer).toBe(fmServerFacade.syncAppFilesToContainer);
+  });
 });
 
 describe("Motor Caddy & Hardening de Segurança OWASP", () => {

@@ -76,7 +76,7 @@ export const Route = createFileRoute('/api/file-manager/upload')({
           });
 
           // Sincronização em segundo plano com o container
-          syncAppFilesToContainer(appId).catch((err) => {
+          syncAppFilesToContainer(appId).catch((err: any) => {
             console.warn('[Container Auto-Sync Warning]:', err.message);
           });
 
