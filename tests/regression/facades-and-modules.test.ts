@@ -1538,6 +1538,70 @@ describe("Lei da Preservação de Fachadas (Facade Integrity Tests)", () => {
     const modal = await import("../../src/components/admin/clients/modals/ClientManageInvoiceModal");
     expect(typeof modal.ClientManageInvoiceModal).toBe("function");
   });
+
+  it("Phase 69: cloud-apps.functions fachada e client-ops submódulos devem exportar todas as funções de lifecycle, deploy e files", async () => {
+    const facade = await import("../../src/lib/cloud-apps.functions");
+    const sub = await import("../../src/lib/cloud-apps/client-ops/index");
+
+    // Lifecycle
+    expect(typeof facade.getMyApplications).toBe("function");
+    expect(typeof facade.getApplicationDetails).toBe("function");
+    expect(typeof facade.executeAppAction).toBe("function");
+    expect(typeof facade.triggerApplicationAction).toBe("function");
+    expect(typeof facade.resetCloudApp).toBe("function");
+    expect(typeof facade.getApplicationLogs).toBe("function");
+    expect(typeof facade.getApplicationEnvs).toBe("function");
+    expect(typeof facade.saveApplicationEnvs).toBe("function");
+    expect(typeof facade.updateApplicationName).toBe("function");
+
+    expect(typeof sub.getMyApplications).toBe("function");
+    expect(typeof sub.getApplicationDetails).toBe("function");
+    expect(typeof sub.executeAppAction).toBe("function");
+    expect(typeof sub.triggerApplicationAction).toBe("function");
+    expect(typeof sub.resetCloudApp).toBe("function");
+    expect(typeof sub.getApplicationLogs).toBe("function");
+    expect(typeof sub.getApplicationEnvs).toBe("function");
+    expect(typeof sub.saveApplicationEnvs).toBe("function");
+    expect(typeof sub.updateApplicationName).toBe("function");
+
+    // Deploy & Domain
+    expect(typeof facade.updateApplicationDomain).toBe("function");
+    expect(typeof facade.resetApplicationDomain).toBe("function");
+    expect(typeof facade.verifyApplicationDomainDns).toBe("function");
+    expect(typeof facade.applyTemplateToApp).toBe("function");
+    expect(typeof facade.deployApplicationFromGit).toBe("function");
+    expect(typeof facade.getDeploymentStatus).toBe("function");
+
+    expect(typeof sub.updateApplicationDomain).toBe("function");
+    expect(typeof sub.resetApplicationDomain).toBe("function");
+    expect(typeof sub.verifyApplicationDomainDns).toBe("function");
+    expect(typeof sub.applyTemplateToApp).toBe("function");
+    expect(typeof sub.deployApplicationFromGit).toBe("function");
+    expect(typeof sub.getDeploymentStatus).toBe("function");
+
+    // Files
+    expect(typeof facade.getApplicationFiles).toBe("function");
+    expect(typeof facade.saveApplicationFile).toBe("function");
+    expect(typeof facade.saveApplicationFilesBatch).toBe("function");
+    expect(typeof facade.deleteApplicationFile).toBe("function");
+    expect(typeof facade.uploadApplicationZip).toBe("function");
+    expect(typeof facade.extractApplicationZip).toBe("function");
+    expect(typeof facade.bulkDeleteApplicationFiles).toBe("function");
+    expect(typeof facade.createApplicationFolder).toBe("function");
+    expect(typeof facade.moveApplicationFiles).toBe("function");
+    expect(typeof facade.copyApplicationFiles).toBe("function");
+
+    expect(typeof sub.getApplicationFiles).toBe("function");
+    expect(typeof sub.saveApplicationFile).toBe("function");
+    expect(typeof sub.saveApplicationFilesBatch).toBe("function");
+    expect(typeof sub.deleteApplicationFile).toBe("function");
+    expect(typeof sub.uploadApplicationZip).toBe("function");
+    expect(typeof sub.extractApplicationZip).toBe("function");
+    expect(typeof sub.bulkDeleteApplicationFiles).toBe("function");
+    expect(typeof sub.createApplicationFolder).toBe("function");
+    expect(typeof sub.moveApplicationFiles).toBe("function");
+    expect(typeof sub.copyApplicationFiles).toBe("function");
+  });
 });
 
 
