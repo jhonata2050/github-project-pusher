@@ -913,6 +913,42 @@ describe("Lei da Preservação de Fachadas (Facade Integrity Tests)", () => {
     expect(typeof servicesComponents.ServiceDetailsSkeleton).toBe("function");
     expect(typeof servicesComponents.UpgradePlanDialog).toBe("function");
   });
+
+  it("profile subcomponentes e schema de validação devem operar corretamente", async () => {
+    const profileComponents = await import("../../src/components/profile");
+    expect(typeof profileComponents.ProfileIdentitySection).toBe("function");
+    expect(typeof profileComponents.ProfileBillingAddressSection).toBe("function");
+    expect(typeof profileComponents.ProfileAccountSummaryCard).toBe("function");
+    expect(typeof profileComponents.ProfileThemeSelector).toBe("function");
+    expect(typeof profileComponents.EMPTY_PROFILE_FORM).toBe("object");
+
+    // Validação de schema Zod do perfil
+    const validProfile = profileComponents.profileSchema.safeParse({
+      full_name: "Cliente Teste",
+      company_name: "Minha Empresa",
+      tax_id: "123.456.789-00",
+      identification_type: "cpf",
+      country: "BR",
+      phone: "+55 11 99999-9999",
+      address_line: "Av. Paulista, 1000",
+      address_line2: "Apto 101",
+      city: "São Paulo",
+      state: "SP",
+      postal_code: "01310-100",
+    });
+    expect(validProfile.success).toBe(true);
+
+    const invalidProfile = profileComponents.profileSchema.safeParse({
+      full_name: "A", // muito curto (< 2)
+      tax_id: "12", // muito curto (< 5)
+      identification_type: "",
+      country: "",
+      phone: "12",
+      address_line: "",
+      city: "",
+    });
+    expect(invalidProfile.success).toBe(false);
+  });
 });
 
 describe("Motor Caddy & Hardening de Segurança OWASP", () => {
