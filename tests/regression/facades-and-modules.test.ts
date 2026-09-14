@@ -1113,6 +1113,14 @@ describe("Lei da Preservação de Fachadas (Facade Integrity Tests)", () => {
     expect(ticketsSubmodule.replyTicket).toBe(ticketsFacade.replyTicket);
     expect(ticketsSubmodule.updateTicketStatus).toBe(ticketsFacade.updateTicketStatus);
   });
+
+  it("admin branding componentes modulares devem exportar os cards de identidade, paleta e presets", async () => {
+    const branding = await import("../../src/components/admin/branding");
+    expect(typeof branding.BrandingIdentityCard).toBe("function");
+    expect(typeof branding.BrandingPaletteCard).toBe("function");
+    expect(Array.isArray(branding.PRESETS)).toBe(true);
+    expect(branding.PRESETS.length).toBeGreaterThan(0);
+  });
 });
 
 describe("Motor Caddy & Hardening de Segurança OWASP", () => {
