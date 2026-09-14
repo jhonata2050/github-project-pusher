@@ -305,6 +305,23 @@ describe("Lei da Preservação de Fachadas (Facade Integrity Tests)", () => {
     expect(typeof shell.AppShellBanners).toBe("function");
     expect(typeof shell.AppShellSidebar).toBe("function");
   });
+
+  it("apps/list submódulos e helper de stack devem ser exportados corretamente", async () => {
+    const appsList = await import("../../src/components/apps/list");
+    expect(typeof appsList.AppCard).toBe("function");
+    expect(typeof appsList.TemplateCard).toBe("function");
+    expect(typeof appsList.TemplateCatalogTab).toBe("function");
+    expect(typeof appsList.InstallTemplateModal).toBe("function");
+    expect(typeof appsList.ResetAppDialog).toBe("function");
+    expect(typeof appsList.getAppStackLabel).toBe("function");
+
+    expect(appsList.getAppStackLabel({ name: "meu-wordpress" })).toBe("WordPress + PHP");
+    expect(appsList.getAppStackLabel({ name: "bot-evolution-whatsapp" })).toBe("Evolution API");
+    expect(appsList.getAppStackLabel({ name: "n8n-worker" })).toBe("N8N Automations");
+    expect(appsList.getAppStackLabel({ name: "kuma-monitor" })).toBe("Uptime Kuma");
+    expect(appsList.getAppStackLabel({ name: "generic-app", build_pack: "nodejs" })).toBe("NODEJS");
+    expect(appsList.getAppStackLabel({ name: "outro" })).toBe("Docker Container");
+  });
 });
 
 describe("Motor Caddy & Hardening de Segurança OWASP", () => {
