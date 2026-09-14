@@ -1001,6 +1001,25 @@ describe("Lei da Preservação de Fachadas (Facade Integrity Tests)", () => {
     expect(typeof vpsInstances.AssignInstanceModal).toBe("function");
     expect(typeof vpsInstances.SSHConfigModal).toBe("function");
   });
+
+  it("cloud-apps lifecycle fachada e submódulos devem reexportar todas as operações de ciclo de vida", async () => {
+    const lifecycleFacade = await import("../../src/lib/cloud-apps/lifecycle.server");
+    expect(typeof lifecycleFacade.provisionCloudApplication).toBe("function");
+    expect(typeof lifecycleFacade.executeCloudAppAction).toBe("function");
+    expect(typeof lifecycleFacade.startCloudApplication).toBe("function");
+    expect(typeof lifecycleFacade.stopCloudApplication).toBe("function");
+    expect(typeof lifecycleFacade.resetCloudApplication).toBe("function");
+    expect(typeof lifecycleFacade.getCloudApplicationDetails).toBe("function");
+    expect(typeof lifecycleFacade.getCloudApplicationLogs).toBe("function");
+    expect(typeof lifecycleFacade.getCloudDeploymentStatus).toBe("function");
+    expect(lifecycleFacade.activeDeployments).toBeInstanceOf(Map);
+
+    const lifecycleSubmodule = await import("../../src/lib/cloud-apps/lifecycle");
+    expect(lifecycleSubmodule.provisionCloudApplication).toBe(lifecycleFacade.provisionCloudApplication);
+    expect(lifecycleSubmodule.executeCloudAppAction).toBe(lifecycleFacade.executeCloudAppAction);
+    expect(lifecycleSubmodule.resetCloudApplication).toBe(lifecycleFacade.resetCloudApplication);
+    expect(lifecycleSubmodule.getCloudApplicationDetails).toBe(lifecycleFacade.getCloudApplicationDetails);
+  });
 });
 
 describe("Motor Caddy & Hardening de Segurança OWASP", () => {
