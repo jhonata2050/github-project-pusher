@@ -1060,6 +1060,17 @@ describe("Lei da Preservação de Fachadas (Facade Integrity Tests)", () => {
     expect(whmcsSubmodule.finishImportJob).toBe(whmcsFacade.finishImportJob);
     expect(whmcsSubmodule.emptyStats).toBe(whmcsFacade.emptyStats);
   });
+
+  it("invoices componentes modulares devem exportar os blocos estruturais do detalhe da fatura", async () => {
+    const invoices = await import("../../src/components/invoices");
+    expect(typeof invoices.InvoiceHeader).toBe("function");
+    expect(typeof invoices.InvoiceItemsTable).toBe("function");
+    expect(typeof invoices.InvoiceNotesCard).toBe("function");
+    expect(typeof invoices.InvoicePaymentCard).toBe("function");
+    expect(typeof invoices.STATUS_LABELS).toBe("object");
+    expect(Array.isArray(invoices.METHOD_OPTIONS)).toBe(true);
+    expect(typeof invoices.getInvoiceStatusInfo).toBe("function");
+  });
 });
 
 describe("Motor Caddy & Hardening de Segurança OWASP", () => {
