@@ -1310,7 +1310,32 @@ describe("Lei da Preservação de Fachadas (Facade Integrity Tests)", () => {
     expect(typeof hooks.useCheckoutPricing).toBe("function");
     expect(typeof hooks.useCheckoutOrder).toBe("function");
   });
+
+  it("contabo.server fachada e submódulos devem reexportar funções de token, instâncias, ações, catálogo e provisionamento", async () => {
+    const contaboFacade = await import("../../src/lib/contabo.server");
+    expect(typeof contaboFacade.getContaboToken).toBe("function");
+    expect(typeof contaboFacade.getContaboInstances).toBe("function");
+    expect(typeof contaboFacade.performContaboAction).toBe("function");
+    expect(typeof contaboFacade.performContaboActionByExternalId).toBe("function");
+    expect(typeof contaboFacade.getContaboProductTypes).toBe("function");
+    expect(typeof contaboFacade.provisionContaboVPS).toBe("function");
+    expect(typeof contaboFacade.mapContaboSpecs).toBe("function");
+    expect(typeof contaboFacade.getContaboInstanceDetails).toBe("function");
+    expect(typeof contaboFacade.getContaboInstanceStats).toBe("function");
+
+    const contaboModule = await import("../../src/lib/contabo/index");
+    expect(typeof contaboModule.getContaboToken).toBe("function");
+    expect(typeof contaboModule.getContaboInstances).toBe("function");
+    expect(typeof contaboModule.performContaboAction).toBe("function");
+    expect(typeof contaboModule.performContaboActionByExternalId).toBe("function");
+    expect(typeof contaboModule.getContaboProductTypes).toBe("function");
+    expect(typeof contaboModule.provisionContaboVPS).toBe("function");
+    expect(typeof contaboModule.mapContaboSpecs).toBe("function");
+    expect(typeof contaboModule.getContaboInstanceDetails).toBe("function");
+    expect(typeof contaboModule.getContaboInstanceStats).toBe("function");
+  });
 });
+
 
 
 
