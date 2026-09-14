@@ -1395,6 +1395,45 @@ describe("Lei da Preservação de Fachadas (Facade Integrity Tests)", () => {
     expect(typeof ops.useAppDeployOperations).toBe("function");
     expect(typeof ops.useAppEnvsOperations).toBe("function");
   });
+
+  it("Phase 63: domains.server.ts fachada e submódulos devem reexportar todas as funções e constantes de domínios", async () => {
+    const facade = await import("../../src/lib/domains.server");
+    const sub = await import("../../src/lib/domains/index");
+
+    // Constantes
+    expect(Array.isArray(facade.DEFAULT_TLDS)).toBe(true);
+    expect(Array.isArray(sub.DEFAULT_TLDS)).toBe(true);
+
+    // Settings
+    expect(typeof facade.getDomainRegistrarSettings).toBe("function");
+    expect(typeof facade.saveDomainRegistrarSettings).toBe("function");
+    expect(typeof facade.getDomainPricingList).toBe("function");
+    expect(typeof facade.saveDomainPricingList).toBe("function");
+    expect(typeof sub.getDomainRegistrarSettings).toBe("function");
+    expect(typeof sub.saveDomainRegistrarSettings).toBe("function");
+    expect(typeof sub.getDomainPricingList).toBe("function");
+    expect(typeof sub.saveDomainPricingList).toBe("function");
+
+    // Queries
+    expect(typeof facade.getClientDomainsList).toBe("function");
+    expect(typeof facade.getDomainDetailsById).toBe("function");
+    expect(typeof facade.getDomainEPPCode).toBe("function");
+    expect(typeof sub.getClientDomainsList).toBe("function");
+    expect(typeof sub.getDomainDetailsById).toBe("function");
+    expect(typeof sub.getDomainEPPCode).toBe("function");
+
+    // Management
+    expect(typeof facade.updateDomainNameserversById).toBe("function");
+    expect(typeof facade.toggleDomainTransferLock).toBe("function");
+    expect(typeof facade.toggleDomainAutoRenewSetting).toBe("function");
+    expect(typeof sub.updateDomainNameserversById).toBe("function");
+    expect(typeof sub.toggleDomainTransferLock).toBe("function");
+    expect(typeof sub.toggleDomainAutoRenewSetting).toBe("function");
+
+    // Order
+    expect(typeof facade.orderDomainRegistration).toBe("function");
+    expect(typeof sub.orderDomainRegistration).toBe("function");
+  });
 });
 
 
