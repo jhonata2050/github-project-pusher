@@ -288,6 +288,23 @@ describe("Lei da Preservação de Fachadas (Facade Integrity Tests)", () => {
     const { useFileManager } = await import("../../src/components/file-manager/hooks/useFileManager");
     expect(typeof useFileManager).toBe("function");
   });
+
+  it("AppShell e submódulos de shell devem ser exportados corretamente com seções de navegação válidas", async () => {
+    const { AppShell, ADMIN_SECTIONS, CLIENT_SECTIONS } = await import("../../src/components/app/AppShell");
+    expect(typeof AppShell).toBe("function");
+    expect(Array.isArray(ADMIN_SECTIONS)).toBe(true);
+    expect(Array.isArray(CLIENT_SECTIONS)).toBe(true);
+    expect(ADMIN_SECTIONS.length).toBeGreaterThanOrEqual(4);
+    expect(CLIENT_SECTIONS.length).toBeGreaterThanOrEqual(3);
+
+    const shell = await import("../../src/components/app/shell");
+    expect(typeof shell.SidebarSection).toBe("function");
+    expect(typeof shell.NotificationMenu).toBe("function");
+    expect(typeof shell.AppShellUserMenu).toBe("function");
+    expect(typeof shell.AppShellBalanceCard).toBe("function");
+    expect(typeof shell.AppShellBanners).toBe("function");
+    expect(typeof shell.AppShellSidebar).toBe("function");
+  });
 });
 
 describe("Motor Caddy & Hardening de Segurança OWASP", () => {
