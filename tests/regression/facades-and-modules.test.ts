@@ -1038,6 +1038,28 @@ describe("Lei da Preservação de Fachadas (Facade Integrity Tests)", () => {
     expect(typeof dbComponents.DatabaseConnectionTab).toBe("function");
     expect(typeof dbComponents.DatabaseUsersTab).toBe("function");
   });
+
+  it("whmcs-import.server fachada e submódulo devem reexportar todas as operações de importação", async () => {
+    const whmcsFacade = await import("../../src/lib/whmcs-import.server");
+    expect(typeof whmcsFacade.startImportJob).toBe("function");
+    expect(typeof whmcsFacade.importBatch).toBe("function");
+    expect(typeof whmcsFacade.finishImportJob).toBe("function");
+    expect(typeof whmcsFacade.emptyStats).toBe("function");
+    expect(typeof whmcsFacade.pick).toBe("function");
+    expect(typeof whmcsFacade.toDate).toBe("function");
+    expect(typeof whmcsFacade.toNumber).toBe("function");
+    expect(typeof whmcsFacade.resolveUserId).toBe("function");
+    expect(typeof whmcsFacade.resolveProductId).toBe("function");
+    expect(typeof whmcsFacade.importClients).toBe("function");
+    expect(typeof whmcsFacade.importServices).toBe("function");
+    expect(typeof whmcsFacade.importInvoices).toBe("function");
+
+    const whmcsSubmodule = await import("../../src/lib/whmcs");
+    expect(whmcsSubmodule.startImportJob).toBe(whmcsFacade.startImportJob);
+    expect(whmcsSubmodule.importBatch).toBe(whmcsFacade.importBatch);
+    expect(whmcsSubmodule.finishImportJob).toBe(whmcsFacade.finishImportJob);
+    expect(whmcsSubmodule.emptyStats).toBe(whmcsFacade.emptyStats);
+  });
 });
 
 describe("Motor Caddy & Hardening de Segurança OWASP", () => {
