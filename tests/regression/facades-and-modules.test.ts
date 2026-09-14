@@ -980,6 +980,18 @@ describe("Lei da Preservação de Fachadas (Facade Integrity Tests)", () => {
     const oldDate = new Date(Date.now() - 30 * 60 * 60 * 1000).toISOString();
     expect(adminDashboard.getSLAStatus(oldDate).label).toBe("CRÍTICO (>24h)");
   });
+
+  it("admin vps plans subcomponentes e constantes devem ser exportados corretamente", async () => {
+    const vpsPlans = await import("../../src/components/admin/vps/plans");
+    expect(typeof vpsPlans.VPSPlansHeader).toBe("function");
+    expect(typeof vpsPlans.VPSPlanCard).toBe("function");
+    expect(typeof vpsPlans.VPSPlansList).toBe("function");
+    expect(typeof vpsPlans.VPSPlanEditDialog).toBe("function");
+    expect(typeof vpsPlans.formatBRL).toBe("function");
+    expect(typeof vpsPlans.getPublicOrigin).toBe("function");
+    expect(vpsPlans.CYCLE_LABELS.monthly).toBe("mês");
+    expect(vpsPlans.formatBRL(49.9)).toContain("49,90");
+  });
 });
 
 describe("Motor Caddy & Hardening de Segurança OWASP", () => {
