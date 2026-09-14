@@ -1303,7 +1303,15 @@ describe("Lei da Preservação de Fachadas (Facade Integrity Tests)", () => {
     expect(typeof aff.AffiliateHowItWorks).toBe("function");
     expect(typeof aff.AffiliateWithdrawModal).toBe("function");
   });
+
+  it("checkout hooks e submódulos devem exportar useCheckoutProduct, useCheckoutPricing e useCheckoutOrder", async () => {
+    const hooks = await import("../../src/components/checkout/hooks");
+    expect(typeof hooks.useCheckoutProduct).toBe("function");
+    expect(typeof hooks.useCheckoutPricing).toBe("function");
+    expect(typeof hooks.useCheckoutOrder).toBe("function");
+  });
 });
+
 
 
 
