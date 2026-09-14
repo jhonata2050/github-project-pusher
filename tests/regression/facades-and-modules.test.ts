@@ -1528,6 +1528,16 @@ describe("Lei da Preservação de Fachadas (Facade Integrity Tests)", () => {
     expect(typeof route.STATUS_MAP).toBe("object");
     expect(Array.isArray(route.STATUS_FILTERS)).toBe(true);
   });
+
+  it("Phase 68: client manage invoice modal subcomponentes devem ser exportados corretamente", async () => {
+    const inv = await import("../../src/components/admin/clients/modals/invoice/index");
+    expect(typeof inv.InvoiceQuickActions).toBe("function");
+    expect(typeof inv.InvoiceFormFields).toBe("function");
+    expect(typeof inv.InvoiceItemsList).toBe("function");
+
+    const modal = await import("../../src/components/admin/clients/modals/ClientManageInvoiceModal");
+    expect(typeof modal.ClientManageInvoiceModal).toBe("function");
+  });
 });
 
 
