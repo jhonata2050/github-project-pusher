@@ -1273,7 +1273,28 @@ describe("Lei da Preservação de Fachadas (Facade Integrity Tests)", () => {
     expect(typeof lifecycleModule.adminUpdateInvoiceImplementation).toBe("function");
     expect(typeof lifecycleModule.adminCreateManualInvoiceImplementation).toBe("function");
   });
+
+  it("affiliates operations.server fachada e submódulos devem reexportar funções de afiliados, cliques, comissão e resgates", async () => {
+    const opsFacade = await import("../../src/lib/affiliates/operations.server");
+    expect(typeof opsFacade.getOrCreateAffiliate).toBe("function");
+    expect(typeof opsFacade.trackAffiliateClick).toBe("function");
+    expect(typeof opsFacade.updateAffiliatePercent).toBe("function");
+    expect(typeof opsFacade.processAffiliateCommission).toBe("function");
+    expect(typeof opsFacade.withdrawAffiliateToWallet).toBe("function");
+    expect(typeof opsFacade.getAffiliateReferrals).toBe("function");
+    expect(typeof opsFacade.getAdminAffiliatesList).toBe("function");
+
+    const opsModule = await import("../../src/lib/affiliates/operations/index");
+    expect(typeof opsModule.getOrCreateAffiliate).toBe("function");
+    expect(typeof opsModule.trackAffiliateClick).toBe("function");
+    expect(typeof opsModule.updateAffiliatePercent).toBe("function");
+    expect(typeof opsModule.processAffiliateCommission).toBe("function");
+    expect(typeof opsModule.withdrawAffiliateToWallet).toBe("function");
+    expect(typeof opsModule.getAffiliateReferrals).toBe("function");
+    expect(typeof opsModule.getAdminAffiliatesList).toBe("function");
+  });
 });
+
 
 
 describe("Motor Caddy & Hardening de Segurança OWASP", () => {
