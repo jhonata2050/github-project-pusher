@@ -1640,6 +1640,16 @@ describe("Lei da Preservação de Fachadas (Facade Integrity Tests)", () => {
     expect(typeof sub.fetchGitSourceCode).toBe("function");
     expect(typeof sub.deployGitSwarmStack).toBe("function");
   });
+
+  it("Phase 73: FileManagerToolbar e submódulos toolbar devem exportar todos os subcomponentes", async () => {
+    const toolbar = await import("../../src/components/file-manager/toolbar/index");
+    expect(typeof toolbar.ToolbarNavigationActions).toBe("function");
+    expect(typeof toolbar.ToolbarBreadcrumbsSearch).toBe("function");
+    expect(typeof toolbar.ToolbarBatchActions).toBe("function");
+
+    const main = await import("../../src/components/file-manager/FileManagerToolbar");
+    expect(typeof main.FileManagerToolbar).toBe("function");
+  });
 });
 
 
