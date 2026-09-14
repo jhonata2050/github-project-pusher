@@ -1345,6 +1345,40 @@ describe("Lei da Preservação de Fachadas (Facade Integrity Tests)", () => {
     expect(Array.isArray(imp.SLOTS)).toBe(true);
     expect(typeof imp.emptyStats).toBe("function");
   });
+
+  it("Phase 60: cloud-apps files.server fachada e submódulos devem reexportar todas as operações de arquivos", async () => {
+    const facade = await import("../../src/lib/cloud-apps/files.server");
+    const submodules = await import("../../src/lib/cloud-apps/files/index");
+
+    // Validação da fachada (Law #6)
+    expect(typeof facade.getCloudApplicationFiles).toBe("function");
+    expect(typeof facade.saveCloudApplicationFile).toBe("function");
+    expect(typeof facade.saveCloudApplicationFilesBatch).toBe("function");
+    expect(typeof facade.deleteCloudApplicationFile).toBe("function");
+    expect(typeof facade.uploadCloudApplicationZip).toBe("function");
+    expect(typeof facade.extractCloudApplicationZip).toBe("function");
+    expect(typeof facade.bulkDeleteCloudApplicationFiles).toBe("function");
+    expect(typeof facade.createCloudApplicationFolder).toBe("function");
+    expect(typeof facade.moveCloudApplicationFiles).toBe("function");
+    expect(typeof facade.copyCloudApplicationFiles).toBe("function");
+
+    // Validação dos submódulos
+    expect(typeof submodules.getCloudApplicationFiles).toBe("function");
+    expect(typeof submodules.saveCloudApplicationFile).toBe("function");
+    expect(typeof submodules.saveCloudApplicationFilesBatch).toBe("function");
+    expect(typeof submodules.deleteCloudApplicationFile).toBe("function");
+    expect(typeof submodules.uploadCloudApplicationZip).toBe("function");
+    expect(typeof submodules.extractCloudApplicationZip).toBe("function");
+    expect(typeof submodules.bulkDeleteCloudApplicationFiles).toBe("function");
+    expect(typeof submodules.createCloudApplicationFolder).toBe("function");
+    expect(typeof submodules.moveCloudApplicationFiles).toBe("function");
+    expect(typeof submodules.copyCloudApplicationFiles).toBe("function");
+
+    // Validação reexportada em cloud-apps.server.ts
+    const cloudApps = await import("../../src/lib/cloud-apps.server");
+    expect(typeof cloudApps.getCloudApplicationFiles).toBe("function");
+    expect(typeof cloudApps.saveCloudApplicationFile).toBe("function");
+  });
 });
 
 
