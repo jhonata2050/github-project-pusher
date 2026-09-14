@@ -1097,6 +1097,22 @@ describe("Lei da Preservação de Fachadas (Facade Integrity Tests)", () => {
     expect(walletSubmodule.autoPayPendingInvoices).toBe(walletFacade.autoPayPendingInvoices);
     expect(walletSubmodule.adminAdjustBalance).toBe(walletFacade.adminAdjustBalance);
   });
+
+  it("support tickets.functions fachada e submódulo devem reexportar todas as 5 server functions", async () => {
+    const ticketsFacade = await import("../../src/lib/support/tickets.functions");
+    expect(typeof ticketsFacade.getTickets).toBe("function");
+    expect(typeof ticketsFacade.getTicketDetails).toBe("function");
+    expect(typeof ticketsFacade.createTicket).toBe("function");
+    expect(typeof ticketsFacade.replyTicket).toBe("function");
+    expect(typeof ticketsFacade.updateTicketStatus).toBe("function");
+
+    const ticketsSubmodule = await import("../../src/lib/support/tickets");
+    expect(ticketsSubmodule.getTickets).toBe(ticketsFacade.getTickets);
+    expect(ticketsSubmodule.getTicketDetails).toBe(ticketsFacade.getTicketDetails);
+    expect(ticketsSubmodule.createTicket).toBe(ticketsFacade.createTicket);
+    expect(ticketsSubmodule.replyTicket).toBe(ticketsFacade.replyTicket);
+    expect(ticketsSubmodule.updateTicketStatus).toBe(ticketsFacade.updateTicketStatus);
+  });
 });
 
 describe("Motor Caddy & Hardening de Segurança OWASP", () => {
