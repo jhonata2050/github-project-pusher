@@ -1071,6 +1071,16 @@ describe("Lei da Preservação de Fachadas (Facade Integrity Tests)", () => {
     expect(Array.isArray(invoices.METHOD_OPTIONS)).toBe(true);
     expect(typeof invoices.getInvoiceStatusInfo).toBe("function");
   });
+
+  it("apps domains componentes modulares devem exportar os cards de subdomínio, conexão e dns", async () => {
+    const domains = await import("../../src/components/apps/domains");
+    expect(typeof domains.DomainSubdomainCard).toBe("function");
+    expect(typeof domains.DomainCustomConnectionCard).toBe("function");
+    expect(typeof domains.DomainDnsInstructionsCard).toBe("function");
+
+    const tab = await import("../../src/components/apps/tabs/AppDomainsTab");
+    expect(typeof tab.AppDomainsTab).toBe("function");
+  });
 });
 
 describe("Motor Caddy & Hardening de Segurança OWASP", () => {
