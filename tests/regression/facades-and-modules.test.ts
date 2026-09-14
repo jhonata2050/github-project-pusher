@@ -1514,6 +1514,20 @@ describe("Lei da Preservação de Fachadas (Facade Integrity Tests)", () => {
     expect(typeof sub.performAdminVPSAction).toBe("function");
     expect(typeof sub.getContaboPlansFn).toBe("function");
   });
+
+  it("Phase 67: admin tickets subcomponentes e constantes devem ser exportados corretamente", async () => {
+    const tickets = await import("../../src/components/admin/tickets/index");
+    expect(typeof tickets.AdminTicketsHeader).toBe("function");
+    expect(typeof tickets.AdminTicketsFilters).toBe("function");
+    expect(typeof tickets.AdminTicketCard).toBe("function");
+    expect(typeof tickets.AdminTicketsPagination).toBe("function");
+    expect(typeof tickets.STATUS_MAP).toBe("object");
+    expect(Array.isArray(tickets.STATUS_FILTERS)).toBe(true);
+
+    const route = await import("../../src/routes/_authenticated/admin/tickets");
+    expect(typeof route.STATUS_MAP).toBe("object");
+    expect(Array.isArray(route.STATUS_FILTERS)).toBe(true);
+  });
 });
 
 
