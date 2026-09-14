@@ -867,6 +867,41 @@ describe("Lei da Preservação de Fachadas (Facade Integrity Tests)", () => {
     });
     expect(signupValid.success).toBe(true);
   });
+
+  it("provisioning.server fachada e submódulos devem reexportar e calcular ciclos sem regressão", async () => {
+    const provisioningFacade = await import("../../src/lib/finance/provisioning.server");
+    expect(typeof provisioningFacade.processProvisioning).toBe("function");
+    expect(typeof provisioningFacade.handleWalletDepositProvisioning).toBe("function");
+    expect(typeof provisioningFacade.handleDomainRegistrationProvisioning).toBe("function");
+    expect(typeof provisioningFacade.handlePlanUpgradeProvisioning).toBe("function");
+    expect(typeof provisioningFacade.handleServiceRenewalProvisioning).toBe("function");
+    expect(typeof provisioningFacade.provisionDirectAdminHosting).toBe("function");
+    expect(typeof provisioningFacade.provisionVpsInstance).toBe("function");
+    expect(typeof provisioningFacade.provisionPaaSApplication).toBe("function");
+    expect(typeof provisioningFacade.computeNextDueDate).toBe("function");
+
+    // Validação de cálculo de vencimento por ciclo (usando data futura intermediária para testar prorrogação)
+    const baseDate = new Date(2029, 0, 15);
+    const baseStr = baseDate.toISOString();
+
+    const monthly = provisioningFacade.computeNextDueDate("monthly", baseStr);
+    expect(monthly.getMonth()).toBe((baseDate.getMonth() + 1) % 12);
+
+    const quarterly = provisioningFacade.computeNextDueDate("quarterly", baseStr);
+    expect(quarterly.getMonth()).toBe((baseDate.getMonth() + 3) % 12);
+
+    const semiannually = provisioningFacade.computeNextDueDate("semiannually", baseStr);
+    expect(semiannually.getMonth()).toBe((baseDate.getMonth() + 6) % 12);
+
+    const annually = provisioningFacade.computeNextDueDate("annually", baseStr);
+    expect(annually.getFullYear()).toBe(baseDate.getFullYear() + 1);
+
+    const biennially = provisioningFacade.computeNextDueDate("biennially", baseStr);
+    expect(biennially.getFullYear()).toBe(baseDate.getFullYear() + 2);
+
+    const triennially = provisioningFacade.computeNextDueDate("triennially", baseStr);
+    expect(triennially.getFullYear()).toBe(baseDate.getFullYear() + 3);
+  });
 });
 
 describe("Motor Caddy & Hardening de Segurança OWASP", () => {
