@@ -5,3 +5,5 @@ export * from "./GoogleAuthButton";
 export * from "./SignupFields";
 export * from "./CheckEmailView";
 export * from "./ForgotPasswordTrigger";
+export * from "./useAuthForm";
+export * from "./AuthForm";

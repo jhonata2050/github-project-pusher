@@ -1434,6 +1434,19 @@ describe("Lei da Preservação de Fachadas (Facade Integrity Tests)", () => {
     expect(typeof facade.orderDomainRegistration).toBe("function");
     expect(typeof sub.orderDomainRegistration).toBe("function");
   });
+
+  it("Phase 64: auth componentes e useAuthForm hook devem ser exportados corretamente", async () => {
+    const auth = await import("../../src/components/auth/index");
+    expect(typeof auth.AuthForm).toBe("function");
+    expect(typeof auth.useAuthForm).toBe("function");
+    expect(typeof auth.AuthDesktopBanner).toBe("function");
+    expect(typeof auth.AuthMobileBanner).toBe("function");
+    expect(typeof auth.AuthLogo).toBe("function");
+    expect(typeof auth.GoogleAuthButton).toBe("function");
+    expect(typeof auth.SignupFields).toBe("function");
+    expect(typeof auth.CheckEmailView).toBe("function");
+    expect(typeof auth.ForgotPasswordTrigger).toBe("function");
+  });
 });
 
 
