@@ -646,6 +646,43 @@ describe("Lei da Preservação de Fachadas (Facade Integrity Tests)", () => {
     expect(plainWarn.level).toBe("warn");
     expect(plainWarn.message).toContain("Warning: memory threshold exceeded");
   });
+
+  it("Affiliates Facade e Submódulos devem exportar todas as funções contratuais e utilitários", async () => {
+    // 1. Teste da fachada do servidor
+    const affiliatesFacade = await import("../../src/lib/affiliates.server");
+    expect(typeof affiliatesFacade.getOrCreateAffiliate).toBe("function");
+    expect(typeof affiliatesFacade.trackAffiliateClick).toBe("function");
+    expect(typeof affiliatesFacade.getGlobalAffiliateSettings).toBe("function");
+    expect(typeof affiliatesFacade.saveGlobalAffiliateSettings).toBe("function");
+    expect(typeof affiliatesFacade.getProductCommissionSettings).toBe("function");
+    expect(typeof affiliatesFacade.saveProductCommissionSettings).toBe("function");
+    expect(typeof affiliatesFacade.updateAffiliatePercent).toBe("function");
+    expect(typeof affiliatesFacade.processAffiliateCommission).toBe("function");
+    expect(typeof affiliatesFacade.withdrawAffiliateToWallet).toBe("function");
+    expect(typeof affiliatesFacade.getAffiliateReferrals).toBe("function");
+    expect(typeof affiliatesFacade.getAdminAffiliatesList).toBe("function");
+
+    // 2. Teste de geração de código de afiliado (store.server)
+    const { generateAffiliateCode } = await import("../../src/lib/affiliates/store.server");
+    expect(typeof generateAffiliateCode).toBe("function");
+
+    const code1 = generateAffiliateCode("João Silva", "joao@exemplo.com");
+    expect(code1).toMatch(/^joaosilv\d{3}$/);
+
+    const code2 = generateAffiliateCode(undefined, "contato@empresa.com.br");
+    expect(code2).toMatch(/^contato\d{3}$/);
+
+    const codeFallback = generateAffiliateCode();
+    expect(codeFallback).toMatch(/^indica\d{3}$/);
+
+    // 3. Teste dos componentes do painel administrativo
+    const adminAffiliates = await import("../../src/components/admin/affiliates");
+    expect(typeof adminAffiliates.AffiliatesKpiCards).toBe("function");
+    expect(typeof adminAffiliates.ProductCommissionsTab).toBe("function");
+    expect(typeof adminAffiliates.AffiliatesListTab).toBe("function");
+    expect(typeof adminAffiliates.GlobalSettingsTab).toBe("function");
+    expect(typeof adminAffiliates.EditAffiliateModal).toBe("function");
+  });
 });
 
 describe("Motor Caddy & Hardening de Segurança OWASP", () => {
