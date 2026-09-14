@@ -1147,6 +1147,24 @@ describe("Lei da Preservação de Fachadas (Facade Integrity Tests)", () => {
     expect(fmServerSubmodule.writeAppFile).toBe(fmServerFacade.writeAppFile);
     expect(fmServerSubmodule.syncAppFilesToContainer).toBe(fmServerFacade.syncAppFilesToContainer);
   });
+
+  it("file-manager jobs fachada e submódulo devem reexportar JobManagerService, jobManager e runners de compress/extract", async () => {
+    const jobsFacade = await import("../../src/lib/file-manager/jobs");
+    expect(jobsFacade.jobManager).toBeDefined();
+    expect(typeof jobsFacade.JobManagerService).toBe("function");
+    expect(typeof jobsFacade.runExtractJob).toBe("function");
+    expect(typeof jobsFacade.runCompressJob).toBe("function");
+    expect(typeof jobsFacade.jobManager.getJob).toBe("function");
+    expect(typeof jobsFacade.jobManager.cancelJob).toBe("function");
+    expect(typeof jobsFacade.jobManager.startExtractJob).toBe("function");
+    expect(typeof jobsFacade.jobManager.startCompressJob).toBe("function");
+
+    const jobsSubmodule = await import("../../src/lib/file-manager/jobs/index");
+    expect(jobsSubmodule.jobManager).toBe(jobsFacade.jobManager);
+    expect(jobsSubmodule.JobManagerService).toBe(jobsFacade.JobManagerService);
+    expect(jobsSubmodule.runExtractJob).toBe(jobsFacade.runExtractJob);
+    expect(jobsSubmodule.runCompressJob).toBe(jobsFacade.runCompressJob);
+  });
 });
 
 describe("Motor Caddy & Hardening de Segurança OWASP", () => {
