@@ -1650,6 +1650,17 @@ describe("Lei da Preservação de Fachadas (Facade Integrity Tests)", () => {
     const main = await import("../../src/components/file-manager/FileManagerToolbar");
     expect(typeof main.FileManagerToolbar).toBe("function");
   });
+
+  it("Phase 74: swarm-routing.server fachada e submódulos devem exportar syncSwarmDomainRouting e generateCaddyfileForRuntime", async () => {
+    const facade = await import("../../src/lib/swarm/swarm-routing.server");
+    const sub = await import("../../src/lib/swarm/routing/index");
+
+    expect(typeof facade.syncSwarmDomainRouting).toBe("function");
+    expect(typeof facade.generateCaddyfileForRuntime).toBe("function");
+
+    expect(typeof sub.syncSwarmDomainRouting).toBe("function");
+    expect(typeof sub.generateCaddyfileForRuntime).toBe("function");
+  });
 });
 
 
