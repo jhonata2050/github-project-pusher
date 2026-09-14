@@ -1447,6 +1447,46 @@ describe("Lei da Preservação de Fachadas (Facade Integrity Tests)", () => {
     expect(typeof auth.CheckEmailView).toBe("function");
     expect(typeof auth.ForgotPasswordTrigger).toBe("function");
   });
+
+  it("Phase 65: file-manager functions.ts fachada e submódulos devem reexportar todas as server functions", async () => {
+    const facade = await import("../../src/lib/file-manager/functions");
+    const sub = await import("../../src/lib/file-manager/client-functions/index");
+
+    // CRUD
+    expect(typeof facade.getFileManagerFiles).toBe("function");
+    expect(typeof facade.readFileContentFn).toBe("function");
+    expect(typeof facade.saveFileContentFn).toBe("function");
+    expect(typeof facade.createFileFn).toBe("function");
+    expect(typeof facade.createFolderFn).toBe("function");
+    expect(typeof facade.deleteItemsFn).toBe("function");
+    expect(typeof facade.renameItemFn).toBe("function");
+    expect(typeof facade.copyItemsFn).toBe("function");
+    expect(typeof facade.moveItemsFn).toBe("function");
+    expect(typeof facade.chmodItemFn).toBe("function");
+    expect(typeof facade.searchFilesFn).toBe("function");
+
+    expect(typeof sub.getFileManagerFiles).toBe("function");
+    expect(typeof sub.readFileContentFn).toBe("function");
+    expect(typeof sub.saveFileContentFn).toBe("function");
+
+    // Archives
+    expect(typeof facade.compressItemsFn).toBe("function");
+    expect(typeof facade.extractArchiveFn).toBe("function");
+    expect(typeof facade.uploadFilesBatchFn).toBe("function");
+    expect(typeof sub.compressItemsFn).toBe("function");
+    expect(typeof sub.extractArchiveFn).toBe("function");
+    expect(typeof sub.uploadFilesBatchFn).toBe("function");
+
+    // Jobs
+    expect(typeof facade.startExtractJobFn).toBe("function");
+    expect(typeof facade.getJobStatusFn).toBe("function");
+    expect(typeof facade.cancelJobFn).toBe("function");
+    expect(typeof facade.forcePullFilesFromSwarmFn).toBe("function");
+    expect(typeof sub.startExtractJobFn).toBe("function");
+    expect(typeof sub.getJobStatusFn).toBe("function");
+    expect(typeof sub.cancelJobFn).toBe("function");
+    expect(typeof sub.forcePullFilesFromSwarmFn).toBe("function");
+  });
 });
 
 
