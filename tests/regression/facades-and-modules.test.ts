@@ -835,6 +835,38 @@ describe("Lei da Preservação de Fachadas (Facade Integrity Tests)", () => {
     expect(typeof dialogSubmodules.JobProgressDialog).toBe("function");
     expect(typeof dialogSubmodules.DeleteConfirmDialog).toBe("function");
   });
+
+  it("auth subcomponentes e schemas de validação devem operar corretamente", async () => {
+    const authComponents = await import("../../src/components/auth");
+    expect(typeof authComponents.AuthDesktopBanner).toBe("function");
+    expect(typeof authComponents.AuthMobileBanner).toBe("function");
+    expect(typeof authComponents.AuthLogo).toBe("function");
+    expect(typeof authComponents.GoogleAuthButton).toBe("function");
+    expect(typeof authComponents.GoogleIcon).toBe("function");
+    expect(typeof authComponents.SignupFields).toBe("function");
+    expect(typeof authComponents.CheckEmailView).toBe("function");
+    expect(typeof authComponents.ForgotPasswordTrigger).toBe("function");
+
+    // Validação de schemas Zod
+    expect(authComponents.emailSchema.safeParse("user@example.com").success).toBe(true);
+    expect(authComponents.emailSchema.safeParse("invalid-email").success).toBe(false);
+
+    // Validação de regras de senha (min 8, maiúscula, minúscula, número, caractere especial)
+    expect(authComponents.passwordSchema.safeParse("Weak123").success).toBe(false);
+    expect(authComponents.passwordSchema.safeParse("StrongP@ssw0rd!").success).toBe(true);
+
+    const signupValid = authComponents.signupSchema.safeParse({
+      fullName: "Cliente Teste",
+      phone: "+55 11 99999-9999",
+      tax_id: "123.456.789-00",
+      identification_type: "cpf",
+      country: "BR",
+      email: "cliente@teste.com",
+      password: "StrongP@ssw0rd!",
+      leadSource: "Google",
+    });
+    expect(signupValid.success).toBe(true);
+  });
 });
 
 describe("Motor Caddy & Hardening de Segurança OWASP", () => {
