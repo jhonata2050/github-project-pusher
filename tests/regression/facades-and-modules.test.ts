@@ -1230,6 +1230,24 @@ describe("Lei da Preservação de Fachadas (Facade Integrity Tests)", () => {
     expect(pdfSubmodule.parseColorToRGB).toBe(pdfFacade.parseColorToRGB);
     expect(pdfSubmodule.loadImageAsBase64).toBe(pdfFacade.loadImageAsBase64);
   });
+
+  it("container-telemetry.server fachada e submódulo devem reexportar getLiveContainerMetrics e formatadores", async () => {
+    const telemetryFacade = await import("../../src/lib/container-telemetry.server");
+    expect(typeof telemetryFacade.getLiveContainerMetrics).toBe("function");
+    expect(typeof telemetryFacade.formatBytes).toBe("function");
+    expect(typeof telemetryFacade.formatMb).toBe("function");
+    expect(typeof telemetryFacade.formatUptime).toBe("function");
+
+    const telemetrySubmodule = await import("../../src/lib/container-telemetry/index");
+    expect(telemetrySubmodule.getLiveContainerMetrics).toBe(telemetryFacade.getLiveContainerMetrics);
+    expect(telemetrySubmodule.formatBytes).toBe(telemetryFacade.formatBytes);
+    expect(telemetrySubmodule.formatMb).toBe(telemetryFacade.formatMb);
+    expect(telemetrySubmodule.formatUptime).toBe(telemetryFacade.formatUptime);
+
+    expect(telemetryFacade.formatBytes(1024)).toBe("1.0 KB");
+    expect(telemetryFacade.formatMb(2048)).toBe("2 GB");
+    expect(telemetryFacade.formatUptime(3660)).toBe("1h 1m");
+  });
 });
 
 describe("Motor Caddy & Hardening de Segurança OWASP", () => {
