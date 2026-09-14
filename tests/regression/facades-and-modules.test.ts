@@ -1334,7 +1334,19 @@ describe("Lei da Preservação de Fachadas (Facade Integrity Tests)", () => {
     expect(typeof contaboModule.getContaboInstanceDetails).toBe("function");
     expect(typeof contaboModule.getContaboInstanceStats).toBe("function");
   });
+
+  it("admin import componentes e submódulos de UI devem ser exportados corretamente", async () => {
+    const imp = await import("../../src/components/admin/import");
+    expect(typeof imp.ImportHeader).toBe("function");
+    expect(typeof imp.ImportWarningCard).toBe("function");
+    expect(typeof imp.ImportSlotCard).toBe("function");
+    expect(typeof imp.ImportHistoryCard).toBe("function");
+    expect(typeof imp.ImportProgressDialog).toBe("function");
+    expect(Array.isArray(imp.SLOTS)).toBe(true);
+    expect(typeof imp.emptyStats).toBe("function");
+  });
 });
+
 
 
 
