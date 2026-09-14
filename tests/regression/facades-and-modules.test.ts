@@ -1030,6 +1030,14 @@ describe("Lei da Preservação de Fachadas (Facade Integrity Tests)", () => {
     expect(typeof tickets.STATUS_MAP).toBe("object");
     expect(typeof tickets.getTicketStatusInfo).toBe("function");
   });
+
+  it("admin database componentes modulares devem exportar os blocos de header, backups, conexão e usuários", async () => {
+    const dbComponents = await import("../../src/components/admin/database");
+    expect(typeof dbComponents.DatabaseHeader).toBe("function");
+    expect(typeof dbComponents.DatabaseBackupsTab).toBe("function");
+    expect(typeof dbComponents.DatabaseConnectionTab).toBe("function");
+    expect(typeof dbComponents.DatabaseUsersTab).toBe("function");
+  });
 });
 
 describe("Motor Caddy & Hardening de Segurança OWASP", () => {
