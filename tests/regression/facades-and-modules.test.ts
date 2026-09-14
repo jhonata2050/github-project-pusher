@@ -902,6 +902,17 @@ describe("Lei da Preservação de Fachadas (Facade Integrity Tests)", () => {
     const triennially = provisioningFacade.computeNextDueDate("triennially", baseStr);
     expect(triennially.getFullYear()).toBe(baseDate.getFullYear() + 3);
   });
+
+  it("services subcomponentes de gerenciamento de serviço devem ser exportados corretamente", async () => {
+    const servicesComponents = await import("../../src/components/services");
+    expect(typeof servicesComponents.BlockedServiceAlert).toBe("function");
+    expect(typeof servicesComponents.ServerDetailsCard).toBe("function");
+    expect(typeof servicesComponents.ServiceStatusCard).toBe("function");
+    expect(typeof servicesComponents.QuickActionCard).toBe("function");
+    expect(typeof servicesComponents.ServiceQuickActions).toBe("function");
+    expect(typeof servicesComponents.ServiceDetailsSkeleton).toBe("function");
+    expect(typeof servicesComponents.UpgradePlanDialog).toBe("function");
+  });
 });
 
 describe("Motor Caddy & Hardening de Segurança OWASP", () => {
