@@ -992,6 +992,15 @@ describe("Lei da Preservação de Fachadas (Facade Integrity Tests)", () => {
     expect(vpsPlans.CYCLE_LABELS.monthly).toBe("mês");
     expect(vpsPlans.formatBRL(49.9)).toContain("49,90");
   });
+
+  it("admin vps instances subcomponentes e modais devem ser exportados corretamente", async () => {
+    const vpsInstances = await import("../../src/components/admin/vps/instances");
+    expect(typeof vpsInstances.AdminVPSHeader).toBe("function");
+    expect(typeof vpsInstances.VPSInstancesTable).toBe("function");
+    expect(typeof vpsInstances.SyncContaboModal).toBe("function");
+    expect(typeof vpsInstances.AssignInstanceModal).toBe("function");
+    expect(typeof vpsInstances.SSHConfigModal).toBe("function");
+  });
 });
 
 describe("Motor Caddy & Hardening de Segurança OWASP", () => {
