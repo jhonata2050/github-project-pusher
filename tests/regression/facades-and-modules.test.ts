@@ -322,6 +322,66 @@ describe("Lei da Preservação de Fachadas (Facade Integrity Tests)", () => {
     expect(appsList.getAppStackLabel({ name: "generic-app", build_pack: "nodejs" })).toBe("NODEJS");
     expect(appsList.getAppStackLabel({ name: "outro" })).toBe("Docker Container");
   });
+
+  it("checkout tipos, utilitários e submódulos devem calcular ciclos e exportar componentes corretamente", async () => {
+    const { getCycleDetails, normalizeServiceKey, brl } = await import("../../src/components/checkout/types");
+    expect(getCycleDetails("monthly").name).toBe("Mensal");
+    expect(getCycleDetails("quarterly").name).toBe("Trimestral");
+    expect(getCycleDetails("semiannually").name).toBe("Semestral");
+    expect(getCycleDetails("annually").name).toBe("Anual");
+    expect(getCycleDetails("biennially").name).toBe("Bienal");
+    expect(getCycleDetails("triennially").name).toBe("Trienal");
+    expect(getCycleDetails("one_time").name).toBe("Pagamento Único");
+    expect(getCycleDetails("custom").name).toBe("custom");
+
+    expect(normalizeServiceKey("containers")).toBe("containers");
+    expect(normalizeServiceKey("paas")).toBe("containers");
+    expect(normalizeServiceKey("bot")).toBe("containers");
+    expect(normalizeServiceKey("directadmin")).toBe("directadmin");
+    expect(normalizeServiceKey("hospedagem")).toBe("directadmin");
+    expect(normalizeServiceKey("vps")).toBe("vps");
+    expect(normalizeServiceKey("cloud")).toBe("vps");
+    expect(normalizeServiceKey("invalid-service")).toBe(null);
+    expect(normalizeServiceKey(undefined)).toBe(null);
+
+    expect(brl.format(10)).toContain("10,00");
+
+    const { buildServiceConfigs, getStartingPrice } = await import("../../src/components/checkout/catalog/catalog-config");
+    expect(typeof buildServiceConfigs).toBe("function");
+    expect(typeof getStartingPrice).toBe("function");
+
+    const dummyGroup = {
+      products: [
+        {
+          product_prices: [
+            { cycle: "monthly", price: "29.90", is_active: true },
+            { cycle: "monthly", price: "19.90", is_active: true },
+          ],
+        },
+      ],
+    };
+    expect(getStartingPrice(dummyGroup)).toBe(19.9);
+    expect(getStartingPrice(undefined)).toBe(null);
+
+    const configs = buildServiceConfigs(dummyGroup, dummyGroup, dummyGroup);
+    expect(configs.directadmin.title).toBe("DirectAdmin");
+    expect(configs.containers.title).toBe("Containers");
+    expect(configs.vps.title).toBe("VPS");
+
+    const { CheckoutProgressBar } = await import("../../src/components/checkout/CheckoutProgressBar");
+    const { StepBillingCycle } = await import("../../src/components/checkout/StepBillingCycle");
+    const { CheckoutSummarySidebar } = await import("../../src/components/checkout/CheckoutSummarySidebar");
+    const { ServiceCategorySelector } = await import("../../src/components/checkout/catalog/ServiceCategorySelector");
+    const { ProductCatalogGrid } = await import("../../src/components/checkout/catalog/ProductCatalogGrid");
+    const { useCheckoutProduct } = await import("../../src/components/checkout/hooks/useCheckoutProduct");
+
+    expect(typeof CheckoutProgressBar).toBe("function");
+    expect(typeof StepBillingCycle).toBe("function");
+    expect(typeof CheckoutSummarySidebar).toBe("function");
+    expect(typeof ServiceCategorySelector).toBe("function");
+    expect(typeof ProductCatalogGrid).toBe("function");
+    expect(typeof useCheckoutProduct).toBe("function");
+  });
 });
 
 describe("Motor Caddy & Hardening de Segurança OWASP", () => {
