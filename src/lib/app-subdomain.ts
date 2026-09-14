@@ -15,7 +15,9 @@ export function getTemplateSubdomainPrefix(
   const tId = (templateId || "").toLowerCase();
   const name = (appName || "").toLowerCase();
 
-  if (tId.includes("openstatus") || name.includes("openstatus")) return "openstatus";
+  if (tId.includes("flowise") || name.includes("flowise")) return "flowise";
+  if (tId.includes("nocodb") || name.includes("nocodb")) return "nocodb";
+  if (tId.includes("vaultwarden") || tId.includes("vault") || name.includes("vault")) return "vault";
   if (tId.includes("pocketbase") || name.includes("pocketbase")) return "pocketbase";
   if (tId.includes("wordpress") || name.includes("wordpress")) return "wordpress";
   if (tId.includes("caddy") || tId.includes("static") || buildPack === "static" || name.includes("caddy") || name.includes("estático") || name.includes("estatico")) return "caddy";

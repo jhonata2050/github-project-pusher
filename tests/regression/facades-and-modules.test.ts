@@ -1710,3 +1710,75 @@ describe("Motor Caddy & Hardening de Segurança OWASP", () => {
     expect(proxyCaddy).toContain("header_up Host {host}");
   });
 });
+
+describe("Novos Templates Single-Container: Flowise AI, NocoDB & Vaultwarden", () => {
+  it("deve registrar Flowise, NocoDB e Vaultwarden no catálogo APP_TEMPLATES com configurações válidas", async () => {
+    const { APP_TEMPLATES, resolveDeploymentRuntime } = await import("../../src/lib/templates.data");
+    
+    const flowise = APP_TEMPLATES.find((t) => t.id === "flowise-ai");
+    expect(flowise).toBeDefined();
+    expect(flowise?.category).toBe("bots");
+    expect(flowise?.default_port).toBe(3000);
+    expect(flowise?.recommended_ram).toBe(1024);
+    expect(resolveDeploymentRuntime("flowise-ai")).toBe("NODE");
+
+    const nocodb = APP_TEMPLATES.find((t) => t.id === "nocodb-airtable");
+    expect(nocodb).toBeDefined();
+    expect(nocodb?.category).toBe("databases");
+    expect(nocodb?.default_port).toBe(8080);
+    expect(resolveDeploymentRuntime("nocodb-airtable")).toBe("NODE");
+
+    const vault = APP_TEMPLATES.find((t) => t.id === "vaultwarden-server");
+    expect(vault).toBeDefined();
+    expect(vault?.category).toBe("tools");
+    expect(vault?.default_port).toBe(80);
+    expect(resolveDeploymentRuntime("vaultwarden-server")).toBe("DOCKER");
+  });
+
+  it("deve resolver subdomínios e raízes de contêiner corretamente", async () => {
+    const { getTemplateSubdomainPrefix } = await import("../../src/lib/app-subdomain");
+    expect(getTemplateSubdomainPrefix("flowise-ai", "Meu Chatbot")).toBe("flowise");
+    expect(getTemplateSubdomainPrefix("nocodb-airtable", "Planilha")).toBe("nocodb");
+    expect(getTemplateSubdomainPrefix("vaultwarden-server", "Cofre")).toBe("vault");
+
+    const { getTemplateContainerRoot } = await import("../../src/lib/file-manager/template-definitions");
+    expect(getTemplateContainerRoot("flowise-ai")).toBe("/root/.flowise");
+    expect(getTemplateContainerRoot("nocodb-airtable")).toBe("/usr/app/data");
+    expect(getTemplateContainerRoot("vaultwarden-server")).toBe("/data");
+  });
+
+  it("deve gerar compose YAML válido e estruturado para Flowise, NocoDB e Vaultwarden", async () => {
+    const {
+      buildFlowiseCompose,
+      buildNocoDBCompose,
+      buildVaultwardenCompose,
+    } = await import("../../src/lib/swarm/templates/web-apps.compose");
+
+    const mockCtx: any = {
+      cleanId: "app123456789",
+      stackName: "app_app123456789",
+      cleanHost: "app123456789.dk1.eqsam.com",
+      wildcard: "dk1.eqsam.com",
+      getEnv: (_k: string, d?: string) => d || "mock_value",
+      limits: {
+        cpuLimit: "1.0",
+        memLimit: "1024M",
+      },
+    };
+
+    const flowiseYaml = buildFlowiseCompose(mockCtx);
+    expect(flowiseYaml).toContain("flowiseai/flowise:latest");
+    expect(flowiseYaml).toContain("vol_app123456789_flowise:/root/.flowise");
+    expect(flowiseYaml).toContain("loadbalancer.server.port=3000");
+
+    const nocodbYaml = buildNocoDBCompose(mockCtx);
+    expect(nocodbYaml).toContain("nocodb/nocodb:latest");
+    expect(nocodbYaml).toContain("vol_app123456789_nocodb:/usr/app/data");
+    expect(nocodbYaml).toContain("loadbalancer.server.port=8080");
+
+    const vaultYaml = buildVaultwardenCompose(mockCtx);
+    expect(vaultYaml).toContain("vaultwarden/server:latest");
+    expect(vaultYaml).toContain("vol_app123456789_vault:/data");
+    expect(vaultYaml).toContain("loadbalancer.server.port=80");
+  });
+});

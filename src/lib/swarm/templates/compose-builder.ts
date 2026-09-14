@@ -4,6 +4,9 @@ import {
   buildN8NCompose,
   buildKumaCompose,
   buildGhostCompose,
+  buildFlowiseCompose,
+  buildNocoDBCompose,
+  buildVaultwardenCompose,
 } from "./web-apps.compose";
 import {
   buildPostgresCompose,
@@ -40,6 +43,15 @@ export async function buildTemplateComposeYaml(
   }
   if (templateId.includes("kuma")) {
     return buildKumaCompose(ctx);
+  }
+  if (templateId.includes("flowise")) {
+    return buildFlowiseCompose(ctx);
+  }
+  if (templateId.includes("nocodb")) {
+    return buildNocoDBCompose(ctx);
+  }
+  if (templateId.includes("vaultwarden") || templateId.includes("vault")) {
+    return buildVaultwardenCompose(ctx);
   }
   if (templateId.includes("evolution") || templateId.includes("whatsapp")) {
     return buildEvolutionCompose(ctx);

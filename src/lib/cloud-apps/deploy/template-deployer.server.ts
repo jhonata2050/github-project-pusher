@@ -45,6 +45,12 @@ export async function applyTemplateToApplication(
     );
     if (matched) {
       templateId = matched.id;
+    } else if (template.git_repository.toLowerCase().includes("flowise")) {
+      templateId = "flowise-ai";
+    } else if (template.git_repository.toLowerCase().includes("nocodb")) {
+      templateId = "nocodb-airtable";
+    } else if (template.git_repository.toLowerCase().includes("vaultwarden") || template.git_repository.toLowerCase().includes("vault")) {
+      templateId = "vaultwarden-server";
     } else if (template.git_repository.toLowerCase().includes("pocketbase")) {
       templateId = "pocketbase-backend";
     } else if (template.git_repository.toLowerCase().includes("uptime-kuma") || template.git_repository.toLowerCase().includes("kuma")) {

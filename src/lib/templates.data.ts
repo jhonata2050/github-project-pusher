@@ -46,8 +46,8 @@ export function resolveDeploymentRuntime(
   if (tid.includes("react") || tid.includes("vue") || tid.includes("angular") || tid.includes("vite") || tid.includes("spa")) return "STATIC_SPA";
   if (tid.includes("wordpress") || tid.includes("php") || tid.includes("laravel")) return "PHP";
   if (tid.includes("python") || tid.includes("fastapi") || tid.includes("flask") || tid.includes("django")) return "PYTHON";
-  if (tid.includes("node") || tid.includes("express") || tid.includes("nest") || tid.includes("n8n") || tid.includes("kuma")) return "NODE";
-  if (tid.includes("docker") || bp === "dockercompose") return "DOCKER";
+  if (tid.includes("flowise") || tid.includes("nocodb") || tid.includes("node") || tid.includes("express") || tid.includes("nest") || tid.includes("n8n") || tid.includes("kuma")) return "NODE";
+  if (tid.includes("vaultwarden") || tid.includes("vault") || tid.includes("docker") || bp === "dockercompose") return "DOCKER";
   if (tid.includes("proxy")) return "REVERSE_PROXY";
   if (bp === "static" || tid.includes("static")) return "STATIC";
 
@@ -275,6 +275,28 @@ export const APP_TEMPLATES: AppTemplate[] = [
       { key: "NODE_ENV", value: "production" },
     ],
   },
+  {
+    id: "flowise-ai",
+    name: "Flowise AI (Chatbots & LLMs)",
+    category: "bots",
+    icon: "https://raw.githubusercontent.com/FlowiseAI/Flowise/main/packages/ui/public/favicon.ico",
+    description: "Criador visual de fluxos de IA, agentes autônomos e chatbots conectados a OpenAI, Claude, Llama e WhatsApp com banco SQLite integrado.",
+    build_pack: "dockerfile",
+    git_repository: "https://github.com/FlowiseAI/Flowise",
+    git_branch: "main",
+    recommended_ram: 1024,
+    recommended_cpu: 1.0,
+    recommended_disk: 2048,
+    default_port: 3000,
+    tags: ["Flowise", "IA", "Chatbot", "LangChain", "OpenAI", "LLM"],
+    default_envs: [
+      { key: "PORT", value: "3000" },
+      { key: "FLOWISE_USERNAME", value: "admin" },
+      { key: "FLOWISE_PASSWORD", value: "" },
+      { key: "FLOWISE_SECRETKEY_OVERWRITE", value: "" },
+      { key: "DATABASE_TYPE", value: "sqlite" },
+    ],
+  },
 
   // ==========================================
   // 4. AUTOMAÇÕES & FERRAMENTAS
@@ -317,6 +339,26 @@ export const APP_TEMPLATES: AppTemplate[] = [
     tags: ["Monitor", "Uptime", "Ping", "Alertas"],
     default_envs: [
       { key: "PORT", value: "3001" },
+    ],
+  },
+  {
+    id: "vaultwarden-server",
+    name: "Vaultwarden (Cofre Bitwarden)",
+    category: "tools",
+    icon: "https://cdn.simpleicons.org/bitwarden/175DDC",
+    description: "Servidor ultra-leve em Rust compatível com aplicativos Bitwarden (Android, iOS, extensões) para senhas e dados criptografados.",
+    build_pack: "dockerfile",
+    git_repository: "https://github.com/dani-garcia/vaultwarden",
+    git_branch: "main",
+    recommended_ram: 256,
+    recommended_cpu: 0.3,
+    recommended_disk: 1024,
+    default_port: 80,
+    tags: ["Vaultwarden", "Bitwarden", "Senhas", "Segurança", "Rust"],
+    default_envs: [
+      { key: "WEBSOCKET_ENABLED", value: "true" },
+      { key: "SIGNUPS_ALLOWED", value: "true" },
+      { key: "ADMIN_TOKEN", value: "" },
     ],
   },
 
@@ -441,6 +483,26 @@ export const APP_TEMPLATES: AppTemplate[] = [
     tags: ["PocketBase", "SQLite", "Realtime", "Go"],
     default_envs: [
       { key: "PORT", value: "8090" },
+    ],
+  },
+  {
+    id: "nocodb-airtable",
+    name: "NocoDB (Planilhas & No-Code)",
+    category: "databases",
+    icon: "https://cdn.simpleicons.org/nocodb/7A3EE4",
+    description: "Alternativa open-source ao Airtable. Transforme planilhas e dados em tabelas inteligentes, formulários públicos, Kanban e APIs REST.",
+    build_pack: "dockerfile",
+    git_repository: "https://github.com/nocodb/nocodb",
+    git_branch: "master",
+    recommended_ram: 512,
+    recommended_cpu: 0.5,
+    recommended_disk: 1536,
+    default_port: 8080,
+    tags: ["NocoDB", "Airtable", "No-Code", "Planilhas", "Database", "REST API"],
+    default_envs: [
+      { key: "PORT", value: "8080" },
+      { key: "NC_DB", value: "sqlite3:///usr/app/data/noco.db" },
+      { key: "NC_AUTH_JWT_SECRET", value: "" },
     ],
   },
 ];

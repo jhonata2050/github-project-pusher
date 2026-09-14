@@ -180,6 +180,10 @@ server.listen(port, '0.0.0.0', () => {
       templateId.includes("evolution") ||
       templateId.includes("whatsapp") ||
       templateId.includes("n8n") ||
+      templateId.includes("flowise") ||
+      templateId.includes("nocodb") ||
+      templateId.includes("vaultwarden") ||
+      templateId.includes("vault") ||
       templateId.includes("typebot") ||
       templateId.includes("pocketbase") ||
       templateId.includes("openstatus") ||

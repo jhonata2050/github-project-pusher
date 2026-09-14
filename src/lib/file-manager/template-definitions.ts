@@ -45,13 +45,23 @@ export function getTemplateContainerRoot(
   }
 
   // 4. Uptime Kuma -> /app/data
-  if (tid.includes("uptime-kuma")) {
+  if (tid.includes("uptime-kuma") || tid.includes("kuma")) {
     return "/app/data";
   }
 
-  // 4.1 OpenStatus -> /app
-  if (tid.includes("openstatus")) {
-    return "/app";
+  // 4.1 Flowise AI -> /root/.flowise
+  if (tid.includes("flowise")) {
+    return "/root/.flowise";
+  }
+
+  // 4.2 NocoDB -> /usr/app/data
+  if (tid.includes("nocodb")) {
+    return "/usr/app/data";
+  }
+
+  // 4.3 Vaultwarden -> /data
+  if (tid.includes("vaultwarden") || tid.includes("vault")) {
+    return "/data";
   }
 
   // 5. Bancos de Dados
@@ -601,325 +611,60 @@ Instância N8N no cluster Eqsam PaaS.
   }
 
   // ==========================================
-  // 7.5 OPENSTATUS (openstatus-monitor)
+  // 7.5 FLOWISE AI (flowise-ai)
   // ==========================================
-  if (tid.includes("openstatus")) {
+  if (tid.includes("flowise")) {
     return [
       {
-        path: "index.html",
-        content: `<!DOCTYPE html>
-<html lang="pt-BR">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>${appName} — Status Page & Monitor</title>
-  <link rel="stylesheet" href="styles.css">
-  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%2310b981'><circle cx='12' cy='12' r='10'/></svg>">
-</head>
-<body>
-  <div class="glow-bg"></div>
-  <header class="header">
-    <div class="brand">
-      <div class="logo">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
-      </div>
-      <div>
-        <h1 class="title">${appName}</h1>
-        <span class="subtitle">OpenStatus • Monitoramento de Alta Disponibilidade</span>
-      </div>
-    </div>
-    <div class="status-badge" id="overallStatus">
-      <span class="pulse-dot"></span>
-      <span class="status-text">Todos os Sistemas Operacionais</span>
-    </div>
-  </header>
+        path: "README.md",
+        content: `# 🤖 ${appName} — Flowise AI
 
-  <main class="container">
-    <section class="summary-cards">
-      <div class="card stat-card">
-        <div class="stat-label">Uptime Médio (30d)</div>
-        <div class="stat-value text-emerald">99.98%</div>
-        <div class="stat-sub">SLA Garantido</div>
-      </div>
-      <div class="card stat-card">
-        <div class="stat-label">Latência em Tempo Real</div>
-        <div class="stat-value text-cyan" id="livePing">-- ms</div>
-        <div class="stat-sub">Ping Edge DK1 Cluster</div>
-      </div>
-      <div class="card stat-card">
-        <div class="stat-label">Incidentes Ativos</div>
-        <div class="stat-value text-slate">0</div>
-        <div class="stat-sub">Sem interrupções</div>
-      </div>
-    </section>
+Plataforma visual drag-and-drop de fluxos de inteligência artificial e chatbots no cluster Eqsam PaaS.
 
-    <section class="card services-card">
-      <div class="section-head">
-        <h2>Serviços e Componentes</h2>
-        <span class="live-indicator">● Atualizado em tempo real</span>
-      </div>
-      <div class="service-list">
-        <div class="service-item">
-          <div class="service-info">
-            <span class="service-name">API Gateway & Edge Traefik</span>
-            <span class="service-status text-emerald">Operacional</span>
-          </div>
-          <div class="uptime-bar">
-            ${Array.from({ length: 45 }).map(() => '<span class="bar-unit green"></span>').join("")}
-          </div>
-          <div class="service-meta"><span>90 dias atrás</span><span>Hoje (100%)</span></div>
-        </div>
-
-        <div class="service-item">
-          <div class="service-info">
-            <span class="service-name">Banco de Dados Principal</span>
-            <span class="service-status text-emerald">Operacional</span>
-          </div>
-          <div class="uptime-bar">
-            ${Array.from({ length: 45 }).map(() => '<span class="bar-unit green"></span>').join("")}
-          </div>
-          <div class="service-meta"><span>90 dias atrás</span><span>Hoje (99.99%)</span></div>
-        </div>
-
-        <div class="service-item">
-          <div class="service-info">
-            <span class="service-name">Painel Web & Dashboard</span>
-            <span class="service-status text-emerald">Operacional</span>
-          </div>
-          <div class="uptime-bar">
-            ${Array.from({ length: 45 }).map(() => '<span class="bar-unit green"></span>').join("")}
-          </div>
-          <div class="service-meta"><span>90 dias atrás</span><span>Hoje (100%)</span></div>
-        </div>
-
-        <div class="service-item">
-          <div class="service-info">
-            <span class="service-name">Workers de Automação & Notificações</span>
-            <span class="service-status text-emerald">Operacional</span>
-          </div>
-          <div class="uptime-bar">
-            ${Array.from({ length: 45 }).map(() => '<span class="bar-unit green"></span>').join("")}
-          </div>
-          <div class="service-meta"><span>90 dias atrás</span><span>Hoje (100%)</span></div>
-        </div>
-      </div>
-    </section>
-
-    <section class="card incidents-card">
-      <div class="section-head">
-        <h2>Histórico de Incidentes</h2>
-        <span class="history-sub">Últimos 14 dias</span>
-      </div>
-      <div class="incident-entry">
-        <div class="incident-date">Hoje</div>
-        <div class="incident-desc text-muted">Nenhum incidente reportado nas últimas 24 horas. Todos os nós operando perfeitamente.</div>
-      </div>
-    </section>
-  </main>
-
-  <footer class="footer">
-    <p>Powered by <strong>OpenStatus</strong> &bull; Hospedado no cluster resiliente <strong>Eqsam Cloud PaaS</strong></p>
-  </footer>
-
-  <script src="script.js"></script>
-</body>
-</html>`,
-      },
-      {
-        path: "styles.css",
-        content: `* { box-sizing: border-box; margin: 0; padding: 0; }
-body {
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-  background-color: #030712;
-  color: #f3f4f6;
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
-  position: relative;
-  overflow-x: hidden;
-}
-.glow-bg {
-  position: fixed;
-  top: -150px;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 650px;
-  height: 350px;
-  background: radial-gradient(circle, rgba(16, 185, 129, 0.12) 0%, rgba(6, 182, 212, 0.05) 50%, transparent 80%);
-  pointer-events: none;
-  z-index: 0;
-}
-.header {
-  position: relative;
-  z-index: 1;
-  max-width: 900px;
-  width: 100%;
-  margin: 0 auto;
-  padding: 2.5rem 1.5rem 1.5rem;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 1.25rem;
-}
-.brand { display: flex; align-items: center; gap: 0.85rem; }
-.logo {
-  width: 44px;
-  height: 44px;
-  background: linear-gradient(135deg, #10b981, #06b6d4);
-  color: #030712;
-  border-radius: 12px;
-  display: grid;
-  place-items: center;
-  box-shadow: 0 4px 14px rgba(16, 185, 129, 0.35);
-}
-.title { font-size: 1.4rem; font-weight: 700; color: #fff; letter-spacing: -0.02em; }
-.subtitle { font-size: 0.8rem; color: #9ca3af; }
-.status-badge {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  background: rgba(16, 185, 129, 0.12);
-  border: 1px solid rgba(16, 185, 129, 0.3);
-  padding: 0.5rem 1rem;
-  border-radius: 9999px;
-  color: #34d399;
-  font-size: 0.85rem;
-  font-weight: 600;
-}
-.pulse-dot {
-  width: 9px;
-  height: 9px;
-  background: #10b981;
-  border-radius: 50%;
-  box-shadow: 0 0 10px #10b981;
-  animation: pulse 2s infinite;
-}
-@keyframes pulse {
-  0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
-  70% { transform: scale(1); box-shadow: 0 0 0 6px rgba(16, 185, 129, 0); }
-  100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
-}
-.container {
-  position: relative;
-  z-index: 1;
-  max-width: 900px;
-  width: 100%;
-  margin: 0 auto;
-  padding: 0 1.5rem 3rem;
-  display: flex;
-  flex-direction: column;
-  gap: 1.5rem;
-  flex: 1;
-}
-.card {
-  background: #111827;
-  border: 1px solid #1f2937;
-  border-radius: 16px;
-  padding: 1.5rem;
-}
-.summary-cards {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 1rem;
-}
-.stat-card {
-  background: #0b0f19;
-  border: 1px solid #1f2937;
-  padding: 1.25rem 1.5rem;
-}
-.stat-label { font-size: 0.8rem; color: #9ca3af; font-weight: 500; margin-bottom: 0.4rem; }
-.stat-value { font-size: 1.75rem; font-weight: 800; }
-.stat-sub { font-size: 0.75rem; color: #6b7280; margin-top: 0.25rem; }
-.text-emerald { color: #10b981; }
-.text-cyan { color: #06b6d4; }
-.text-slate { color: #94a3b8; }
-.text-muted { color: #6b7280; }
-.section-head {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 1.5rem;
-  padding-bottom: 0.75rem;
-  border-bottom: 1px solid #1f2937;
-}
-.section-head h2 { font-size: 1.05rem; font-weight: 700; color: #f9fafb; }
-.live-indicator, .history-sub { font-size: 0.78rem; color: #9ca3af; }
-.service-list { display: flex; flex-direction: column; gap: 1.25rem; }
-.service-item { display: flex; flex-direction: column; gap: 0.45rem; }
-.service-info { display: flex; justify-content: space-between; font-size: 0.9rem; font-weight: 600; }
-.uptime-bar {
-  display: flex;
-  gap: 3px;
-  height: 24px;
-  align-items: center;
-}
-.bar-unit {
-  flex: 1;
-  height: 100%;
-  border-radius: 3px;
-  transition: opacity 0.2s;
-}
-.bar-unit.green { background: #10b981; }
-.bar-unit:hover { opacity: 0.75; cursor: pointer; }
-.service-meta { display: flex; justify-content: space-between; font-size: 0.7rem; color: #6b7280; }
-.incident-entry { padding: 0.5rem 0; font-size: 0.85rem; }
-.incident-date { font-weight: 600; color: #e5e7eb; margin-bottom: 0.25rem; }
-.footer {
-  text-align: center;
-  padding: 2rem 1.5rem;
-  font-size: 0.8rem;
-  color: #6b7280;
-  border-top: 1px solid #111827;
-}
-.footer strong { color: #9ca3af; }
+- **Diretório de Dados:** \`/root/.flowise\`
+- **Porta:** \`3000\`
+- **Banco Embutido:** SQLite (\`/root/.flowise/database.sqlite\`)
+- **Compatibilidade:** OpenAI, Claude (Anthropic), Ollama, Llama 3, LangChain, WhatsApp e Webhooks.
 `,
       },
-      {
-        path: "script.js",
-        content: `async function measurePing() {
-  const start = performance.now();
-  try {
-    const res = await fetch(window.location.origin + "/index.html?_=" + Date.now(), { method: 'HEAD', cache: 'no-store' });
-    const elapsed = Math.round(performance.now() - start);
-    const pingEl = document.getElementById("livePing");
-    if (pingEl) {
-      pingEl.textContent = elapsed + " ms";
-    }
-  } catch {
-    const pingEl = document.getElementById("livePing");
-    if (pingEl) pingEl.textContent = "15 ms";
+    ];
   }
-}
-measurePing();
-setInterval(measurePing, 5000);
-console.log("[OpenStatus] Monitor ativo e respondendo na porta 80 via Caddy.");
-`,
-      },
-      {
-        path: "config.openstatus.yaml",
-        content: `name: "${appName}"
-version: "1.0"
-interval: 60
-monitors:
-  - id: "api-gateway"
-    name: "API Gateway"
-    url: "${appName}"
-    type: "http"
-  - id: "database"
-    name: "Database Cluster"
-    type: "tcp"
-`,
-      },
+
+  // ==========================================
+  // 7.6 NOCODB (nocodb-airtable)
+  // ==========================================
+  if (tid.includes("nocodb")) {
+    return [
       {
         path: "README.md",
-        content: `# 📊 ${appName} — OpenStatus (Status Page & Monitor)
+        content: `# 📊 ${appName} — NocoDB (Smart Spreadsheet)
 
-Página de status em tempo real com alta disponibilidade e servidor Caddy HTTP/3 no cluster Eqsam PaaS.
+Alternativa open-source ao Airtable no cluster Eqsam PaaS.
 
-- **Arquivos:** \`index.html\`, \`styles.css\`, \`script.js\`
-- **Configuração:** \`config.openstatus.yaml\`
-- **Métricas:** Uptime, histórico de 90 dias, latência em tempo real e monitor de incidentes.
+- **Diretório de Dados:** \`/usr/app/data\`
+- **Porta:** \`8080\`
+- **Banco Embutido:** SQLite (\`/usr/app/data/noco.db\`)
+- **Recursos:** Tabelas inteligentes, Kanban, formulários públicos e APIs REST geradas automaticamente.
+`,
+      },
+    ];
+  }
+
+  // ==========================================
+  // 7.7 VAULTWARDEN (vaultwarden-server)
+  // ==========================================
+  if (tid.includes("vaultwarden") || tid.includes("vault")) {
+    return [
+      {
+        path: "README.md",
+        content: `# 🛡️ ${appName} — Vaultwarden (Cofre Bitwarden)
+
+Servidor de senhas e dados criptografados compatível com Bitwarden no cluster Eqsam PaaS.
+
+- **Diretório de Dados:** \`/data\`
+- **Porta:** \`80\`
+- **Compatibilidade:** Aplicativos oficiais Bitwarden (Android, iOS, extensões de Chrome/Firefox/Edge e Desktop).
+- **Segurança:** Criptografia de ponta a ponta (Zero-Knowledge).
 `,
       },
     ];

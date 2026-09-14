@@ -222,6 +222,60 @@ services:
         limits:
           cpus: "${limits.cpuLimit}"
           memory: ${limits.memLimit}
+  // Labels Traefik HTTP & HTTPS com SSL automático
+  labels:
+    - "traefik.enable=true"
+    - "traefik.swarm.network=public-ingress"
+    - "traefik.http.routers.${stackName}_app-http.rule=Host(\`${cleanHost}\`)"
+    - "traefik.http.routers.${stackName}_app-http.entrypoints=web"
+    - "traefik.http.routers.${stackName}_app-http.service=${stackName}_app"
+    - "traefik.http.routers.${stackName}_app-https.rule=Host(\`${cleanHost}\`)"
+    - "traefik.http.routers.${stackName}_app-https.entrypoints=websecure"
+    - "traefik.http.routers.${stackName}_app-https.tls=true"
+    - "traefik.http.routers.${stackName}_app-https.tls.certresolver=le"
+    - "traefik.http.routers.${stackName}_app-https.service=${stackName}_app"
+    - "traefik.http.services.${stackName}_app.loadbalancer.server.port=2368"
+`;
+}
+
+export function buildFlowiseCompose(ctx: TemplateContext): string {
+  const { cleanId, stackName, cleanHost, getEnv, limits } = ctx;
+  const flowiseUser = getEnv("FLOWISE_USERNAME", "admin");
+  const flowisePass = getEnv("FLOWISE_PASSWORD");
+  const flowiseSecret = getEnv("FLOWISE_SECRETKEY_OVERWRITE");
+
+  return `version: '3.8'
+networks:
+  public-ingress:
+    external: true
+volumes:
+  vol_${cleanId}_flowise:
+    driver: local
+services:
+  app:
+    image: flowiseai/flowise:latest
+    networks:
+      - public-ingress
+    volumes:
+      - vol_${cleanId}_flowise:/root/.flowise
+    environment:
+      PORT: "3000"
+      FLOWISE_USERNAME: "${flowiseUser}"
+      FLOWISE_PASSWORD: "${flowisePass}"
+      FLOWISE_SECRETKEY_OVERWRITE: "${flowiseSecret}"
+      DATABASE_TYPE: "sqlite"
+      DATABASE_PATH: "/root/.flowise"
+      APIKEY_PATH: "/root/.flowise"
+      SECRETKEY_PATH: "/root/.flowise"
+      LOG_PATH: "/root/.flowise/logs"
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+      resources:
+        limits:
+          cpus: "${limits.cpuLimit}"
+          memory: ${limits.memLimit}
       labels:
         - "traefik.enable=true"
         - "traefik.swarm.network=public-ingress"
@@ -233,6 +287,98 @@ services:
         - "traefik.http.routers.${stackName}_app-https.tls=true"
         - "traefik.http.routers.${stackName}_app-https.tls.certresolver=le"
         - "traefik.http.routers.${stackName}_app-https.service=${stackName}_app"
-        - "traefik.http.services.${stackName}_app.loadbalancer.server.port=2368"
+        - "traefik.http.services.${stackName}_app.loadbalancer.server.port=3000"
+`;
+}
+
+export function buildNocoDBCompose(ctx: TemplateContext): string {
+  const { cleanId, stackName, cleanHost, getEnv, limits } = ctx;
+  const jwtSecret = getEnv("NC_AUTH_JWT_SECRET");
+
+  return `version: '3.8'
+networks:
+  public-ingress:
+    external: true
+volumes:
+  vol_${cleanId}_nocodb:
+    driver: local
+services:
+  app:
+    image: nocodb/nocodb:latest
+    networks:
+      - public-ingress
+    volumes:
+      - vol_${cleanId}_nocodb:/usr/app/data
+    environment:
+      PORT: "8080"
+      NC_DB: "sqlite3:///usr/app/data/noco.db"
+      NC_AUTH_JWT_SECRET: "${jwtSecret}"
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+      resources:
+        limits:
+          cpus: "${limits.cpuLimit}"
+          memory: ${limits.memLimit}
+      labels:
+        - "traefik.enable=true"
+        - "traefik.swarm.network=public-ingress"
+        - "traefik.http.routers.${stackName}_app-http.rule=Host(\`${cleanHost}\`)"
+        - "traefik.http.routers.${stackName}_app-http.entrypoints=web"
+        - "traefik.http.routers.${stackName}_app-http.service=${stackName}_app"
+        - "traefik.http.routers.${stackName}_app-https.rule=Host(\`${cleanHost}\`)"
+        - "traefik.http.routers.${stackName}_app-https.entrypoints=websecure"
+        - "traefik.http.routers.${stackName}_app-https.tls=true"
+        - "traefik.http.routers.${stackName}_app-https.tls.certresolver=le"
+        - "traefik.http.routers.${stackName}_app-https.service=${stackName}_app"
+        - "traefik.http.services.${stackName}_app.loadbalancer.server.port=8080"
+`;
+}
+
+export function buildVaultwardenCompose(ctx: TemplateContext): string {
+  const { cleanId, stackName, cleanHost, getEnv, limits } = ctx;
+  const adminToken = getEnv("ADMIN_TOKEN");
+  const signupsAllowed = getEnv("SIGNUPS_ALLOWED", "true");
+
+  return `version: '3.8'
+networks:
+  public-ingress:
+    external: true
+volumes:
+  vol_${cleanId}_vault:
+    driver: local
+services:
+  app:
+    image: vaultwarden/server:latest
+    networks:
+      - public-ingress
+    volumes:
+      - vol_${cleanId}_vault:/data
+    environment:
+      DOMAIN: "https://${cleanHost}"
+      WEBSOCKET_ENABLED: "true"
+      SIGNUPS_ALLOWED: "${signupsAllowed}"
+      ADMIN_TOKEN: "${adminToken}"
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+      resources:
+        limits:
+          cpus: "${limits.cpuLimit}"
+          memory: ${limits.memLimit}
+      labels:
+        - "traefik.enable=true"
+        - "traefik.swarm.network=public-ingress"
+        - "traefik.http.routers.${stackName}_app-http.rule=Host(\`${cleanHost}\`)"
+        - "traefik.http.routers.${stackName}_app-http.entrypoints=web"
+        - "traefik.http.routers.${stackName}_app-http.service=${stackName}_app"
+        - "traefik.http.routers.${stackName}_app-https.rule=Host(\`${cleanHost}\`)"
+        - "traefik.http.routers.${stackName}_app-https.entrypoints=websecure"
+        - "traefik.http.routers.${stackName}_app-https.tls=true"
+        - "traefik.http.routers.${stackName}_app-https.tls.certresolver=le"
+        - "traefik.http.routers.${stackName}_app-https.service=${stackName}_app"
+        - "traefik.http.services.${stackName}_app.loadbalancer.server.port=80"
 `;
 }
