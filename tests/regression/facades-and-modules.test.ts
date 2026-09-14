@@ -1205,6 +1205,18 @@ describe("Lei da Preservação de Fachadas (Facade Integrity Tests)", () => {
     expect(typeof vpsDetails.VPSMetricsChartCard).toBe("function");
     expect(typeof vpsDetails.VPSAgentAndPowerCard).toBe("function");
   });
+
+  it("file manager code editor subcomponentes devem exportar header, search bar, binary warning, status bar e conflict dialog", async () => {
+    const editor = await import("../../src/components/file-manager/editor");
+    expect(typeof editor.EditorHeader).toBe("function");
+    expect(typeof editor.EditorSearchBar).toBe("function");
+    expect(typeof editor.EditorBinaryWarning).toBe("function");
+    expect(typeof editor.EditorStatusBar).toBe("function");
+    expect(typeof editor.EditorConflictDialog).toBe("function");
+
+    const modal = await import("../../src/components/file-manager/CodeEditorModal");
+    expect(typeof modal.CodeEditorModal).toBe("function");
+  });
 });
 
 describe("Motor Caddy & Hardening de Segurança OWASP", () => {
