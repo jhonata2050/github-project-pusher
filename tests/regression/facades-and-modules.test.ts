@@ -1217,6 +1217,19 @@ describe("Lei da Preservação de Fachadas (Facade Integrity Tests)", () => {
     const modal = await import("../../src/components/file-manager/CodeEditorModal");
     expect(typeof modal.CodeEditorModal).toBe("function");
   });
+
+  it("invoice-pdf fachada e submódulo devem reexportar a função generateInvoicePDF, helpers de cor e formatação BRL", async () => {
+    const pdfFacade = await import("../../src/lib/invoice-pdf");
+    expect(typeof pdfFacade.generateInvoicePDF).toBe("function");
+    expect(typeof pdfFacade.parseColorToRGB).toBe("function");
+    expect(typeof pdfFacade.loadImageAsBase64).toBe("function");
+    expect(pdfFacade.brl).toBeDefined();
+
+    const pdfSubmodule = await import("../../src/lib/invoice-pdf/index");
+    expect(pdfSubmodule.generateInvoicePDF).toBe(pdfFacade.generateInvoicePDF);
+    expect(pdfSubmodule.parseColorToRGB).toBe(pdfFacade.parseColorToRGB);
+    expect(pdfSubmodule.loadImageAsBase64).toBe(pdfFacade.loadImageAsBase64);
+  });
 });
 
 describe("Motor Caddy & Hardening de Segurança OWASP", () => {
