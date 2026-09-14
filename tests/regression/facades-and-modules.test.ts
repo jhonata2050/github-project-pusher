@@ -1195,6 +1195,16 @@ describe("Lei da Preservação de Fachadas (Facade Integrity Tests)", () => {
     expect(typeof domains.DomainAuthCodeCard).toBe("function");
     expect(typeof domains.DomainSecurityCard).toBe("function");
   });
+
+  it("vps details componentes modulares devem exportar header, specs, live metrics, ssh access, chart e power card", async () => {
+    const vpsDetails = await import("../../src/components/vps/details");
+    expect(typeof vpsDetails.VPSHeader).toBe("function");
+    expect(typeof vpsDetails.VPSSpecsCard).toBe("function");
+    expect(typeof vpsDetails.VPSLiveMetricsCard).toBe("function");
+    expect(typeof vpsDetails.VPSSshAccessCard).toBe("function");
+    expect(typeof vpsDetails.VPSMetricsChartCard).toBe("function");
+    expect(typeof vpsDetails.VPSAgentAndPowerCard).toBe("function");
+  });
 });
 
 describe("Motor Caddy & Hardening de Segurança OWASP", () => {
