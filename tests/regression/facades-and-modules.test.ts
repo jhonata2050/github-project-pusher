@@ -791,6 +791,18 @@ describe("Lei da Preservação de Fachadas (Facade Integrity Tests)", () => {
     expect(typeof addServiceModule.VpsFieldsSection).toBe("function");
     expect(typeof addServiceModule.BillingFieldsSection).toBe("function");
   });
+
+  it("admin products subcomponentes devem ser exportados corretamente com helpers e labels", async () => {
+    const productsComponents = await import("../../src/components/admin/products");
+    expect(typeof productsComponents.ProductCard).toBe("function");
+    expect(typeof productsComponents.ProductsHeader).toBe("function");
+    expect(typeof productsComponents.ProductEditDialog).toBe("function");
+    expect(typeof productsComponents.CYCLE_LABELS).toBe("object");
+    expect(productsComponents.CYCLE_LABELS.monthly).toBe("mês");
+    expect(productsComponents.CYCLE_LABELS.annually).toBe("ano");
+    expect(productsComponents.brl).toBeDefined();
+    expect(productsComponents.brl.format(10)).toContain("10");
+  });
 });
 
 describe("Motor Caddy & Hardening de Segurança OWASP", () => {

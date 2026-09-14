@@ -1,21 +1,20 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Package, Plus, Search, Store, Edit2, Save, X, Server, Link as LinkIcon, Copy } from "lucide-react";
+import { Package, Store } from "lucide-react";
 import { useEffect, useState } from "react";
 
 import { AppShell } from "@/components/app/AppShell";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { supabase } from "@/integrations/supabase/client";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Switch } from "@/components/ui/switch";
 import { updateProduct, createProduct, getServers, getDAPackagesList, getProductGroups } from "@/lib/support.functions";
 import { toast } from "sonner";
+import {
+  ProductCard,
+  ProductsHeader,
+  ProductEditDialog,
+  type EditingProduct,
+  type ProductItem,
+} from "@/components/admin/products";
 
 export const Route = createFileRoute("/_authenticated/admin/products")({
   head: () => ({
@@ -30,19 +29,9 @@ export const Route = createFileRoute("/_authenticated/admin/products")({
   component: ProductsPage,
 });
 
-const brl = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" });
-
-const CYCLE_LABELS: Record<string, string> = {
-  monthly: "mês",
-  quarterly: "trimestre",
-  semiannually: "semestre",
-  annually: "ano",
-  biennially: "2 anos",
-};
-
 function ProductsPage() {
   const [term, setTerm] = useState("");
-  const [editingProduct, setEditingProduct] = useState<any>(null);
+  const [editingProduct, setEditingProduct] = useState<EditingProduct | null>(null);
   const [selectedServer, setSelectedServer] = useState<string>("");
   const queryClient = useQueryClient();
 
@@ -57,7 +46,7 @@ function ProductsPage() {
         .neq("product_type", "vps")
         .order("sort_order");
       if (error) throw error;
-      return data;
+      return data as ProductItem[];
     },
   });
 
@@ -66,9 +55,6 @@ function ProductsPage() {
     queryFn: () => getProductGroups(),
     staleTime: 1000 * 60 * 15,
   });
-
-  // Planos VPS são gerenciados na área exclusiva /admin/vps/plans
-
 
   const servers = useQuery({
     queryKey: ["admin-servers"],
@@ -111,11 +97,14 @@ function ProductsPage() {
     p.name.toLowerCase().includes(term.trim().toLowerCase()),
   );
 
-  const handleEdit = (product: any) => {
+  const handleEdit = (product: ProductItem) => {
     setEditingProduct({
       ...product,
+      description: product.description || "",
       directadmin_package: product.directadmin_package || "",
-      external_id: product.external_id || "",
+      external_id: (product as any).external_id || "",
+      is_visible: product.is_visible ?? true,
+      sort_order: product.sort_order ?? 0,
       immediate_purchase: !!product.immediate_purchase,
       prices: product.product_prices || []
     });
@@ -139,6 +128,7 @@ function ProductsPage() {
   };
 
   const handleSave = () => {
+    if (!editingProduct) return;
     updateMutation.mutate({
       id: editingProduct.id,
       name: editingProduct.name,
@@ -177,30 +167,11 @@ function ProductsPage() {
         </>
       }
     >
-      <h1 className="text-2xl font-semibold tracking-tight">Seus produtos</h1>
-      <p className="mt-1 text-sm text-muted-foreground">
-        Hospedagem web, domínios e adicionais. Planos de VPS ficam na área exclusiva{" "}
-        <Link to="/admin/vps/plans" className="text-brand underline">Planos VPS</Link>.
-      </p>
-
-      <div className="mt-6 flex flex-wrap items-center gap-3">
-        <div className="relative flex-1 min-w-56">
-          <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            value={term}
-            onChange={(e) => setTerm(e.target.value)}
-            placeholder="Pesquisar"
-            className="h-11 rounded-xl pl-9"
-          />
-        </div>
-        <Button 
-          className="h-11 rounded-xl bg-primary text-primary-foreground hover:bg-primary/90"
-          onClick={handleCreate}
-        >
-          <Plus className="mr-1 size-4" />
-          Novo
-        </Button>
-      </div>
+      <ProductsHeader
+        term={term}
+        setTerm={setTerm}
+        onCreate={handleCreate}
+      />
 
       {products.isLoading ? (
         <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
@@ -212,333 +183,27 @@ function ProductsPage() {
         <p className="py-24 text-center text-sm text-muted-foreground">Nenhum produto encontrado</p>
       ) : (
         <div className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-          {filtered.map((product) => {
-            const monthly = product.product_prices?.find((p) => p.cycle === "monthly" && p.is_active);
-            return (
-              <article key={product.id} className="group relative rounded-2xl border border-border p-5 transition-all hover:shadow-[var(--shadow-card)]">
-                <div className="flex items-start justify-between gap-2">
-                  <div>
-                    <h2 className="font-semibold">{product.name}</h2>
-                    <p className="text-xs text-muted-foreground">
-                      {product.product_groups?.name ?? "Sem grupo"}
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Badge variant={product.is_visible ? "default" : "secondary"}>
-                      {product.is_visible ? "Visível" : "Oculto"}
-                    </Badge>
-                    <Button 
-                      variant="ghost" 
-                      size="icon" 
-                      className="size-8 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity"
-                      onClick={() => handleEdit(product)}
-                    >
-                      <Edit2 className="size-4" />
-                    </Button>
-                  </div>
-                </div>
-                <p className="mt-3 line-clamp-2 text-sm text-muted-foreground">{product.description}</p>
-                <dl className="mt-4 space-y-1 text-xs text-muted-foreground">
-                  <div className="flex justify-between">
-                    <dt>Pacote DirectAdmin</dt>
-                    <dd className="text-foreground">{product.directadmin_package ?? "—"}</dd>
-                  </div>
-                  <div className="flex justify-between">
-                    <dt>Disco</dt>
-                    <dd className="text-foreground">
-                      {product.disk_quota_mb ? `${Math.round(product.disk_quota_mb / 1024)} GB` : "—"}
-                    </dd>
-                  </div>
-                  <div className="flex justify-between">
-                    <dt>Preços ativos</dt>
-                    <dd className="text-foreground">{product.product_prices?.filter(p => p.is_active).length ?? 0}</dd>
-                  </div>
-                  {(product as any).immediate_purchase && (
-                    <div className="flex justify-between items-center mt-1">
-                      <dt className="text-brand font-medium">Link de Venda</dt>
-                      <dd>
-                        <Button 
-                          variant="ghost" 
-                          size="icon" 
-                          className="size-6 h-6 w-6"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            const publicOrigin = typeof window !== 'undefined' ? window.location.origin : '';
-                            const url = `${publicOrigin}/checkout/${product.id}?immediate=true&mode=signup`;
-                            navigator.clipboard.writeText(url);
-                            toast.success("Link copiado!");
-                          }}
-                        >
-                          <Copy className="size-3" />
-                        </Button>
-                      </dd>
-                    </div>
-                  )}
-                </dl>
-                <p className="mt-4 text-lg font-semibold">
-                  {monthly ? brl.format(Number(monthly.price)) : "Sem preço mensal"}
-                  <span className="text-sm font-normal text-muted-foreground">
-                    {monthly ? ` /${CYCLE_LABELS[monthly.cycle]}` : ""}
-                  </span>
-                </p>
-              </article>
-            );
-          })}
+          {filtered.map((product) => (
+            <ProductCard
+              key={product.id}
+              product={product}
+              onEdit={handleEdit}
+            />
+          ))}
         </div>
       )}
 
-      <Dialog open={!!editingProduct} onOpenChange={(open) => !open && setEditingProduct(null)}>
-        <DialogContent className="max-w-2xl rounded-3xl border-none shadow-2xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="text-2xl font-bold">
-              {editingProduct?.id ? "Editar Produto" : "Novo Produto"}
-            </DialogTitle>
-          </DialogHeader>
-          
-          {editingProduct && (
-            <div className="space-y-6 py-4">
-              <div className="grid gap-4 md:grid-cols-2">
-                <div className="space-y-2">
-                  <Label>Nome do Plano</Label>
-                  <Input 
-                    value={editingProduct.name} 
-                    onChange={e => setEditingProduct({...editingProduct, name: e.target.value})}
-                    placeholder="Ex: Hospedagem Start"
-                    className="rounded-xl"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Tipo de Produto</Label>
-                  <Select 
-                    value={editingProduct.product_type} 
-                    onValueChange={val => setEditingProduct({...editingProduct, product_type: val})}
-                  >
-                    <SelectTrigger className="rounded-xl">
-                      <SelectValue placeholder="Selecione o tipo" />
-                    </SelectTrigger>
-                    <SelectContent className="rounded-xl border-none shadow-xl">
-                      <SelectItem value="hosting">Hospedagem (DirectAdmin)</SelectItem>
-                      <SelectItem value="domain">Domínio</SelectItem>
-                      <SelectItem value="other">Outros / Adicionais</SelectItem>
-
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-
-              <div className="grid gap-4 md:grid-cols-2">
-                <div className="space-y-2">
-                  <Label>Grupo</Label>
-                  <Select 
-                    value={editingProduct.group_id || ""} 
-                    onValueChange={val => setEditingProduct({...editingProduct, group_id: val})}
-                  >
-                    <SelectTrigger className="rounded-xl">
-                      <SelectValue placeholder="Selecione um grupo" />
-                    </SelectTrigger>
-                    <SelectContent className="rounded-xl border-none shadow-xl">
-                      {productGroups.data?.map((g: any) => (
-                        <SelectItem key={g.id} value={g.id}>{g.name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label>Ordem de Exibição</Label>
-                  <Input 
-                    type="number"
-                    value={editingProduct.sort_order} 
-                    onChange={e => setEditingProduct({...editingProduct, sort_order: Number(e.target.value)})}
-                    className="rounded-xl"
-                  />
-                </div>
-              </div>
-
-              <div className="grid gap-4 md:grid-cols-2">
-              <div className="grid gap-4 md:grid-cols-2">
-                <div className="flex items-center justify-between border border-border rounded-xl p-4 bg-muted/20">
-                  <div className="space-y-0.5">
-                    <Label className="text-sm font-medium">Venda Imediata</Label>
-                    <p className="text-[10px] text-muted-foreground">Gera link direto para checkout</p>
-                  </div>
-                  <Switch 
-                    checked={editingProduct.immediate_purchase} 
-                    onCheckedChange={val => setEditingProduct({...editingProduct, immediate_purchase: val})}
-                  />
-                </div>
-                {editingProduct.immediate_purchase && editingProduct.id && (
-                  <div className="flex items-center gap-2 border border-border rounded-xl p-4 bg-brand/5">
-                    <div className="flex-1 min-w-0">
-                      <Label className="text-[10px] text-brand font-bold uppercase">Link do Plano</Label>
-                      <p className="text-[10px] truncate text-muted-foreground">
-                        {`/checkout/${editingProduct.id}?immediate=true&mode=signup`}
-                      </p>
-                    </div>
-                    <Button 
-                      variant="ghost" 
-                      size="icon" 
-                      className="size-8"
-                      onClick={() => {
-                        const publicOrigin = typeof window !== 'undefined' ? window.location.origin : '';
-                        const url = `${publicOrigin}/checkout/${editingProduct.id}?immediate=true&mode=signup`;
-                        navigator.clipboard.writeText(url);
-                        toast.success("Link copiado!");
-                      }}
-                    >
-                      <Copy className="size-4 text-brand" />
-                    </Button>
-                  </div>
-                )}
-              </div>
-
-              <div className="space-y-2">
-                  <Label>Espaço em Disco (MB)</Label>
-                  <Input 
-                    type="number"
-                    value={editingProduct.disk_quota_mb || ""} 
-                    onChange={e => setEditingProduct({...editingProduct, disk_quota_mb: Number(e.target.value)})}
-                    placeholder="Ex: 1024 para 1GB"
-                    className="rounded-xl"
-                  />
-                </div>
-                <div className="flex items-center justify-between pt-8">
-                  <Label>Produto Visível</Label>
-                  <Switch 
-                    checked={editingProduct.is_visible} 
-                    onCheckedChange={val => setEditingProduct({...editingProduct, is_visible: val})}
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label>Descrição</Label>
-                <Textarea 
-                  value={editingProduct.description || ""} 
-                  onChange={e => setEditingProduct({...editingProduct, description: e.target.value})}
-                  className="rounded-xl min-h-[80px]"
-                />
-              </div>
-
-              <div className="rounded-2xl border border-border p-4 bg-muted/30">
-                <div className="flex items-center gap-2 mb-4 text-sm font-bold uppercase text-muted-foreground">
-                  <Server className="size-4" />
-                  Integração DirectAdmin
-                </div>
-
-                <div className="grid gap-4 md:grid-cols-2">
-                  <div className="space-y-2">
-                    <Label>Servidor para Sincronização</Label>
-                    <Select value={selectedServer} onValueChange={setSelectedServer}>
-                      <SelectTrigger className="rounded-xl">
-                        <SelectValue placeholder="Selecione um servidor" />
-                      </SelectTrigger>
-                      <SelectContent className="rounded-xl border-none shadow-xl">
-                        {servers.data?.map((s: any) => (
-                          <SelectItem key={s.id} value={s.id}>
-                            {s.hostname ?? s.name ?? s.ip_address ?? s.id}
-                          </SelectItem>
-                        ))}
-                        {(!servers.data || servers.data.length === 0) && (
-                          <div className="p-2 text-xs text-center text-muted-foreground">
-                            Nenhum servidor cadastrado
-                          </div>
-                        )}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Pacote no Servidor</Label>
-                    <Select
-                      value={editingProduct.directadmin_package || ""}
-                      onValueChange={val => setEditingProduct({...editingProduct, directadmin_package: val})}
-                    >
-                      <SelectTrigger className="rounded-xl">
-                        <SelectValue placeholder={daPackages.isLoading ? "Carregando..." : "Selecione um pacote"} />
-                      </SelectTrigger>
-                      <SelectContent className="rounded-xl border-none shadow-xl">
-                        {daPackages.data?.map((pkg: string) => (
-                          <SelectItem key={pkg} value={pkg}>{pkg}</SelectItem>
-                        ))}
-                        {(!daPackages.data || daPackages.data.length === 0) && !daPackages.isLoading && (
-                          <div className="p-2 text-xs text-center text-muted-foreground">
-                            {daPackages.error
-                              ? (daPackages.error as Error).message
-                              : "Selecione um servidor para carregar os pacotes"}
-                          </div>
-                        )}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-              </div>
-
-
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <Label className="font-bold">Ciclos de Cobrança</Label>
-                </div>
-                
-                <div className="grid gap-3">
-                  {Object.keys(CYCLE_LABELS).map(cycle => {
-                    const priceObj = editingProduct.prices.find((p: any) => p.cycle === cycle) || { cycle, price: 0, is_active: false };
-                    return (
-                      <div key={cycle} className="flex items-center gap-4 rounded-xl border border-border/70 p-3 bg-card">
-                        <div className="flex-1">
-                          <Label className="capitalize text-xs">{CYCLE_LABELS[cycle]}</Label>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <span className="text-sm font-bold">R$</span>
-                          <Input 
-                            type="number" 
-                            value={priceObj.price}
-                            onChange={e => {
-                              const newPrices = [...editingProduct.prices];
-                              const idx = newPrices.findIndex(p => p.cycle === cycle);
-                              if (idx > -1) {
-                                newPrices[idx] = {...newPrices[idx], price: e.target.value};
-                              } else {
-                                newPrices.push({ cycle, price: e.target.value, is_active: true });
-                              }
-                              setEditingProduct({...editingProduct, prices: newPrices});
-                            }}
-                            className="w-24 h-8 rounded-lg"
-                          />
-                        </div>
-                        <Switch 
-                          checked={priceObj.is_active}
-                          onCheckedChange={val => {
-                            const newPrices = [...editingProduct.prices];
-                            const idx = newPrices.findIndex(p => p.cycle === cycle);
-                            if (idx > -1) {
-                              newPrices[idx] = {...newPrices[idx], is_active: val};
-                            } else {
-                              newPrices.push({ cycle, price: 0, is_active: val });
-                            }
-                            setEditingProduct({...editingProduct, prices: newPrices});
-                          }}
-                        />
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            </div>
-          )}
-
-          <DialogFooter className="mt-6 flex flex-row gap-2">
-            <Button variant="outline" className="flex-1 rounded-2xl" onClick={() => setEditingProduct(null)}>
-              Cancelar
-            </Button>
-            <Button 
-              className="flex-1 rounded-2xl bg-brand text-brand-foreground hover:bg-brand/90"
-              onClick={handleSave}
-              disabled={updateMutation.isPending}
-            >
-              {updateMutation.isPending ? "Salvando..." : "Salvar Alterações"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <ProductEditDialog
+        editingProduct={editingProduct}
+        setEditingProduct={setEditingProduct}
+        selectedServer={selectedServer}
+        setSelectedServer={setSelectedServer}
+        productGroups={productGroups.data}
+        servers={servers.data}
+        daPackages={daPackages}
+        onSave={handleSave}
+        isSaving={updateMutation.isPending}
+      />
 
       <p className="mt-8 text-xs text-muted-foreground">
         Precisa ver a loja pública? <Link to="/" className="text-brand underline">Abrir catálogo</Link>
