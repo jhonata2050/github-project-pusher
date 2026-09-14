@@ -1661,6 +1661,18 @@ describe("Lei da Preservação de Fachadas (Facade Integrity Tests)", () => {
     expect(typeof sub.syncSwarmDomainRouting).toBe("function");
     expect(typeof sub.generateCaddyfileForRuntime).toBe("function");
   });
+
+  it("Phase 75: admin clients route e submódulos clients list devem exportar todos os subcomponentes", async () => {
+    const list = await import("../../src/components/admin/clients/list/index");
+    expect(typeof list.ClientsHeader).toBe("function");
+    expect(typeof list.ClientsSearchBar).toBe("function");
+    expect(typeof list.ClientsTable).toBe("function");
+    expect(typeof list.ClientsPagination).toBe("function");
+
+    const route = await import("../../src/routes/_authenticated/admin/clients");
+    expect(typeof route.Route).toBe("object");
+    expect(typeof route.ClientsPage).toBe("function");
+  });
 });
 
 
