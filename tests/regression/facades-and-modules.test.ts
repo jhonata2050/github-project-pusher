@@ -1386,6 +1386,15 @@ describe("Lei da Preservação de Fachadas (Facade Integrity Tests)", () => {
     expect(typeof details.ClientDetailTabs).toBe("function");
     expect(typeof details.ClientDetailModals).toBe("function");
   });
+
+  it("Phase 62: useAppOperations e sub-hooks de operações devem ser exportados corretamente", async () => {
+    const mainHook = await import("../../src/components/apps/hooks/useAppOperations");
+    const ops = await import("../../src/components/apps/hooks/operations/index");
+    expect(typeof mainHook.useAppOperations).toBe("function");
+    expect(typeof ops.useAppLifecycle).toBe("function");
+    expect(typeof ops.useAppDeployOperations).toBe("function");
+    expect(typeof ops.useAppEnvsOperations).toBe("function");
+  });
 });
 
 
