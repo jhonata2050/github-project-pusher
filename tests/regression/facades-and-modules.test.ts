@@ -280,6 +280,14 @@ describe("Lei da Preservação de Fachadas (Facade Integrity Tests)", () => {
     expect(eventTitles.some(t => t.includes("Consumo Elevado de Memória"))).toBe(true);
     expect(eventTitles.some(t => t.includes("Container Ativo"))).toBe(true);
   });
+
+  it("FileManagerView e useFileManager hook devem ser exportados corretamente", async () => {
+    const { FileManagerView } = await import("../../src/components/file-manager/FileManagerView");
+    expect(typeof FileManagerView).toBe("function");
+
+    const { useFileManager } = await import("../../src/components/file-manager/hooks/useFileManager");
+    expect(typeof useFileManager).toBe("function");
+  });
 });
 
 describe("Motor Caddy & Hardening de Segurança OWASP", () => {
