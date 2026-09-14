@@ -137,6 +137,28 @@ describe("Lei da Preservação de Fachadas (Facade Integrity Tests)", () => {
 
     const postDeploy = await import("../../src/lib/swarm/templates/post-deploy");
     expect(typeof postDeploy.runPostDeployHooks).toBe("function");
+
+    const runtimesFacade = await import("../../src/lib/swarm/templates/runtimes.compose");
+    expect(typeof runtimesFacade.buildPhpCompose).toBe("function");
+    expect(typeof runtimesFacade.buildNodeApiCompose).toBe("function");
+    expect(typeof runtimesFacade.buildPythonCompose).toBe("function");
+    expect(typeof runtimesFacade.buildGoCompose).toBe("function");
+    expect(typeof runtimesFacade.buildJavaCompose).toBe("function");
+    expect(typeof runtimesFacade.buildRustCompose).toBe("function");
+    expect(typeof runtimesFacade.buildDiscordCompose).toBe("function");
+    expect(typeof runtimesFacade.buildNextJsCompose).toBe("function");
+    expect(typeof runtimesFacade.buildStaticCaddyCompose).toBe("function");
+
+    const runtimesSubmodule = await import("../../src/lib/swarm/templates/runtimes/index");
+    expect(runtimesSubmodule.buildPhpCompose).toBe(runtimesFacade.buildPhpCompose);
+    expect(runtimesSubmodule.buildNodeApiCompose).toBe(runtimesFacade.buildNodeApiCompose);
+    expect(runtimesSubmodule.buildPythonCompose).toBe(runtimesFacade.buildPythonCompose);
+    expect(runtimesSubmodule.buildGoCompose).toBe(runtimesFacade.buildGoCompose);
+    expect(runtimesSubmodule.buildJavaCompose).toBe(runtimesFacade.buildJavaCompose);
+    expect(runtimesSubmodule.buildRustCompose).toBe(runtimesFacade.buildRustCompose);
+    expect(runtimesSubmodule.buildDiscordCompose).toBe(runtimesFacade.buildDiscordCompose);
+    expect(runtimesSubmodule.buildNextJsCompose).toBe(runtimesFacade.buildNextJsCompose);
+    expect(runtimesSubmodule.buildStaticCaddyCompose).toBe(runtimesFacade.buildStaticCaddyCompose);
   });
 
   it("payments.server fachada deve reexportar todas as funções de sessão, URLs canônicas e adaptadores de gateway", async () => {
