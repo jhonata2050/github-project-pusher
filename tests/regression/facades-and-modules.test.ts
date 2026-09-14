@@ -537,6 +537,70 @@ describe("Lei da Preservação de Fachadas (Facade Integrity Tests)", () => {
     expect(metrics.sshConnectionsCreated).toBe(0);
     expect(metrics.sshChannelsCreated).toBe(0);
   });
+
+  it("filesystem fachada e submódulos fs devem reexportar todas as 17 funções e validar utilitários de disco", async () => {
+    const fsFacade = await import("../../src/lib/file-manager/filesystem");
+    const fsMeta = await import("../../src/lib/file-manager/fs/meta");
+    const fsListing = await import("../../src/lib/file-manager/fs/listing");
+    const fsMutations = await import("../../src/lib/file-manager/fs/mutations");
+    const fsArchives = await import("../../src/lib/file-manager/fs/archives");
+    const fsAudit = await import("../../src/lib/file-manager/fs/audit-and-metrics");
+
+    // Validação de exportação na fachada
+    expect(typeof fsFacade.formatBytes).toBe("function");
+    expect(typeof fsFacade.getMimeType).toBe("function");
+    expect(typeof fsFacade.parsePermissions).toBe("function");
+    expect(typeof fsFacade.buildFileInfo).toBe("function");
+    expect(typeof fsFacade.listRealDirectory).toBe("function");
+    expect(typeof fsFacade.readRealFileContent).toBe("function");
+    expect(typeof fsFacade.searchRealFiles).toBe("function");
+    expect(typeof fsFacade.writeRealFileContent).toBe("function");
+    expect(typeof fsFacade.createRealFile).toBe("function");
+    expect(typeof fsFacade.createRealDirectory).toBe("function");
+    expect(typeof fsFacade.deleteRealItems).toBe("function");
+    expect(typeof fsFacade.renameRealItem).toBe("function");
+    expect(typeof fsFacade.copyRealItems).toBe("function");
+    expect(typeof fsFacade.moveRealItems).toBe("function");
+    expect(typeof fsFacade.chmodRealItem).toBe("function");
+    expect(typeof fsFacade.compressRealItems).toBe("function");
+    expect(typeof fsFacade.extractRealArchive).toBe("function");
+    expect(typeof fsFacade.auditLogOperation).toBe("function");
+    expect(typeof fsFacade.calculateDirectorySize).toBe("function");
+
+    // Validação de correspondência com submódulos
+    expect(fsFacade.formatBytes).toBe(fsMeta.formatBytes);
+    expect(fsFacade.listRealDirectory).toBe(fsListing.listRealDirectory);
+    expect(fsFacade.writeRealFileContent).toBe(fsMutations.writeRealFileContent);
+    expect(fsFacade.extractRealArchive).toBe(fsArchives.extractRealArchive);
+    expect(fsFacade.calculateDirectorySize).toBe(fsAudit.calculateDirectorySize);
+
+    // Teste de formatBytes
+    expect(fsFacade.formatBytes(0)).toBe("0 B");
+    expect(fsFacade.formatBytes(1024)).toBe("1 KB");
+    expect(fsFacade.formatBytes(1024 * 1024 * 2.5)).toBe("2.5 MB");
+    expect(fsFacade.formatBytes(1024 * 1024 * 1024 * 10)).toBe("10 GB");
+
+    // Teste de getMimeType
+    expect(fsFacade.getMimeType("index.html")).toBe("text/html");
+    expect(fsFacade.getMimeType("server.ts")).toBe("application/typescript");
+    expect(fsFacade.getMimeType("config.json")).toBe("application/json");
+    expect(fsFacade.getMimeType("bundle.zip")).toBe("application/zip");
+    expect(fsFacade.getMimeType("image.png")).toBe("image/png");
+    expect(fsFacade.getMimeType("unknown.customext")).toBe("application/octet-stream");
+
+    // Teste de parsePermissions
+    const dirPerm = fsFacade.parsePermissions(0o755, true);
+    expect(dirPerm.octal).toBe("0755");
+    expect(dirPerm.rwx).toBe("drwxr-xr-x");
+
+    const filePerm = fsFacade.parsePermissions(0o644, false);
+    expect(filePerm.octal).toBe("0644");
+    expect(filePerm.rwx).toBe("-rw-r--r--");
+
+    const privDir = fsFacade.parsePermissions(0o700, true);
+    expect(privDir.octal).toBe("0700");
+    expect(privDir.rwx).toBe("drwx------");
+  });
 });
 
 describe("Motor Caddy & Hardening de Segurança OWASP", () => {
