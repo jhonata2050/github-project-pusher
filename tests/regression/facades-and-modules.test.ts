@@ -1248,6 +1248,17 @@ describe("Lei da Preservação de Fachadas (Facade Integrity Tests)", () => {
     expect(telemetryFacade.formatMb(2048)).toBe("2 GB");
     expect(telemetryFacade.formatUptime(3660)).toBe("1h 1m");
   });
+
+  it("app connection endpoints subcomponentes devem exportar seções de banco de dados, typebot, openstatus e standard", async () => {
+    const endpoints = await import("../../src/components/apps/overview/endpoints");
+    expect(typeof endpoints.DatabaseEndpointsSection).toBe("function");
+    expect(typeof endpoints.TypebotEndpointsSection).toBe("function");
+    expect(typeof endpoints.OpenStatusEndpointsSection).toBe("function");
+    expect(typeof endpoints.StandardEndpointsSection).toBe("function");
+
+    const card = await import("../../src/components/apps/overview/AppConnectionEndpointsCard");
+    expect(typeof card.AppConnectionEndpointsCard).toBe("function");
+  });
 });
 
 describe("Motor Caddy & Hardening de Segurança OWASP", () => {
