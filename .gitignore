@@ -36,4 +36,5 @@ supabase/.temp/
 # Storage e Backups
 storage/apps/
 backups/
+docker-stack.yml
 
