@@ -4,6 +4,7 @@ import {
   AppPendingDeployBanner,
   AppPendingEnvsAlert,
   AppMetricsCards,
+  AppAccessGuideCard,
   AppConnectionEndpointsCard,
   AppInfrastructureInfoCard,
 } from "../overview";
@@ -18,8 +19,9 @@ export interface AppOverviewTabProps {
   safeOnlineUrl: string;
   setIsTemplateModalOpen: (open: boolean) => void;
   setActiveTab: (tab: string) => void;
-  copyToClipboard: (text: string, key?: string) => void;
+  copyToClipboard: (text: string, key?: string | undefined) => void;
   navigate: any;
+  envsData?: any[] | undefined;
 }
 
 export function AppOverviewTab({
@@ -34,6 +36,7 @@ export function AppOverviewTab({
   setActiveTab,
   copyToClipboard,
   navigate,
+  envsData,
 }: AppOverviewTabProps) {
   return (
     <div className="space-y-6">
@@ -68,6 +71,15 @@ export function AppOverviewTab({
             createdAt={app.created_at}
             updatedAt={app.updated_at || app.created_at || new Date().toISOString()}
             metrics={metrics}
+          />
+
+          {/* Guia de Acesso Inteligente & Credenciais de Administrador */}
+          <AppAccessGuideCard
+            app={app}
+            safeOnlineUrl={safeOnlineUrl}
+            envsData={envsData}
+            setActiveTab={setActiveTab}
+            copyToClipboard={copyToClipboard}
           />
 
           {/* Portas, Conexões e Endpoints Públicos */}

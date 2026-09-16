@@ -1,6 +1,7 @@
 import type { ApplicationRecord, ClusterServerConfig } from "../../cloud-apps.server";
 import { getActiveClusterServer } from "../../cloud-apps.server";
 import { execSshCommand, getSshConnection } from "../swarm-transport.server";
+import { getTemplateSubdomainPrefix, extractAppHash12 } from "../../app-subdomain";
 
 /**
  * Sincroniza em tempo real as regras de roteamento do Traefik no Docker Swarm
@@ -33,6 +34,11 @@ export async function syncSwarmDomainRouting(
       const swarmServices = serviceListOut.trim().split("\n").map((s) => s.trim()).filter(Boolean);
 
       const stackName = (app as any).stack_name;
+      const appPrefix8 = app.id ? app.id.replace(/-/g, "").slice(0, 8) : "";
+      const svcPrefix8 = app.service_id ? app.service_id.replace(/-/g, "").slice(0, 8) : "";
+      const cleanId12 = app.id ? extractAppHash12(app.id) : "";
+      const cleanSvc12 = app.service_id ? extractAppHash12(app.service_id) : "";
+
       let targetService = "";
 
       if (stackName) {
@@ -46,11 +52,29 @@ export async function syncSwarmDomainRouting(
           "";
       }
 
-      if (!targetService) {
-        // Tentar encontrar por ID ou prefixo
-        const appPrefix = app.id.slice(0, 8);
+      if (!targetService && cleanId12) {
         targetService =
-          swarmServices.find((s) => s.includes(appPrefix) && !s.endsWith("_db")) ||
+          swarmServices.find((s) => s === `app_${cleanId12}_app`) ||
+          swarmServices.find((s) => s.includes(cleanId12) && !s.endsWith("_db")) ||
+          "";
+      }
+
+      if (!targetService && cleanSvc12) {
+        targetService =
+          swarmServices.find((s) => s === `app_${cleanSvc12}_app`) ||
+          swarmServices.find((s) => s.includes(cleanSvc12) && !s.endsWith("_db")) ||
+          "";
+      }
+
+      if (!targetService && appPrefix8) {
+        targetService =
+          swarmServices.find((s) => s.includes(appPrefix8) && !s.endsWith("_db")) ||
+          "";
+      }
+
+      if (!targetService && svcPrefix8) {
+        targetService =
+          swarmServices.find((s) => s.includes(svcPrefix8) && !s.endsWith("_db")) ||
           "";
       }
 
@@ -60,31 +84,48 @@ export async function syncSwarmDomainRouting(
         return false;
       }
 
-      // 2. Montar domínios permitidos
+      // 2. Montar domínios permitidos (Multi-Host SAN)
       const wildcard = server.wildcardDomain || "dk1.eqsam.com";
-      const primaryDomain = (targetFqdn || app.fqdn || "")
-        .replace(/^https?:\/\//i, "")
-        .replace(/\/+$/, "")
-        .trim()
-        .toLowerCase();
+      const cleanWildcard = wildcard.replace(/^https?:\/\//i, "").replace(/\/+$/, "").trim().toLowerCase();
 
-      const defaultDomain = (app.default_subdomain || "")
-        .replace(/^https?:\/\//i, "")
-        .replace(/\/+$/, "")
-        .trim()
-        .toLowerCase();
+      const sanitize = (val?: string | null): string => {
+        if (!val) return "";
+        const withoutProto = val.replace(/^https?:\/\//i, "").replace(/\/+$/, "");
+        const firstPart = withoutProto.split("/")[0] ?? "";
+        const withoutPort = firstPart.split(":")[0] ?? "";
+        return withoutPort.trim().toLowerCase();
+      };
 
-      const customDomain = (app.custom_domain || "")
-        .replace(/^https?:\/\//i, "")
-        .replace(/\/+$/, "")
-        .trim()
-        .toLowerCase();
+      const templatePrefix = getTemplateSubdomainPrefix(
+        app.template_id,
+        app.name,
+        app.build_pack
+      );
 
-      const legacyHash = stackName ? stackName.replace("app_", "") : "";
-      const legacyDomain = legacyHash ? `app-${legacyHash}.${wildcard}` : "";
+      const domainCandidates: string[] = [];
+
+      if (targetFqdn) domainCandidates.push(targetFqdn);
+      if (app.fqdn) domainCandidates.push(app.fqdn);
+      if (app.default_subdomain) domainCandidates.push(app.default_subdomain);
+      if (app.custom_domain) domainCandidates.push(app.custom_domain);
+
+      if (cleanId12) {
+        domainCandidates.push(`${templatePrefix}-${cleanId12}.${cleanWildcard}`);
+        domainCandidates.push(`app-${cleanId12}.${cleanWildcard}`);
+      }
+
+      if (cleanSvc12) {
+        domainCandidates.push(`${templatePrefix}-${cleanSvc12}.${cleanWildcard}`);
+        domainCandidates.push(`app-${cleanSvc12}.${cleanWildcard}`);
+      }
+
+      if (stackName) {
+        const legacyHash = stackName.replace("app_", "");
+        if (legacyHash) domainCandidates.push(`app-${legacyHash}.${cleanWildcard}`);
+      }
 
       const uniqueDomains = Array.from(
-        new Set([primaryDomain, defaultDomain, customDomain, legacyDomain].filter(Boolean))
+        new Set(domainCandidates.map(sanitize).filter((d) => d && d.includes(".")))
       );
 
       if (uniqueDomains.length === 0) {
@@ -110,17 +151,26 @@ export async function syncSwarmDomainRouting(
 
       await execSshCommand(conn, updateCmd);
 
-      // 4. Se existir o compose em /opt/stacks/<stackName>/docker-compose.yml, atualizar também para persistência
-      if (stackName) {
-        const composePath = `/opt/stacks/${stackName}/docker-compose.yml`;
-        const check = await execSshCommand(conn, `[ -f "${composePath}" ] && echo "EXISTS"`);
-        if (check.out.includes("EXISTS")) {
-          const escapedRule = hostRule.replace(/`/g, "\\`");
-          await execSshCommand(
-            conn,
-            `sed -i 's|Host([^)]*)|${escapedRule}|g' "${composePath}" && sed -i 's|traefik.docker.network|traefik.swarm.network|g' "${composePath}"`
-          );
-        }
+      // 4. Se existir o compose em /opt/stacks/<stackName>/docker-compose.yml, atualizar de forma segura
+      const targetStack = stackName || (targetService.startsWith("app_") ? targetService.replace(/_[^_]+$/, "") : "");
+      if (targetStack) {
+        const composePath = `/opt/stacks/${targetStack}/docker-compose.yml`;
+        await execSshCommand(
+          conn,
+          `if [ -f "${composePath}" ]; then python3 -c "
+import re
+try:
+    with open('${composePath}', 'r') as f:
+        c = f.read()
+    rule = '''${hostRule}'''
+    c = re.sub(r'traefik\\.http\\.routers\\.[^.]+\\.rule=[^\\n\"]+', lambda m: m.group(0).split('=')[0] + '=' + rule, c)
+    c = c.replace('traefik.docker.network', 'traefik.swarm.network')
+    with open('${composePath}', 'w') as f:
+        f.write(c)
+except Exception:
+    pass
+" 2>/dev/null || true; fi`
+        );
       }
 
       conn.end();

@@ -150,6 +150,26 @@ export async function deployTemplateStackToSwarm(
       const b64Compose = Buffer.from(composeYaml).toString("base64");
       await execSshCommand(conn, `echo "${b64Compose}" | base64 -d > ${stackDir}/docker-compose.yml`);
 
+      // Limpeza garantida de stacks legadas/conflitantes associadas a esta mesma aplicação
+      try {
+        const idPrefix8 = app.id ? app.id.replace(/-/g, "").slice(0, 8) : "";
+        const svcPrefix8 = app.service_id ? app.service_id.replace(/-/g, "").slice(0, 8) : "";
+        const appPrefixes = [idPrefix8, svcPrefix8].filter(Boolean);
+
+        const { out: stackLsOut } = await execSshCommand(conn, 'docker stack ls --format "{{.Name}}"');
+        const activeStacks = stackLsOut.trim().split("\n").map((s) => s.trim()).filter(Boolean);
+
+        for (const st of activeStacks) {
+          if (st !== stackName && appPrefixes.some((p) => st.startsWith(`app_${p}`))) {
+            console.log(`[deployTemplateStackToSwarm] Removendo stack legada conflitante: ${st}`);
+            await execSshCommand(conn, `docker stack rm ${st} 2>/dev/null || true`);
+            await execSshCommand(conn, `rm -rf /opt/stacks/${st} 2>/dev/null || true`);
+          }
+        }
+      } catch (cleanStackErr: any) {
+        console.warn(`[deployTemplateStackToSwarm Warning ao limpar stacks legadas]:`, cleanStackErr?.message);
+      }
+
       // Limpeza garantida de serviços obsoletos de templates anteriores que não existem mais neste compose
       try {
         const { out: activeSvcs } = await execSshCommand(
@@ -177,6 +197,15 @@ export async function deployTemplateStackToSwarm(
       await runPostDeployHooks(conn, templateId, app, server, cleanId, stackName, cleanHost);
 
       conn.end();
+
+      // Sincronização imediata das regras multi-host do Traefik no Swarm
+      try {
+        const { syncSwarmDomainRouting } = await import("./routing/traefik-sync.server");
+        await syncSwarmDomainRouting(app, cleanHost, server);
+      } catch (syncErr: any) {
+        console.warn(`[deployTemplateStackToSwarm] Aviso ao sincronizar roteamento Traefik:`, syncErr?.message);
+      }
+
       return { success: true, stackName, fqdn: defaultFqdn };
     } catch (innerErr: any) {
       conn.end();

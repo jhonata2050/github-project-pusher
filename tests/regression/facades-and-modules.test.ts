@@ -221,6 +221,7 @@ describe("Lei da Preservação de Fachadas (Facade Integrity Tests)", () => {
     expect(typeof overview.AppPendingEnvsAlert).toBe("function");
     expect(typeof overview.AppMetricsCards).toBe("function");
     expect(typeof overview.AppConnectionEndpointsCard).toBe("function");
+    expect(typeof overview.AppAccessGuideCard).toBe("function");
     expect(typeof overview.AppInfrastructureInfoCard).toBe("function");
   });
 
@@ -1726,6 +1727,7 @@ describe("Novos Templates Single-Container: Flowise AI, NocoDB & Vaultwarden", (
     expect(nocodb).toBeDefined();
     expect(nocodb?.category).toBe("databases");
     expect(nocodb?.default_port).toBe(8080);
+    expect(nocodb?.recommended_ram).toBe(1024);
     expect(resolveDeploymentRuntime("nocodb-airtable")).toBe("NODE");
 
     const vault = APP_TEMPLATES.find((t) => t.id === "vaultwarden-server");
@@ -1767,18 +1769,48 @@ describe("Novos Templates Single-Container: Flowise AI, NocoDB & Vaultwarden", (
     };
 
     const flowiseYaml = buildFlowiseCompose(mockCtx);
-    expect(flowiseYaml).toContain("flowiseai/flowise:latest");
+    expect(flowiseYaml).toContain("flowiseai/flowise:3.0.6");
+    expect(flowiseYaml).toContain('user: "0:0"');
     expect(flowiseYaml).toContain("vol_app123456789_flowise:/root/.flowise");
     expect(flowiseYaml).toContain("loadbalancer.server.port=3000");
+    expect(flowiseYaml).toContain("traefik.http.routers.app_app123456789_app-https.rule=Host(`app123456789.dk1.eqsam.com`)");
 
     const nocodbYaml = buildNocoDBCompose(mockCtx);
     expect(nocodbYaml).toContain("nocodb/nocodb:latest");
+    expect(nocodbYaml).toContain('NODE_OPTIONS: "--max-old-space-size=768"');
     expect(nocodbYaml).toContain("vol_app123456789_nocodb:/usr/app/data");
     expect(nocodbYaml).toContain("loadbalancer.server.port=8080");
+    expect(nocodbYaml).toContain("traefik.http.routers.app_app123456789_app-https.rule=Host(`app123456789.dk1.eqsam.com`)");
 
     const vaultYaml = buildVaultwardenCompose(mockCtx);
     expect(vaultYaml).toContain("vaultwarden/server:latest");
     expect(vaultYaml).toContain("vol_app123456789_vault:/data");
     expect(vaultYaml).toContain("loadbalancer.server.port=80");
+    expect(vaultYaml).toContain("traefik.http.routers.app_app123456789_app-https.rule=Host(`app123456789.dk1.eqsam.com`)");
+  });
+
+  it("buildTraefikHostRule deve gerar regras SAN multi-host cobrindo cleanHost, app.id, app.service_id e template", async () => {
+    const { buildTraefikHostRule } = await import("../../src/lib/swarm/templates/routing-rule");
+    const ctx: any = {
+      cleanHost: "flowise-custom.meudominio.com",
+      wildcard: "dk1.eqsam.com",
+      templateId: "flowise-ai",
+      app: {
+        id: "1faab310-27e9-4868-b419-abf496711a0e",
+        service_id: "fd1d638f-5ad6-4a9c-9fdd-b14edc63130e",
+        template_id: "flowise-ai",
+        name: "Meu Flowise",
+        custom_domain: "meu-flowise.com.br",
+      },
+    };
+
+    const rule = buildTraefikHostRule(ctx);
+    expect(rule).toContain("Host(`flowise-custom.meudominio.com`)");
+    expect(rule).toContain("Host(`flowise-1faab31027e9.dk1.eqsam.com`)");
+    expect(rule).toContain("Host(`app-1faab31027e9.dk1.eqsam.com`)");
+    expect(rule).toContain("Host(`flowise-fd1d638f5ad6.dk1.eqsam.com`)");
+    expect(rule).toContain("Host(`app-fd1d638f5ad6.dk1.eqsam.com`)");
+    expect(rule).toContain("Host(`meu-flowise.com.br`)");
+    expect(rule).toContain(" || ");
   });
 });

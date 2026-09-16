@@ -37,12 +37,16 @@ export async function manageSwarmServiceLifecycle(
 
       const stackName = (app as any).stack_name;
       const cleanId = (app.id || "").replace(/[^a-zA-Z0-9]/g, "").slice(0, 12);
+      const cleanSvcId = (app.service_id || "").replace(/[^a-zA-Z0-9]/g, "").slice(0, 12);
       const appPrefix = (app.id || "").slice(0, 8);
+      const svcPrefix = (app.service_id || "").slice(0, 8);
 
       const targetServices = swarmServices.filter((s) => {
         if (stackName && s.startsWith(stackName)) return true;
         if (cleanId && s.includes(cleanId)) return true;
+        if (cleanSvcId && s.includes(cleanSvcId)) return true;
         if (appPrefix && s.includes(appPrefix)) return true;
+        if (svcPrefix && s.includes(svcPrefix)) return true;
         return false;
       });
 
@@ -124,10 +128,12 @@ export async function removeSwarmServiceAndStack(
 
     try {
       const cleanId = (app.id || "").replace(/[^a-zA-Z0-9]/g, "").slice(0, 12);
+      const cleanSvcId = (app.service_id || "").replace(/[^a-zA-Z0-9]/g, "").slice(0, 12);
       const stackName = (app as any).stack_name || `app_${cleanId}`;
       const appPrefix = (app.id || "").slice(0, 8);
+      const svcPrefix = (app.service_id || "").slice(0, 8);
 
-      console.log(`[SwarmStackRemoval] Removendo permanentemente stack ${stackName} (cleanId: ${cleanId})...`);
+      console.log(`[SwarmStackRemoval] Removendo permanentemente stack ${stackName} (cleanId: ${cleanId}, svc: ${cleanSvcId})...`);
 
       // 1. Encontrar todos os serviços do Swarm relacionados e remover
       const { out: serviceListOut } = await execSshCommand(conn, 'docker service ls --format "{{.Name}}"');
@@ -135,7 +141,9 @@ export async function removeSwarmServiceAndStack(
       const targetServices = swarmServices.filter((s) => {
         if (stackName && s.startsWith(stackName)) return true;
         if (cleanId && s.includes(cleanId)) return true;
+        if (cleanSvcId && s.includes(cleanSvcId)) return true;
         if (appPrefix && s.includes(appPrefix)) return true;
+        if (svcPrefix && s.includes(svcPrefix)) return true;
         return false;
       });
 
@@ -144,14 +152,34 @@ export async function removeSwarmServiceAndStack(
         await execSshCommand(conn, `docker service rm ${targetServices.join(" ")} 2>/dev/null || true`);
       }
 
-      // 2. Remover a stack Docker
-      await execSshCommand(conn, `docker stack rm ${stackName} 2>/dev/null || true`);
+      // 2. Remover todas as stacks Docker associadas
+      const { out: stackLsOut } = await execSshCommand(conn, 'docker stack ls --format "{{.Name}}"');
+      const activeStacks = stackLsOut.trim().split("\n").map((s) => s.trim()).filter(Boolean);
+      const matchedStacks = new Set<string>();
+      if (stackName) matchedStacks.add(stackName);
+      if (cleanId) matchedStacks.add(`app_${cleanId}`);
+      if (cleanSvcId) matchedStacks.add(`app_${cleanSvcId}`);
+      for (const st of activeStacks) {
+        if (
+          (appPrefix && st.startsWith(`app_${appPrefix}`)) ||
+          (svcPrefix && st.startsWith(`app_${svcPrefix}`))
+        ) {
+          matchedStacks.add(st);
+        }
+      }
+
+      for (const st of matchedStacks) {
+        await execSshCommand(conn, `docker stack rm ${st} 2>/dev/null || true`);
+      }
 
       // 3. Remover volumes nomeados associados a este app
-      await execSshCommand(conn, `docker volume rm $(docker volume ls -q --filter name=${cleanId}) 2>/dev/null || true`);
+      if (cleanId) await execSshCommand(conn, `docker volume rm $(docker volume ls -q --filter name=${cleanId}) 2>/dev/null || true`);
+      if (cleanSvcId) await execSshCommand(conn, `docker volume rm $(docker volume ls -q --filter name=${cleanSvcId}) 2>/dev/null || true`);
 
       // 4. Limpar diretório do filesystem remoto
-      await execSshCommand(conn, `rm -rf /opt/stacks/${stackName} /opt/stacks/app_${cleanId} 2>/dev/null || true`);
+      for (const st of matchedStacks) {
+        await execSshCommand(conn, `rm -rf /opt/stacks/${st} 2>/dev/null || true`);
+      }
 
       conn.end();
       return { success: true };
@@ -190,13 +218,21 @@ export async function getSwarmServiceLogs(
 
     try {
       const cleanId = (app.id || "").replace(/[^a-zA-Z0-9]/g, "").slice(0, 12);
+      const cleanSvcId = (app.service_id || "").replace(/[^a-zA-Z0-9]/g, "").slice(0, 12);
       const stackName = (app as any).stack_name || `app_${cleanId}`;
+      const appPrefix = (app.id || "").slice(0, 8);
+      const svcPrefix = (app.service_id || "").slice(0, 8);
 
       // Localizar serviços da stack
       const { out: serviceListOut } = await execSshCommand(conn, 'docker service ls --format "{{.Name}}"');
       const swarmServices = serviceListOut.trim().split("\n").map((s) => s.trim()).filter(Boolean);
       const appServices = swarmServices.filter(
-        (s) => (stackName && s.startsWith(stackName)) || s.includes(cleanId)
+        (s) =>
+          (stackName && s.startsWith(stackName)) ||
+          (cleanId && s.includes(cleanId)) ||
+          (cleanSvcId && s.includes(cleanSvcId)) ||
+          (appPrefix && s.includes(appPrefix)) ||
+          (svcPrefix && s.includes(svcPrefix))
       );
 
       // Priorizar serviço web/app (que não seja apenas db/redis/pg)

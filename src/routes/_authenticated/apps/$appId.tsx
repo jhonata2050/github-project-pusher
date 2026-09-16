@@ -176,6 +176,7 @@ function AppDetailsPage() {
               setActiveTab={m.setActiveTab}
               copyToClipboard={m.copyToClipboard}
               navigate={m.navigate}
+              envsData={m.envsData || (app as any)?.env_vars || []}
             />
           </TabsContent>
 

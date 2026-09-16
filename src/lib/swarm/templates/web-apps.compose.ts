@@ -1,7 +1,9 @@
 import type { TemplateContext } from "./types";
+import { buildTraefikHostRule } from "./routing-rule";
 
 export function buildWordPressCompose(ctx: TemplateContext): string {
   const { cleanId, stackName, cleanHost, getEnv, limits } = ctx;
+  const hostRule = buildTraefikHostRule(ctx);
   const wpDbName = getEnv("WORDPRESS_DB_NAME", "wordpress");
   const wpDbUser = getEnv("WORDPRESS_DB_USER", "wordpress");
   const wpDbPass = getEnv("WORDPRESS_DB_PASSWORD");
@@ -63,10 +65,10 @@ services:
       labels:
         - "traefik.enable=true"
         - "traefik.swarm.network=public-ingress"
-        - "traefik.http.routers.${stackName}_app-http.rule=Host(\`${cleanHost}\`)"
+        - "traefik.http.routers.${stackName}_app-http.rule=${hostRule}"
         - "traefik.http.routers.${stackName}_app-http.entrypoints=web"
         - "traefik.http.routers.${stackName}_app-http.service=${stackName}_app"
-        - "traefik.http.routers.${stackName}_app-https.rule=Host(\`${cleanHost}\`)"
+        - "traefik.http.routers.${stackName}_app-https.rule=${hostRule}"
         - "traefik.http.routers.${stackName}_app-https.entrypoints=websecure"
         - "traefik.http.routers.${stackName}_app-https.tls=true"
         - "traefik.http.routers.${stackName}_app-https.tls.certresolver=le"
@@ -77,6 +79,7 @@ services:
 
 export function buildN8NCompose(ctx: TemplateContext): string {
   const { cleanId, stackName, cleanHost, getEnv, limits } = ctx;
+  const hostRule = buildTraefikHostRule(ctx);
   const n8nDbPass = getEnv("DB_POSTGRESDB_PASSWORD", getEnv("POSTGRES_PASSWORD"));
   const n8nEncKey = getEnv("N8N_ENCRYPTION_KEY");
 
@@ -142,10 +145,10 @@ services:
       labels:
         - "traefik.enable=true"
         - "traefik.swarm.network=public-ingress"
-        - "traefik.http.routers.${stackName}_app-http.rule=Host(\`${cleanHost}\`)"
+        - "traefik.http.routers.${stackName}_app-http.rule=${hostRule}"
         - "traefik.http.routers.${stackName}_app-http.entrypoints=web"
         - "traefik.http.routers.${stackName}_app-http.service=${stackName}_app"
-        - "traefik.http.routers.${stackName}_app-https.rule=Host(\`${cleanHost}\`)"
+        - "traefik.http.routers.${stackName}_app-https.rule=${hostRule}"
         - "traefik.http.routers.${stackName}_app-https.entrypoints=websecure"
         - "traefik.http.routers.${stackName}_app-https.tls=true"
         - "traefik.http.routers.${stackName}_app-https.tls.certresolver=le"
@@ -155,7 +158,8 @@ services:
 }
 
 export function buildKumaCompose(ctx: TemplateContext): string {
-  const { cleanId, stackName, cleanHost, limits } = ctx;
+  const { cleanId, stackName, limits } = ctx;
+  const hostRule = buildTraefikHostRule(ctx);
 
   return `version: '3.8'
 networks:
@@ -182,10 +186,10 @@ services:
       labels:
         - "traefik.enable=true"
         - "traefik.swarm.network=public-ingress"
-        - "traefik.http.routers.${stackName}_app-http.rule=Host(\`${cleanHost}\`)"
+        - "traefik.http.routers.${stackName}_app-http.rule=${hostRule}"
         - "traefik.http.routers.${stackName}_app-http.entrypoints=web"
         - "traefik.http.routers.${stackName}_app-http.service=${stackName}_app"
-        - "traefik.http.routers.${stackName}_app-https.rule=Host(\`${cleanHost}\`)"
+        - "traefik.http.routers.${stackName}_app-https.rule=${hostRule}"
         - "traefik.http.routers.${stackName}_app-https.entrypoints=websecure"
         - "traefik.http.routers.${stackName}_app-https.tls=true"
         - "traefik.http.routers.${stackName}_app-https.tls.certresolver=le"
@@ -196,6 +200,7 @@ services:
 
 export function buildGhostCompose(ctx: TemplateContext): string {
   const { cleanId, stackName, cleanHost, limits } = ctx;
+  const hostRule = buildTraefikHostRule(ctx);
 
   return `version: '3.8'
 networks:
@@ -222,24 +227,24 @@ services:
         limits:
           cpus: "${limits.cpuLimit}"
           memory: ${limits.memLimit}
-  // Labels Traefik HTTP & HTTPS com SSL automático
-  labels:
-    - "traefik.enable=true"
-    - "traefik.swarm.network=public-ingress"
-    - "traefik.http.routers.${stackName}_app-http.rule=Host(\`${cleanHost}\`)"
-    - "traefik.http.routers.${stackName}_app-http.entrypoints=web"
-    - "traefik.http.routers.${stackName}_app-http.service=${stackName}_app"
-    - "traefik.http.routers.${stackName}_app-https.rule=Host(\`${cleanHost}\`)"
-    - "traefik.http.routers.${stackName}_app-https.entrypoints=websecure"
-    - "traefik.http.routers.${stackName}_app-https.tls=true"
-    - "traefik.http.routers.${stackName}_app-https.tls.certresolver=le"
-    - "traefik.http.routers.${stackName}_app-https.service=${stackName}_app"
-    - "traefik.http.services.${stackName}_app.loadbalancer.server.port=2368"
+      labels:
+        - "traefik.enable=true"
+        - "traefik.swarm.network=public-ingress"
+        - "traefik.http.routers.${stackName}_app-http.rule=${hostRule}"
+        - "traefik.http.routers.${stackName}_app-http.entrypoints=web"
+        - "traefik.http.routers.${stackName}_app-http.service=${stackName}_app"
+        - "traefik.http.routers.${stackName}_app-https.rule=${hostRule}"
+        - "traefik.http.routers.${stackName}_app-https.entrypoints=websecure"
+        - "traefik.http.routers.${stackName}_app-https.tls=true"
+        - "traefik.http.routers.${stackName}_app-https.tls.certresolver=le"
+        - "traefik.http.routers.${stackName}_app-https.service=${stackName}_app"
+        - "traefik.http.services.${stackName}_app.loadbalancer.server.port=2368"
 `;
 }
 
 export function buildFlowiseCompose(ctx: TemplateContext): string {
   const { cleanId, stackName, cleanHost, getEnv, limits } = ctx;
+  const hostRule = buildTraefikHostRule(ctx);
   const flowiseUser = getEnv("FLOWISE_USERNAME", "admin");
   const flowisePass = getEnv("FLOWISE_PASSWORD");
   const flowiseSecret = getEnv("FLOWISE_SECRETKEY_OVERWRITE");
@@ -253,7 +258,8 @@ volumes:
     driver: local
 services:
   app:
-    image: flowiseai/flowise:latest
+    image: flowiseai/flowise:3.0.6
+    user: "0:0"
     networks:
       - public-ingress
     volumes:
@@ -279,10 +285,10 @@ services:
       labels:
         - "traefik.enable=true"
         - "traefik.swarm.network=public-ingress"
-        - "traefik.http.routers.${stackName}_app-http.rule=Host(\`${cleanHost}\`)"
+        - "traefik.http.routers.${stackName}_app-http.rule=${hostRule}"
         - "traefik.http.routers.${stackName}_app-http.entrypoints=web"
         - "traefik.http.routers.${stackName}_app-http.service=${stackName}_app"
-        - "traefik.http.routers.${stackName}_app-https.rule=Host(\`${cleanHost}\`)"
+        - "traefik.http.routers.${stackName}_app-https.rule=${hostRule}"
         - "traefik.http.routers.${stackName}_app-https.entrypoints=websecure"
         - "traefik.http.routers.${stackName}_app-https.tls=true"
         - "traefik.http.routers.${stackName}_app-https.tls.certresolver=le"
@@ -293,6 +299,7 @@ services:
 
 export function buildNocoDBCompose(ctx: TemplateContext): string {
   const { cleanId, stackName, cleanHost, getEnv, limits } = ctx;
+  const hostRule = buildTraefikHostRule(ctx);
   const jwtSecret = getEnv("NC_AUTH_JWT_SECRET");
 
   return `version: '3.8'
@@ -311,8 +318,8 @@ services:
       - vol_${cleanId}_nocodb:/usr/app/data
     environment:
       PORT: "8080"
-      NC_DB: "sqlite3:///usr/app/data/noco.db"
       NC_AUTH_JWT_SECRET: "${jwtSecret}"
+      NODE_OPTIONS: "--max-old-space-size=768"
     deploy:
       replicas: 1
       restart_policy:
@@ -324,10 +331,10 @@ services:
       labels:
         - "traefik.enable=true"
         - "traefik.swarm.network=public-ingress"
-        - "traefik.http.routers.${stackName}_app-http.rule=Host(\`${cleanHost}\`)"
+        - "traefik.http.routers.${stackName}_app-http.rule=${hostRule}"
         - "traefik.http.routers.${stackName}_app-http.entrypoints=web"
         - "traefik.http.routers.${stackName}_app-http.service=${stackName}_app"
-        - "traefik.http.routers.${stackName}_app-https.rule=Host(\`${cleanHost}\`)"
+        - "traefik.http.routers.${stackName}_app-https.rule=${hostRule}"
         - "traefik.http.routers.${stackName}_app-https.entrypoints=websecure"
         - "traefik.http.routers.${stackName}_app-https.tls=true"
         - "traefik.http.routers.${stackName}_app-https.tls.certresolver=le"
@@ -338,6 +345,7 @@ services:
 
 export function buildVaultwardenCompose(ctx: TemplateContext): string {
   const { cleanId, stackName, cleanHost, getEnv, limits } = ctx;
+  const hostRule = buildTraefikHostRule(ctx);
   const adminToken = getEnv("ADMIN_TOKEN");
   const signupsAllowed = getEnv("SIGNUPS_ALLOWED", "true");
 
@@ -371,10 +379,10 @@ services:
       labels:
         - "traefik.enable=true"
         - "traefik.swarm.network=public-ingress"
-        - "traefik.http.routers.${stackName}_app-http.rule=Host(\`${cleanHost}\`)"
+        - "traefik.http.routers.${stackName}_app-http.rule=${hostRule}"
         - "traefik.http.routers.${stackName}_app-http.entrypoints=web"
         - "traefik.http.routers.${stackName}_app-http.service=${stackName}_app"
-        - "traefik.http.routers.${stackName}_app-https.rule=Host(\`${cleanHost}\`)"
+        - "traefik.http.routers.${stackName}_app-https.rule=${hostRule}"
         - "traefik.http.routers.${stackName}_app-https.entrypoints=websecure"
         - "traefik.http.routers.${stackName}_app-https.tls=true"
         - "traefik.http.routers.${stackName}_app-https.tls.certresolver=le"
