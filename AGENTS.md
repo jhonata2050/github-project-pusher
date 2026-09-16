@@ -39,3 +39,8 @@
 8. **Lei das URLs Canônicas:** Redefinições de senha, scripts de agente VPS e webhooks devem utilizar `getCanonicalPublicUrl()`, resolvendo `APP_URL` ou `x-forwarded-host`, nunca `localhost:3000`.
 9. **Lei do Teste Obrigatório:** Toda correção de bug ou nova funcionalidade crítica deve ser acompanhada de teste de regressão em `tests/regression/`.
 10. **Lei do Pipeline de Homologação:** Nenhuma modificação é considerada pronta sem que o comando `npm run check-all` execute com 100% de sucesso (TypeScript 0 erros + Vitest aprovado + Supabase queries íntegras).
+
+## 🐳 Regra Estrita de Publicação Docker (Docker Hub)
+- **Repositório Compartilhado:** `jhonatavs/strefdfdf` é um repositório compartilhado com múltiplos projetos e serviços distintos do usuário (ex: `painel-lovepro-...`, `site-lovepro-...`, `painel-uaijet`, etc.).
+- **PROIBIÇÃO ABSOLUTA:** **NUNCA** gerar ou fazer push de tags genéricas como `latest`, `v0`, `v1` ou similares para `jhonatavs/strefdfdf`. Fazer isso sobrescreve e quebra outros serviços em produção.
+- **TAG ESPECÍFICA OBRIGATÓRIA:** Use **exclusiva e estritamente** a tag com o prefixo exato do projeto solicitado pelo usuário (ex: `jhonatavs/strefdfdf:painel-eqsam-v0` ou `painel-eqsam-v...`), sem adicionar `latest` ou outras tags genéricas.
