@@ -54,8 +54,7 @@ export const getDatabaseInfo = createServerFn({ method: "GET" })
 
     return {
       config: {
-        url: supabaseUrl,
-        publishableKey: supabaseKey ? `${supabaseKey.slice(0, 16)}...` : "Não configurada",
+        isConnected: Boolean(supabaseUrl),
         hasServiceRole,
       },
       users: users || [],

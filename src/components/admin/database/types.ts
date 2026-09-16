@@ -1,9 +1,10 @@
 import type { RefObject, ChangeEvent } from "react";
 
 export interface DatabaseConfigInfo {
+  isConnected?: boolean | undefined;
+  hasServiceRole?: boolean | undefined;
   url?: string | undefined;
   publishableKey?: string | undefined;
-  hasServiceRole?: boolean | undefined;
 }
 
 export interface DatabaseUserItem {

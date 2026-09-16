@@ -24,44 +24,28 @@ const SYSTEM_TABLES = [
 
 export const DatabaseConnectionTab: React.FC<DatabaseConnectionTabProps> = ({
   config,
-  copiedKey,
-  onCopy,
 }) => {
   return (
     <div className="grid gap-6 md:grid-cols-2">
       <Card className="rounded-3xl border shadow-sm">
         <CardHeader>
           <CardTitle className="text-lg flex items-center gap-2">
-            <Shield className="size-5 text-primary" /> Configuração Supabase
+            <Shield className="size-5 text-primary" /> Conexão do Banco de Dados (.env)
           </CardTitle>
-          <CardDescription>Dados de endpoint e chaves da instância conectada.</CardDescription>
+          <CardDescription>
+            Conexão blindada contra exposição. As credenciais residem exclusivamente nas variáveis de ambiente do contêiner.
+          </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-1.5">
-            <label className="text-xs font-medium text-muted-foreground">URL do Projeto</label>
+            <label className="text-xs font-medium text-muted-foreground">Status da Instância</label>
             <div className="flex items-center gap-2">
-              <code className="flex-1 rounded-xl bg-muted p-2.5 font-mono text-xs select-all">
-                {config?.url || "Carregando..."}
-              </code>
-              {config?.url && (
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="rounded-xl size-9"
-                  onClick={() => onCopy(config.url!, "url")}
-                >
-                  {copiedKey === "url" ? <Check className="size-4 text-green-600" /> : <Copy className="size-4" />}
-                </Button>
-              )}
-            </div>
-          </div>
-
-          <div className="space-y-1.5">
-            <label className="text-xs font-medium text-muted-foreground">Chave Pública (Anon/Publishable)</label>
-            <div className="flex items-center gap-2">
-              <code className="flex-1 rounded-xl bg-muted p-2.5 font-mono text-xs">
-                {config?.publishableKey || "Carregando..."}
-              </code>
+              <Badge variant={config?.isConnected ? "default" : "destructive"} className="rounded-lg">
+                {config?.isConnected ? "Conectado e Ativo (.env)" : "Não configurado"}
+              </Badge>
+              <Badge variant="outline" className="rounded-lg text-xs">
+                Exclusivo Docker Environment
+              </Badge>
             </div>
           </div>
 
@@ -69,9 +53,13 @@ export const DatabaseConnectionTab: React.FC<DatabaseConnectionTabProps> = ({
             <label className="text-xs font-medium text-muted-foreground">Chave de Serviço (Service Role)</label>
             <div className="flex items-center gap-2">
               <Badge variant={config?.hasServiceRole ? "default" : "secondary"} className="rounded-lg">
-                {config?.hasServiceRole ? "Configurada (.env)" : "Opcional / Não configurada"}
+                {config?.hasServiceRole ? "Protegida no Backend (.env)" : "Não configurada"}
               </Badge>
             </div>
+          </div>
+
+          <div className="p-3 bg-muted/40 rounded-2xl border text-xs text-muted-foreground leading-relaxed">
+            🔒 <strong>Blindagem de Segurança:</strong> As chaves de acesso, tokens e URLs de conexão com o banco de dados não são transmitidas nem expostas para o frontend do painel por diretriz de segurança estrita.
           </div>
         </CardContent>
       </Card>
